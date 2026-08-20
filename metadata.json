@@ -1,0 +1,6 @@
+{
+  "name": "Smart Study Center & Library Management",
+  "description": "Real-time smart library & study center seat management system with live occupancy grid, away timers, digital passes, dual branch support, and admin controls.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
