@@ -187,7 +187,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
           {/* Target Duration Selector */}
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-sky-600" />
+              <Clock className="w-3.5 h-3.5 text-blue-600" />
               <span>Target Study Duration:</span>
             </label>
             <div className="grid grid-cols-5 gap-1.5">
@@ -198,7 +198,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                   onClick={() => setTargetHours(opt.hours)}
                   className={`py-2 px-1 rounded-xl text-center border text-xs transition-all ${
                     targetHours === opt.hours
-                      ? 'bg-slate-900 border-slate-900 text-white font-semibold shadow-xs'
+                      ? 'bg-blue-600 border-blue-600 text-white font-semibold shadow-xs'
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
@@ -208,6 +208,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
               ))}
             </div>
           </div>
+
 
           {/* Student Info Inputs */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

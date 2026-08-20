@@ -37,7 +37,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
         {/* Header */}
         <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
+            <div className="w-8 h-8 rounded-lg bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600">
               <BookOpen className="w-4 h-4" />
             </div>
             <div>
@@ -49,6 +49,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
               </p>
             </div>
           </div>
+
 
           <button
             onClick={onClose}
@@ -138,7 +139,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
               {/* Rule Card 4 */}
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
                 <div className="font-semibold text-slate-900 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-sky-500" />
+                  <Lock className="w-4 h-4 text-blue-500" />
                   <span>4. Personal Belongings & Cleanliness</span>
                 </div>
                 <p className="text-slate-500 pl-6 leading-relaxed">
@@ -158,14 +159,14 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
                     n.priority === 'urgent'
                       ? 'bg-rose-50/70 border-rose-200'
                       : n.priority === 'info'
-                      ? 'bg-sky-50/70 border-sky-200'
+                      ? 'bg-blue-50/70 border-blue-200'
                       : 'bg-slate-50 border-slate-200'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
                       {n.priority === 'urgent' && <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />}
-                      {n.priority === 'info' && <Info className="w-3.5 h-3.5 text-sky-500" />}
+                      {n.priority === 'info' && <Info className="w-3.5 h-3.5 text-blue-500" />}
                       <span>{n.title}</span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono shrink-0">
@@ -191,13 +192,13 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
           {/* Tab 3: Wi-Fi & Amenities */}
           {activeTab === 'wifi' && (
             <div className="space-y-3">
-              <div className="p-3.5 rounded-lg bg-sky-50/70 border border-sky-200 space-y-2.5">
-                <div className="flex items-center gap-1.5 text-sky-800 font-semibold text-xs">
-                  <Wifi className="w-4 h-4 text-sky-600" />
+              <div className="p-3.5 rounded-lg bg-blue-50/70 border border-blue-200 space-y-2.5">
+                <div className="flex items-center gap-1.5 text-blue-800 font-semibold text-xs">
+                  <Wifi className="w-4 h-4 text-blue-600" />
                   <span>High-Speed Optical Fiber Wi-Fi</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-sky-100">
+                <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-blue-100">
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-medium">Wi-Fi Network (SSID)</span>
                     <span className="font-semibold text-slate-900 font-mono text-xs">
@@ -211,6 +212,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
                     </span>
                   </div>
                 </div>
+
 
                 <p className="text-[11px] text-slate-500">
                   Optimized for online video lectures and research. High-volume torrents and unapproved downloads are restricted.

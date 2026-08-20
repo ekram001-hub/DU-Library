@@ -104,7 +104,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-semibold text-slate-900">Seat Details</h3>
                 {isMySeat && (
-                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-700">
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
                     My Seat
                   </span>
                 )}
@@ -113,6 +113,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                 {room ? room.name : 'Study Room'}
               </p>
             </div>
+
           </div>
 
           <button
@@ -201,12 +202,13 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   onClose();
                   onOpenBook();
                 }}
-                className="w-full py-2 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs"
+                className="w-full py-2 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs"
               >
                 <Armchair className="w-3.5 h-3.5" />
                 <span>Book This Seat</span>
               </button>
             )}
+
 
             {/* If it's my seat */}
             {isMySeat && (

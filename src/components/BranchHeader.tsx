@@ -23,7 +23,7 @@ export const BranchHeader: React.FC = () => {
             <span
               className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider text-white"
               style={{
-                backgroundColor: currentBranchId === 'bcs_study' ? '#0284c7' : '#059669',
+                backgroundColor: currentBranchId === 'bcs_study' ? '#2563eb' : '#059669',
               }}
             >
               {branchConfig.badge}
@@ -94,15 +94,15 @@ export const BranchHeader: React.FC = () => {
           </div>
 
           {/* Occupancy Rate */}
-          <div className="bg-sky-50/70 border border-sky-200/80 rounded-xl p-2.5 flex flex-col justify-between shadow-2xs">
-            <div className="flex items-center justify-between text-sky-700 mb-1">
+          <div className="bg-blue-50/70 border border-blue-200/80 rounded-xl p-2.5 flex flex-col justify-between shadow-2xs">
+            <div className="flex items-center justify-between text-blue-700 mb-1">
               <span className="text-[11px] font-semibold">Occupancy</span>
-              <Percent className="w-3.5 h-3.5 text-sky-600" />
+              <Percent className="w-3.5 h-3.5 text-blue-600" />
             </div>
-            <div className="text-lg sm:text-xl font-bold text-sky-700 font-mono">
+            <div className="text-lg sm:text-xl font-bold text-blue-700 font-mono">
               {branchStats.occupancyRate}%
             </div>
-            <div className="text-[10px] text-sky-600/90 font-medium">
+            <div className="text-[10px] text-blue-600/90 font-medium">
               {branchStats.awaySeats > 0 ? `${branchStats.awaySeats} on Break` : 'Live Flow'}
             </div>
           </div>
@@ -112,7 +112,7 @@ export const BranchHeader: React.FC = () => {
       {/* Visual Status Legend */}
       <div className="mt-4 pt-3 border-t border-slate-100 flex flex-wrap items-center justify-between gap-2 text-xs text-slate-600">
         <div className="flex items-center gap-1.5 text-slate-500 text-[11px] font-medium">
-          <Info className="w-3.5 h-3.5 text-sky-600" />
+          <Info className="w-3.5 h-3.5 text-blue-600" />
           <span>Seat Status Legend:</span>
         </div>
 
@@ -132,10 +132,11 @@ export const BranchHeader: React.FC = () => {
             <span>On Break</span>
           </div>
 
-          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white border border-sky-200 text-sky-700 text-[11px]">
-            <span className="w-2 h-2 rounded-full bg-sky-500 ring-2 ring-sky-200"></span>
+          <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white border border-blue-200 text-blue-700 text-[11px]">
+            <span className="w-2 h-2 rounded-full bg-blue-500 ring-2 ring-blue-200"></span>
             <span>My Seat</span>
           </div>
+
 
           <div className="flex items-center gap-1.5 px-2 py-0.5 rounded-md bg-white border border-pink-200 text-pink-700 text-[11px]">
             <span className="w-2 h-2 rounded-full bg-pink-500"></span>

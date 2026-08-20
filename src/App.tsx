@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
-import { Navbar } from './components/Navbar';
-import { BranchHeader } from './components/BranchHeader';
+import { PortalHome } from './components/PortalHome';
 import { SeatGrid } from './components/SeatGrid';
 import { SeatBookingModal } from './components/SeatBookingModal';
 import { StudentPassModal } from './components/StudentPassModal';
@@ -11,22 +10,19 @@ import { AuthModal } from './components/AuthModal';
 import { GuidelinesModal } from './components/GuidelinesModal';
 import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { MySeatFloatingWidget } from './components/MySeatFloatingWidget';
-import { Seat } from './types';
-import {
-  GraduationCap,
-  BookOpen,
-  Sparkles,
-  ExternalLink,
-  Facebook,
-} from 'lucide-react';
+import { Seat, BranchId } from './types';
 
 function MainApp() {
   const {
+    currentBranchId,
+    setCurrentBranchId,
     branchConfig,
     rooms,
     currentStudentSeat,
-    currentBranchId,
   } = useLibrary();
+
+  // Navigation state: 'portal' (Landing Hub, Image 1) or 'seats' (Live Seat View, Image 2)
+  const [currentView, setCurrentView] = useState<'portal' | 'seats'>('portal');
 
   // Active Selected Seat for Details/Booking
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
@@ -42,6 +38,12 @@ function MainApp() {
 
   // Active pass seat (either current student seat or newly booked seat)
   const [passSeat, setPassSeat] = useState<Seat | null>(null);
+
+  // Branch Selection from Portal
+  const handleSelectBranch = (branchId: BranchId) => {
+    setCurrentBranchId(branchId);
+    setCurrentView('seats');
+  };
 
   // Seat Click Handler
   const handleSelectSeat = (seat: Seat) => {
@@ -72,23 +74,64 @@ function MainApp() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
-      {/* Top Navigation Bar */}
-      <Navbar
-        onOpenAuth={() => setIsAuthModalOpen(true)}
-        onOpenGuidelines={() => setIsGuidelinesModalOpen(true)}
-        onOpenAdmin={() => setIsAdminModalOpen(true)}
-        onOpenMyPass={handleOpenMyPass}
-      />
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Hind_Siliguri',_'Poppins',_sans-serif] selection:bg-indigo-500 selection:text-white">
+      {currentView === 'portal' ? (
+        /* Screen 1: Portal Hub View (Matching Screenshot 1) */
+        <PortalHome
+          onSelectBranch={handleSelectBranch}
+          onOpenGuidelines={() => setIsGuidelinesModalOpen(true)}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onOpenAdmin={() => setIsAdminModalOpen(true)}
+          onOpenMyPass={handleOpenMyPass}
+        />
+      ) : (
+        /* Screen 2: Live Seat Grid View (Matching Screenshot 2) */
+        <div className="min-h-screen flex flex-col justify-between">
+          <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6">
+            <SeatGrid
+              onSelectSeat={handleSelectSeat}
+              onOpenGuidelines={() => setIsGuidelinesModalOpen(true)}
+              onOpenAuth={() => setIsAuthModalOpen(true)}
+              onOpenAdmin={() => setIsAdminModalOpen(true)}
+              onBackToHome={() => setCurrentView('portal')}
+            />
+          </main>
 
-      {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-6 space-y-6">
-        {/* Branch Banner & Live Stats Header */}
-        <BranchHeader />
-
-        {/* Real-time Interactive Seat Grid & Filters */}
-        <SeatGrid onSelectSeat={handleSelectSeat} />
-      </main>
+          {/* Bottom Footer */}
+          <footer className="mt-8 bg-white border-t border-slate-200 py-4 px-4 text-xs text-slate-500">
+            <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center">
+              <div>
+                {branchConfig.name} • {branchConfig.tagline}
+              </div>
+              <div className="flex items-center gap-3">
+                <button
+                  type="button"
+                  onClick={() => setCurrentView('portal')}
+                  className="hover:text-slate-800 font-medium transition-colors"
+                >
+                  হোম পেজ
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => setIsGuidelinesModalOpen(true)}
+                  className="hover:text-slate-800 transition-colors"
+                >
+                  নির্দেশনা
+                </button>
+                <span>•</span>
+                <button
+                  type="button"
+                  onClick={() => setIsAdminModalOpen(true)}
+                  className="hover:text-indigo-600 transition-colors"
+                >
+                  এডমিন
+                </button>
+              </div>
+            </div>
+          </footer>
+        </div>
+      )}
 
       {/* Sticky Bottom Floating Widget for Active User Seat */}
       <MySeatFloatingWidget
@@ -102,66 +145,6 @@ function MainApp() {
           setIsDetailsModalOpen(true);
         }}
       />
-
-      {/* Footer */}
-      <footer className="mt-12 bg-white border-t border-slate-200 py-6 px-4 text-xs text-slate-500">
-        <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
-          <div className="flex items-center gap-3 text-center md:text-left">
-            <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
-              {currentBranchId === 'bcs_study' ? (
-                <GraduationCap className="w-4 h-4 text-sky-600" />
-              ) : (
-                <BookOpen className="w-4 h-4 text-emerald-600" />
-              )}
-            </div>
-            <div>
-              <div className="font-semibold text-slate-800">
-                {branchConfig.name} • Smart Study Center
-              </div>
-              <div className="text-[11px] text-slate-500">
-                {branchConfig.address} • Phone: {branchConfig.phone}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-600">
-            <a
-              href={branchConfig.memorizerAppUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-amber-600 transition-colors flex items-center gap-1 font-medium text-amber-700"
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Memorizer App</span>
-              <ExternalLink className="w-3 h-3" />
-            </a>
-
-            <a
-              href={branchConfig.facebookUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="hover:text-blue-700 transition-colors flex items-center gap-1 font-medium text-blue-600"
-            >
-              <Facebook className="w-3.5 h-3.5" />
-              <span>Facebook</span>
-            </a>
-
-            <button
-              onClick={() => setIsGuidelinesModalOpen(true)}
-              className="hover:text-slate-900 transition-colors"
-            >
-              Rules & Notices
-            </button>
-
-            <button
-              onClick={() => setIsAdminModalOpen(true)}
-              className="hover:text-rose-600 transition-colors"
-            >
-              Admin Portal
-            </button>
-          </div>
-        </div>
-      </footer>
 
       {/* Modals */}
       <SeatBookingModal
@@ -223,4 +206,3 @@ export default function App() {
     </LibraryProvider>
   );
 }
-

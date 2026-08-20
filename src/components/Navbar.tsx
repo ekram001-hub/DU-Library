@@ -80,9 +80,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             </div>
 
             <div className="hidden sm:flex items-center gap-1.5 text-slate-600">
-              <Calendar className="w-3.5 h-3.5 text-sky-600" />
+              <Calendar className="w-3.5 h-3.5 text-blue-600" />
               <span>{formattedDate}</span>
             </div>
+
           </div>
 
           {/* Action Links: Memorizer App + Facebook Page */}
@@ -131,7 +132,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-xs">
                 {currentBranchId === 'bcs_study' ? (
-                  <GraduationCap className="w-5 h-5 text-sky-400" />
+                  <GraduationCap className="w-5 h-5 text-blue-400" />
                 ) : (
                   <BookOpen className="w-5 h-5 text-emerald-400" />
                 )}
@@ -158,11 +159,11 @@ export const Navbar: React.FC<NavbarProps> = ({
                 onClick={() => setCurrentBranchId('bcs_study')}
                 className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
                   currentBranchId === 'bcs_study'
-                    ? 'bg-white text-sky-700 shadow-xs border border-slate-200/60'
+                    ? 'bg-white text-blue-700 shadow-xs border border-slate-200/60'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
-                <GraduationCap className="w-3.5 h-3.5 text-sky-600" />
+                <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
                 <span>BCS Study Center</span>
               </button>
               <button
@@ -198,7 +199,7 @@ export const Navbar: React.FC<NavbarProps> = ({
               className="inline-flex items-center gap-1.5 px-2.5 sm:px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-slate-700 text-xs font-medium transition-all shadow-2xs"
               title="Guidelines & Notice Board"
             >
-              <BookMarked className="w-3.5 h-3.5 text-sky-600" />
+              <BookMarked className="w-3.5 h-3.5 text-blue-600" />
               <span className="hidden sm:inline">Rules & Notices</span>
               <span className="sm:hidden">Notices</span>
             </button>
@@ -212,9 +213,10 @@ export const Navbar: React.FC<NavbarProps> = ({
                   className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-left text-xs transition-all shadow-2xs group"
                   title="View / Edit Profile"
                 >
-                  <div className="w-6 h-6 rounded-full bg-sky-600 flex items-center justify-center text-white font-bold text-[11px]">
+                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[11px]">
                     {currentStudent.name.charAt(0)}
                   </div>
+
                   <div className="hidden sm:block">
                     <div className="font-semibold text-slate-800 group-hover:text-slate-900 line-clamp-1">
                       {currentStudent.name}
@@ -288,12 +290,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               onClick={() => setCurrentBranchId('bcs_study')}
               className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all text-center ${
                 currentBranchId === 'bcs_study'
-                  ? 'bg-white text-sky-700 shadow-xs'
+                  ? 'bg-white text-blue-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               BCS Study Center
             </button>
+
             <button
               onClick={() => setCurrentBranchId('fresh_study')}
               className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all text-center ${

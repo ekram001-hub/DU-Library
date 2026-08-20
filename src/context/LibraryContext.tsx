@@ -19,6 +19,12 @@ import {
   DEMO_STUDENTS,
   generateInitialSeats,
 } from '../data/initialData';
+import {
+  getSupabase,
+  signInWithGoogle as supabaseSignInGoogle,
+  signOutSupabase as supabaseSignOut,
+  isSupabaseConfigured,
+} from '../lib/supabase';
 
 interface LibraryContextType {
   currentBranchId: BranchId;
@@ -68,6 +74,8 @@ interface LibraryContextType {
   logoutStudent: () => void;
   demoLogin: (demoStudentId: string) => void;
   registerOrUpdateStudent: (data: Omit<StudentProfile, 'id' | 'role'>) => void;
+  signInWithGoogleAuth: () => Promise<{ error: Error | null; data?: unknown }>;
+  isSupabaseReady: boolean;
 
   // Admin Auth
   adminUser: AdminUser | null;
@@ -95,6 +103,7 @@ interface LibraryContextType {
   currentTime: Date;
 }
 
+
 const LibraryContext = createContext<LibraryContextType | undefined>(undefined);
 
 const STORAGE_KEYS = {
@@ -113,7 +122,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // 1. Current Branch
   const [currentBranchId, setCurrentBranchIdState] = useState<BranchId>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.BRANCH);
-    return saved === 'fresh_study' ? 'fresh_study' : 'bcs_study';
+    if (saved === 'central_library' || saved === 'science_library') {
+      return saved as BranchId;
+    }
+    return 'science_library';
   });
 
   const setCurrentBranchId = useCallback((id: BranchId) => {
@@ -192,8 +204,57 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Failed to parse saved student', e);
       }
     }
-    return DEMO_STUDENTS[0]; // Default to Tanvir Ahmed for instant rich experience
+    return DEMO_STUDENTS[0]; // Default to Tanvir Ahmed / Ekram Bhuiyan for instant rich experience
   });
+
+  // Supabase Auth Integration & Session Listener
+  useEffect(() => {
+    const supabase = getSupabase();
+    if (!supabase) return;
+
+    // Check existing Supabase session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session?.user) {
+        const user = session.user;
+        const meta = user.user_metadata || {};
+        const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
+        setCurrentStudent({
+          id: user.id,
+          name: fullName,
+          email: user.email || '',
+          phone: meta.phone || '',
+          studentId: `DU-${user.id.slice(0, 6).toUpperCase()}`,
+          gender: 'male',
+          role: 'student',
+          avatar: meta.avatar_url || meta.picture,
+          targetExam: 'Competitive Exam / BCS',
+        });
+      }
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      if (session?.user) {
+        const user = session.user;
+        const meta = user.user_metadata || {};
+        const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
+        setCurrentStudent({
+          id: user.id,
+          name: fullName,
+          email: user.email || '',
+          phone: meta.phone || '',
+          studentId: `DU-${user.id.slice(0, 6).toUpperCase()}`,
+          gender: 'male',
+          role: 'student',
+          avatar: meta.avatar_url || meta.picture,
+          targetExam: 'Competitive Exam / BCS',
+        });
+      }
+    });
+
+    return () => {
+      subscription.unsubscribe();
+    };
+  }, []);
 
   useEffect(() => {
     if (currentStudent) {
@@ -202,6 +263,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       localStorage.removeItem(STORAGE_KEYS.CURRENT_STUDENT);
     }
   }, [currentStudent]);
+
 
   // 6. Admin User
   const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
@@ -588,6 +650,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const logoutStudent = useCallback(() => {
     setCurrentStudent(null);
+    supabaseSignOut().catch(() => {});
+  }, []);
+
+  const signInWithGoogleAuth = useCallback(async () => {
+    return await supabaseSignInGoogle();
   }, []);
 
   const demoLogin = useCallback((demoStudentId: string) => {
@@ -605,6 +672,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setCurrentStudent(newStudent);
   }, []);
+
 
   // Admin Auth
   const loginAdmin = useCallback((email: string, pass: string): boolean => {
@@ -830,6 +898,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       logoutStudent,
       demoLogin,
       registerOrUpdateStudent,
+      signInWithGoogleAuth,
+      isSupabaseReady: isSupabaseConfigured(),
 
       adminUser,
       isAdminLoggedIn: !!adminUser,
@@ -876,6 +946,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       logoutStudent,
       demoLogin,
       registerOrUpdateStudent,
+      signInWithGoogleAuth,
       adminUser,
       loginAdmin,
       logoutAdmin,
@@ -890,6 +961,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       currentTime,
     ]
   );
+
 
   return <LibraryContext.Provider value={value}>{children}</LibraryContext.Provider>;
 };

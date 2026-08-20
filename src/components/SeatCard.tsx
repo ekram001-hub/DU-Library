@@ -1,13 +1,5 @@
 import React, { useMemo } from 'react';
-import {
-  Armchair,
-  Clock,
-  User,
-  Timer,
-  Check,
-  ChevronRight,
-  AlertCircle,
-} from 'lucide-react';
+import { Armchair, Clock, User, Timer, Check, AlertCircle } from 'lucide-react';
 import { Seat, Room } from '../types';
 import { useLibrary } from '../context/LibraryContext';
 
@@ -41,11 +33,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return {
-        expired: true,
-        text: 'Expired',
-        secondsLeft: 0,
-      };
+      return { expired: true, text: 'সময় শেষ' };
     }
 
     const totalSeconds = Math.floor(remainingMs / 1000);
@@ -54,191 +42,96 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
 
     return {
       expired: false,
-      text: `${mins}m ${secs < 10 ? '0' : ''}${secs}s`,
-      secondsLeft: totalSeconds,
+      text: `${mins}:${secs < 10 ? '0' : ''}${secs}`,
     };
   }, [seat, currentTime]);
 
-  // Format booked time
-  const bookedTimeFormatted = useMemo(() => {
-    if (!seat.bookedAt) return '';
-    const date = new Date(seat.bookedAt);
-    let hours = date.getHours();
-    const mins = date.getMinutes().toString().padStart(2, '0');
-    const ampm = hours >= 12 ? 'PM' : 'AM';
-    hours = hours % 12;
-    hours = hours ? hours : 12;
-    return `${hours}:${mins} ${ampm}`;
-  }, [seat.bookedAt]);
-
-  // Styling based on status (Clean, minimalist light mode)
-  const cardStyle = useMemo(() => {
+  // Card theme styling matching Screenshot 2
+  const statusTheme = useMemo(() => {
     if (seat.status === 'maintenance') {
       return {
-        border: 'border-slate-200 bg-slate-50 opacity-60',
-        badgeBg: 'bg-slate-100 text-slate-500 border-slate-200',
+        cardBg: 'bg-slate-100/70 border-slate-200 text-slate-400 opacity-60',
         iconColor: 'text-slate-400',
+        numColor: 'text-slate-500',
       };
     }
 
     if (isMySeat) {
       return {
-        border: 'border-sky-500 bg-sky-50/40 ring-1 ring-sky-500',
-        badgeBg: 'bg-sky-600 text-white font-medium',
-        iconColor: 'text-sky-600',
+        cardBg: 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-500 text-blue-900 shadow-xs',
+        iconColor: 'text-blue-600',
+        numColor: 'text-blue-900 font-bold',
       };
     }
 
     if (seat.status === 'away') {
       return {
-        border: 'border-amber-200 bg-amber-50/30 hover:border-amber-300',
-        badgeBg: 'bg-amber-50 text-amber-800 border-amber-200',
+        cardBg: 'bg-amber-50/90 border-amber-300 text-amber-900 shadow-2xs hover:border-amber-400',
         iconColor: 'text-amber-600',
+        numColor: 'text-amber-900 font-bold',
       };
     }
 
     if (seat.status === 'occupied') {
       return {
-        border: 'border-slate-200 bg-slate-50/60 hover:border-slate-300',
-        badgeBg: 'bg-rose-50 text-rose-700 border-rose-200',
+        cardBg: 'bg-rose-50/90 border-rose-200 text-rose-900 shadow-2xs hover:border-rose-300',
         iconColor: 'text-rose-600',
+        numColor: 'text-rose-900 font-bold',
       };
     }
 
     // Available
     return {
-      border: 'border-emerald-200 bg-white hover:border-emerald-400 hover:shadow-xs',
-      badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-200',
-      iconColor: 'text-emerald-600',
+      cardBg: 'bg-white border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/20 text-slate-700 shadow-2xs hover:shadow-xs',
+      iconColor: 'text-slate-600 group-hover:text-blue-600',
+      numColor: 'text-slate-800 group-hover:text-blue-900 font-semibold',
     };
   }, [seat.status, isMySeat]);
 
   return (
-    <div
+    <button
       id={`seat-card-${seat.seatNumber}`}
+      type="button"
       onClick={() => onSelectSeat(seat)}
-      className={`group relative rounded-lg border p-2.5 flex flex-col justify-between transition-all duration-150 cursor-pointer min-h-[118px] ${cardStyle.border}`}
+      className={`group relative aspect-square p-2 rounded-xl border flex flex-col items-center justify-center gap-1 transition-all duration-150 cursor-pointer select-none active:scale-95 ${statusTheme.cardBg}`}
+      title={`সিট ${seat.seatNumber} • ${
+        seat.status === 'available'
+          ? 'খালি (বুকিং করতে ক্লিক করুন)'
+          : seat.status === 'occupied'
+          ? `বুকড (${seat.occupantName || 'ব্যবহারকারী'})`
+          : seat.status === 'away'
+          ? 'সাময়িক বিরতি'
+          : 'মেরামত'
+      }`}
     >
-      {/* Top Bar: Seat Number, Female Reserved Badge & Status Pill */}
-      <div className="flex items-center justify-between gap-1 mb-1.5">
-        <div className="flex items-center gap-1">
-          <div className="flex items-center justify-center w-6 h-6 rounded bg-slate-100 border border-slate-200 text-slate-800 font-mono font-semibold text-[11px]">
-            {seat.seatNumber}
-          </div>
+      {/* Top right status mini badge */}
+      {isMySeat && (
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600" />
+      )}
 
-          {seat.isFemaleReserved && (
-            <span
-              className="px-1 py-0.2 rounded text-[9px] font-medium bg-pink-50 border border-pink-200 text-pink-700"
-              title="Female Reserved Seat"
-            >
-              🌸 Female
-            </span>
-          )}
-        </div>
+      {seat.status === 'away' && (
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 animate-ping" />
+      )}
+      {seat.isFemaleReserved && seat.status === 'available' && (
+        <span className="absolute top-1 left-1 text-[8px] text-pink-600">🌸</span>
+      )}
 
-        {/* Status Badge */}
-        <div>
-          {isMySeat ? (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium bg-sky-600 text-white flex items-center gap-0.5">
-              <Check className="w-2.5 h-2.5" />
-              Mine
-            </span>
-          ) : seat.status === 'available' ? (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium border bg-emerald-50 border-emerald-200 text-emerald-700">
-              Open
-            </span>
-          ) : seat.status === 'away' ? (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium border bg-amber-50 border-amber-200 text-amber-800 flex items-center gap-1">
-              <Timer className="w-2.5 h-2.5" />
-              Break
-            </span>
-          ) : seat.status === 'occupied' ? (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium border bg-rose-50 border-rose-200 text-rose-700">
-              Booked
-            </span>
-          ) : (
-            <span className="px-1.5 py-0.5 rounded text-[10px] font-medium border bg-slate-100 border-slate-200 text-slate-500">
-              Maint.
-            </span>
-          )}
-        </div>
+      {/* Armchair Icon */}
+      <div className={`transition-colors ${statusTheme.iconColor}`}>
+        <Armchair className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
       </div>
 
-      {/* Middle Body: Desk Visual + Occupant details or Available prompt */}
-      <div className="my-auto py-0.5">
-        {seat.status === 'available' ? (
-          <div className="flex flex-col items-center justify-center text-center py-1">
-            <div className="w-6 h-6 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600 mb-0.5">
-              <Armchair className="w-3 h-3" />
-            </div>
-            <div className="text-[11px] font-medium text-emerald-700">
-              Reserve Seat
-            </div>
-          </div>
-        ) : seat.status === 'away' ? (
-          <div className="space-y-0.5 bg-amber-50/60 rounded p-1.5 border border-amber-200/60">
-            <div className="flex items-center justify-between text-[11px]">
-              <span className="font-medium text-slate-800 truncate">
-                {seat.occupantName}
-              </span>
-              <span className="text-[9px] px-1 rounded bg-amber-100 text-amber-800 font-medium">
-                {seat.awayReason || 'Break'}
-              </span>
-            </div>
+      {/* Seat Number */}
+      <span className={`text-xs sm:text-sm tracking-tight ${statusTheme.numColor}`}>
+        {seat.seatNumber}
+      </span>
 
-            {/* Live Away Countdown */}
-            {awayCountdown && (
-              <div
-                className={`text-[10px] font-mono font-medium flex items-center gap-1 ${
-                  awayCountdown.expired ? 'text-rose-600' : 'text-amber-800'
-                }`}
-              >
-                <Clock className="w-2.5 h-2.5 shrink-0" />
-                <span>
-                  {awayCountdown.expired ? 'Time expired' : `Left: ${awayCountdown.text}`}
-                </span>
-              </div>
-            )}
-          </div>
-        ) : seat.status === 'occupied' ? (
-          <div className="space-y-0.5 bg-slate-100/60 rounded p-1.5 border border-slate-200/60">
-            <div className="flex items-center gap-1">
-              <div className="w-4 h-4 rounded-full bg-slate-200 flex items-center justify-center text-[9px] font-semibold text-slate-600 shrink-0">
-                {seat.occupantName ? seat.occupantName.charAt(0) : 'U'}
-              </div>
-              <span className="text-[11px] font-medium text-slate-800 truncate">
-                {seat.occupantName}
-              </span>
-            </div>
-
-            <div className="flex items-center justify-between text-[10px] text-slate-500 font-mono">
-              <span>{bookedTimeFormatted}</span>
-              {seat.targetDurationHours && (
-                <span className="text-slate-600 font-sans text-[10px]">
-                  {seat.targetDurationHours}h
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <div className="text-center py-1 text-slate-400 text-[11px] flex flex-col items-center">
-            <AlertCircle className="w-3.5 h-3.5 text-slate-400 mb-0.5" />
-            <span>Under maintenance</span>
-          </div>
-        )}
-      </div>
-
-      {/* Bottom Footer: Room tag & action hint */}
-      <div className="mt-1 pt-1 border-t border-slate-100 flex items-center justify-between text-[10px] text-slate-400">
-        <span className="truncate max-w-[90px]">
-          {room ? room.name : 'Study Room'}
+      {/* Away mini countdown if away */}
+      {seat.status === 'away' && awayCountdown && (
+        <span className="text-[9px] font-mono text-amber-700 leading-none">
+          {awayCountdown.text}
         </span>
-
-        <span className="text-slate-400 group-hover:text-slate-700 transition-colors flex items-center">
-          Details <ChevronRight className="w-2.5 h-2.5 ml-0.5" />
-        </span>
-      </div>
-    </div>
+      )}
+    </button>
   );
 };
-

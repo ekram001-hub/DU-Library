@@ -86,13 +86,13 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
             onClick={() => onSelectSeat(currentStudentSeat)}
             className="flex items-center gap-2.5 cursor-pointer group min-w-0"
           >
-            <div className="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center font-mono font-semibold text-xs text-white shadow-xs shrink-0">
+            <div className="w-8 h-8 rounded-lg bg-blue-600 flex items-center justify-center font-mono font-semibold text-xs text-white shadow-xs shrink-0">
               {currentStudentSeat.seatNumber}
             </div>
 
             <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-semibold text-xs text-slate-900 group-hover:text-sky-600 transition-colors truncate">
+                <span className="font-semibold text-xs text-slate-900 group-hover:text-blue-600 transition-colors truncate">
                   My Active Seat
                 </span>
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
@@ -102,6 +102,7 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
               </div>
             </div>
           </div>
+
 
           {/* Quick Action Buttons */}
           <div className="flex items-center gap-1 shrink-0">

@@ -87,8 +87,8 @@ export const StudentPassModal: React.FC<StudentPassModalProps> = ({
           </div>
 
           {/* Seat Number Hero Display */}
-          <div className="bg-sky-50/70 rounded-xl border border-sky-100 p-3.5 text-center">
-            <div className="text-[10px] font-semibold text-sky-700 uppercase tracking-wider">
+          <div className="bg-blue-50/70 rounded-xl border border-blue-100 p-3.5 text-center">
+            <div className="text-[10px] font-semibold text-blue-700 uppercase tracking-wider">
               Allocated Seat
             </div>
             <div className="text-3xl font-extrabold text-slate-900 font-mono my-0.5 tracking-wider">
@@ -98,6 +98,7 @@ export const StudentPassModal: React.FC<StudentPassModalProps> = ({
               {room ? room.name : 'Central Study Chamber'}
             </div>
           </div>
+
 
           {/* Student & Session Information Grid */}
           <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-xl p-3 border border-slate-100">
@@ -186,11 +187,12 @@ export const StudentPassModal: React.FC<StudentPassModalProps> = ({
           <button
             id="print-pass-btn"
             onClick={handlePrint}
-            className="flex-1 py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
+            className="flex-1 py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
           >
             <Printer className="w-3.5 h-3.5" />
             <span>Print Pass</span>
           </button>
+
         </div>
       </div>
     </div>

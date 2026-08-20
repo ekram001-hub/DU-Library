@@ -293,7 +293,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       setRoomCapacity(16);
                       setIsAddingRoom(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition-colors shadow-xs"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors shadow-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Add Room</span>
@@ -331,7 +331,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         value={roomName}
                         onChange={(e) => setRoomName(e.target.value)}
                         placeholder="e.g. Executive AC Hall 3"
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
@@ -342,7 +342,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       <select
                         value={roomCategory}
                         onChange={(e) => setRoomCategory(e.target.value as RoomCategory)}
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       >
                         <option value="general">General Study Hall</option>
                         <option value="female_only">Female Reserved</option>
@@ -363,7 +363,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           value={roomPrefix}
                           onChange={(e) => setRoomPrefix(e.target.value)}
                           placeholder="A, B, FC"
-                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-blue-500"
                         />
                       </div>
 
@@ -378,7 +378,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           max={60}
                           value={roomCapacity}
                           onChange={(e) => setRoomCapacity(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-blue-500"
                         />
                       </div>
                     </div>
@@ -392,7 +392,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         value={roomDesc}
                         onChange={(e) => setRoomDesc(e.target.value)}
                         placeholder="Quiet study hall with high-speed WiFi."
-                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       />
                     </div>
                   </div>
@@ -403,7 +403,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         type="checkbox"
                         checked={roomHasAC}
                         onChange={(e) => setRoomHasAC(e.target.checked)}
-                        className="rounded border-slate-300 text-sky-600 focus:ring-0"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-0"
                       />
                       <span>Air Conditioned</span>
                     </label>
@@ -413,7 +413,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         type="checkbox"
                         checked={roomIsSilent}
                         onChange={(e) => setRoomIsSilent(e.target.checked)}
-                        className="rounded border-slate-300 text-sky-600 focus:ring-0"
+                        className="rounded border-slate-300 text-blue-600 focus:ring-0"
                       />
                       <span>Silent Zone</span>
                     </label>
@@ -429,13 +429,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs shadow-xs"
+                      className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs shadow-xs"
                     >
                       {editingRoomId ? 'Update Room' : 'Save Room'}
                     </button>
                   </div>
                 </form>
               )}
+
 
               {/* Rooms List Table */}
               <div className="space-y-2">
@@ -522,7 +523,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <select
                       value={assignSeatId}
                       onChange={(e) => setAssignSeatId(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-blue-500"
                     >
                       <option value="">-- Choose Seat --</option>
                       {branchSeats
@@ -543,7 +544,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       placeholder="e.g. Tanvir"
                       value={assignName}
                       onChange={(e) => setAssignName(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -555,9 +556,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       placeholder="017xxxxxxxx"
                       value={assignPhone}
                       onChange={(e) => setAssignPhone(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-blue-500"
                     />
                   </div>
+
 
                   <div className="flex items-end">
                     <button
@@ -594,7 +596,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         .filter((s) => s.status === 'occupied' || s.status === 'away')
                         .map((seat) => (
                           <tr key={seat.id} className="hover:bg-slate-50">
-                            <td className="p-2 font-mono font-semibold text-sky-700">
+                            <td className="p-2 font-mono font-semibold text-blue-700">
                               {seat.seatNumber}
                             </td>
                             <td className="p-2 text-slate-800 font-medium">
@@ -685,7 +687,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           {record.studentName}
                         </td>
                         <td className="p-2 text-slate-500">{record.studentPhone}</td>
-                        <td className="p-2 text-sky-700">
+                        <td className="p-2 text-blue-700">
                           {record.seatNumber} ({record.roomName.split('(')[0]})
                         </td>
                         <td className="p-2 text-emerald-700 font-sans">
@@ -726,7 +728,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       required
                       value={fbUrl}
                       onChange={(e) => setFbUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -739,7 +741,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       required
                       value={fbPageName}
                       onChange={(e) => setFbPageName(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -751,7 +753,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       type="text"
                       value={fbFollowers}
                       onChange={(e) => setFbFollowers(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                     />
                   </div>
 
@@ -763,7 +765,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       type="url"
                       value={memoUrl}
                       onChange={(e) => setMemoUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-blue-500"
                     />
                   </div>
                 </div>
@@ -777,12 +779,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   )}
                   <button
                     type="submit"
-                    className="ml-auto px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition-colors shadow-xs"
+                    className="ml-auto px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-medium text-xs transition-colors shadow-xs"
                   >
                     Update Links
                   </button>
                 </div>
               </form>
+
 
               {/* Maintenance Tools Card */}
               <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-200 space-y-2.5">
