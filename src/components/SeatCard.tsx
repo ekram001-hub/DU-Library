@@ -58,9 +58,9 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
 
     if (isMySeat) {
       return {
-        cardBg: 'bg-blue-50/90 border-blue-400 ring-2 ring-blue-500 text-blue-900 shadow-xs',
-        iconColor: 'text-blue-600',
-        numColor: 'text-blue-900 font-bold',
+        cardBg: 'bg-emerald-50/90 border-emerald-500 ring-2 ring-emerald-500 text-emerald-950 shadow-xs',
+        iconColor: 'text-emerald-700',
+        numColor: 'text-emerald-950 font-bold',
       };
     }
 
@@ -82,9 +82,9 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
 
     // Available
     return {
-      cardBg: 'bg-white border-slate-200/90 hover:border-blue-400 hover:bg-blue-50/20 text-slate-700 shadow-2xs hover:shadow-xs',
-      iconColor: 'text-slate-600 group-hover:text-blue-600',
-      numColor: 'text-slate-800 group-hover:text-blue-900 font-semibold',
+      cardBg: 'bg-white border-slate-200/90 hover:border-emerald-400 hover:bg-emerald-50/20 text-slate-700 shadow-2xs hover:shadow-xs',
+      iconColor: 'text-slate-600 group-hover:text-emerald-700',
+      numColor: 'text-slate-800 group-hover:text-emerald-950 font-semibold',
     };
   }, [seat.status, isMySeat]);
 
@@ -106,7 +106,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
     >
       {/* Top right status mini badge */}
       {isMySeat && (
-        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-blue-600" />
+        <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-emerald-600 ring-2 ring-emerald-200" />
       )}
 
       {seat.status === 'away' && (

@@ -237,7 +237,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         console.error('Failed to parse saved student', e);
       }
     }
-    return DEMO_STUDENTS[0]; // Default to Tanvir Ahmed / Ekram Bhuiyan for instant rich experience
+    return null;
   });
 
   // Supabase Auth Integration & Session Listener

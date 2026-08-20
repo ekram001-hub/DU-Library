@@ -14,10 +14,13 @@ import {
   LogOut,
   ArrowRight,
   Zap,
+  HelpCircle,
+  ChevronDown,
+  ChevronUp,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { Gender } from '../types';
-import { fetchStudentByPhone } from '../lib/supabase';
+import { fetchStudentByPhone, signInWithGoogle, getSupabase } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -52,6 +55,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [isSearchingPhone, setIsSearchingPhone] = useState(false);
   const [phoneFound, setPhoneFound] = useState<boolean | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isGoogleLoading, setIsGoogleLoading] = useState(false);
+  const [googleError, setGoogleError] = useState<string | null>(null);
+  const [showGoogleGuide, setShowGoogleGuide] = useState(false);
 
   // Admin credentials
   const [adminEmail, setAdminEmail] = useState('admin@studycenter.com');
@@ -131,6 +137,26 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setSubmitSuccess(false);
       onClose();
     }, 400);
+  };
+
+  const handleGoogleSignIn = async () => {
+    setIsGoogleLoading(true);
+    setGoogleError(null);
+    try {
+      const { error } = await signInWithGoogle();
+      if (error) {
+        setGoogleError(
+          error.message?.includes('provider is not enabled') || error.message?.includes('Unsupported provider')
+            ? 'Supabase-এ Google Provider এখনও চালু করা হয়নি। নিচের গাইড দেখে অন করুন।'
+            : error.message || 'গুগল সাইন-ইন করতে সমস্যা হয়েছে।'
+        );
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setGoogleError(msg || 'গুগল লগইন ব্যর্থ হয়েছে।');
+    } finally {
+      setIsGoogleLoading(false);
+    }
   };
 
   const handleAdminSubmit = (e: React.FormEvent) => {
@@ -230,10 +256,110 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         )}
 
         {/* MAIN SINGLE-PAGE FORM */}
-        <div className="overflow-y-auto p-4 flex-1">
+        <div className="overflow-y-auto p-4 flex-1 space-y-4">
           {!isAdminMode ? (
-            <form onSubmit={handleStudentSubmit} className="space-y-3.5 text-xs">
-              {/* Phone Number Field with Auto-Lookup */}
+            <div className="space-y-4">
+              {/* GOOGLE SIGN IN DIV */}
+              <div id="google-login-section" className="space-y-2.5">
+                <button
+                  type="button"
+                  id="google-signin-btn"
+                  onClick={handleGoogleSignIn}
+                  disabled={isGoogleLoading}
+                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-semibold text-xs shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+                >
+                  {isGoogleLoading ? (
+                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
+                  ) : (
+                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
+                      <path
+                        fill="#4285F4"
+                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                      />
+                      <path
+                        fill="#34A853"
+                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                      />
+                      <path
+                        fill="#FBBC05"
+                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                      />
+                      <path
+                        fill="#EA4335"
+                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                      />
+                    </svg>
+                  )}
+                  <span>
+                    {isGoogleLoading ? 'গুগল সংযোগ করা হচ্ছে...' : 'Google দিয়ে সরাসরি সাইন-ইন করুন'}
+                  </span>
+                </button>
+
+                {/* Google Error Message if Provider is not yet turned on in Supabase */}
+                {googleError && (
+                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] space-y-1">
+                    <div className="flex items-center gap-1.5 font-semibold text-amber-900">
+                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
+                      <span>গুগল অথেন্টিকেশন নোটিশ:</span>
+                    </div>
+                    <p className="text-[11px] leading-relaxed">{googleError}</p>
+                  </div>
+                )}
+
+                {/* How to enable Google OAuth Toggle / Guide */}
+                <div className="rounded-xl border border-slate-200 bg-slate-50/70 overflow-hidden text-[11px]">
+                  <button
+                    type="button"
+                    onClick={() => setShowGoogleGuide(!showGoogleGuide)}
+                    className="w-full p-2.5 text-left flex items-center justify-between text-slate-700 hover:text-blue-700 font-medium transition-colors cursor-pointer"
+                  >
+                    <span className="flex items-center gap-1.5 font-semibold">
+                      <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
+                      <span>গুগল লগইন কিভাবে অন/কনফিগার করবেন?</span>
+                    </span>
+                    {showGoogleGuide ? (
+                      <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
+                    ) : (
+                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
+                    )}
+                  </button>
+
+                  {showGoogleGuide && (
+                    <div className="p-3 pt-0 border-t border-slate-200/60 text-slate-600 space-y-2 leading-relaxed">
+                      <p className="font-semibold text-slate-800">
+                        গুগল লগইন অন করার ৩টি সহজ ধাপ:
+                      </p>
+                      <ol className="list-decimal list-inside space-y-1.5 pl-0.5 text-[11px]">
+                        <li>
+                          <strong>Google Cloud Console</strong> (<a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">console.cloud.google.com</a>)-এ যান এবং একটি <strong>OAuth 2.0 Client ID</strong> (Web Application) তৈরি করুন।
+                        </li>
+                        <li>
+                          সেখানে <em>Authorized redirect URIs</em>-এ আপনার Supabase URL দিন:
+                          <div className="mt-1 p-1.5 bg-slate-900 text-emerald-400 font-mono text-[10px] rounded select-all break-all">
+                            https://mqrpjhyxfngngegetflb.supabase.co/auth/v1/callback
+                          </div>
+                        </li>
+                        <li>
+                          <strong>Supabase Dashboard</strong> &gt; <strong>Authentication</strong> &gt; <strong>Providers</strong> &gt; <strong>Google</strong>-এ গিয়ে Client ID ও Secret পেস্ট করে <strong>Enable</strong> করুন।
+                        </li>
+                      </ol>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* DIVIDER */}
+              <div className="relative flex items-center py-1">
+                <div className="flex-grow border-t border-slate-200"></div>
+                <span className="flex-shrink mx-3 text-[11px] font-semibold text-slate-400">
+                  অথবা মোবাইল নম্বর দিয়ে লগইন
+                </span>
+                <div className="flex-grow border-t border-slate-200"></div>
+              </div>
+
+              {/* Student Phone Form */}
+              <form onSubmit={handleStudentSubmit} className="space-y-3.5 text-xs">
+                {/* Phone Number Field with Auto-Lookup */}
               <div>
                 <div className="flex items-center justify-between mb-1">
                   <label className="font-semibold text-slate-800 flex items-center gap-1.5">
@@ -371,8 +497,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 </button>
               </div>
             </form>
-          ) : (
-            /* ADMIN PORTAL FORM */
+          </div>
+        ) : (
+          /* ADMIN PORTAL FORM */
             <div className="space-y-3.5 text-xs">
               {isAdminLoggedIn && adminUser ? (
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">

@@ -23,7 +23,7 @@ export const BranchHeader: React.FC = () => {
             <span
               className="px-2 py-0.5 rounded text-[11px] font-bold uppercase tracking-wider text-white"
               style={{
-                backgroundColor: currentBranchId === 'bcs_study' ? '#2563eb' : '#059669',
+                backgroundColor: currentBranchId === 'science_library' ? '#059669' : '#d97706',
               }}
             >
               {branchConfig.badge}

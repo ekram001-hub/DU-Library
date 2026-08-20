@@ -3,14 +3,12 @@ import {
   FlaskConical,
   BookOpen,
   ChevronRight,
-  Sparkles,
   FileText,
-  ExternalLink,
   ShieldCheck,
   User,
   Clock,
-  GraduationCap,
   Calendar,
+  LogIn,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { BranchId } from '../types';
@@ -64,8 +62,6 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
   const { timeStr, ampm } = formatTime(currentTime);
   const formattedDate = formatDate(currentTime);
 
-  const studentName = currentStudent?.name || 'Ekram Bhuiyan';
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between py-6 px-4 sm:px-6">
       {/* Top Header Bar */}
@@ -82,144 +78,155 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
           </div>
         </div>
 
-        {/* 1. Logged In User Pill (Top Card from Screenshot 1) */}
-        <div
-          id="portal-user-status-card"
-          onClick={onOpenAuth}
-          className="w-full bg-white hover:bg-slate-50/90 border border-slate-200/90 rounded-2xl p-3.5 shadow-xs flex items-center justify-between transition-all cursor-pointer group"
-        >
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center text-white font-bold text-base shadow-sm group-hover:scale-105 transition-transform">
-              <User className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
-                  {studentName}
-                </h3>
+        {/* 1. Logged In User Pill / Login Card */}
+        {currentStudent ? (
+          <div
+            id="portal-user-status-card"
+            onClick={onOpenAuth}
+            className="w-full bg-white hover:bg-emerald-50/40 border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-3.5 shadow-xs flex items-center justify-between transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-base shadow-2xs group-hover:scale-105 transition-transform">
+                <User className="w-5 h-5" />
               </div>
-              <p className="text-xs text-emerald-600 font-medium">
-                লগইন করা আছে (স্বাগতম)
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
+                    {currentStudent.name}
+                  </h3>
+                  {isAdminLoggedIn && (
+                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                      Admin
+                    </span>
+                  )}
+                </div>
+                <p className="text-xs text-emerald-700 font-medium">
+                  {currentStudent.phone} • লগইন করা আছে
+                </p>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-2">
+              {currentStudentSeat && (
+                <button
+                  type="button"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onOpenMyPass();
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold"
+                >
+                  সিট #{currentStudentSeat.seatNumber}
+                </button>
+              )}
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold tracking-wide">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Active
+              </span>
             </div>
           </div>
+        ) : (
+          <div
+            id="portal-user-status-card"
+            onClick={onOpenAuth}
+            className="w-full bg-white hover:bg-emerald-50/50 border border-slate-200/90 hover:border-emerald-400 rounded-2xl p-3.5 shadow-xs flex items-center justify-between transition-all cursor-pointer group"
+          >
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-emerald-700 flex items-center justify-center text-white font-bold text-base shadow-sm group-hover:scale-105 transition-transform">
+                <LogIn className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
+                  লগ ইন করুন
+                </h3>
+                <p className="text-xs text-slate-500 font-medium">
+                  মোবাইল নম্বর ও তথ্য দিয়ে প্রবেশ বা প্রোফাইল তৈরি করুন
+                </p>
+              </div>
+            </div>
 
-          <div className="flex items-center gap-2">
-            {currentStudentSeat && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onOpenMyPass();
-                }}
-                className="px-2.5 py-1 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 text-xs font-semibold"
-              >
-                সিট #{currentStudentSeat.seatNumber}
-              </button>
-            )}
-            <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold tracking-wide">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Active
-            </span>
+            <div className="flex items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold tracking-wide shadow-xs transition-all group-hover:shadow-sm">
+                <LogIn className="w-3.5 h-3.5" />
+                <span>লগ ইন করুন</span>
+              </span>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
-      {/* Main Content Area: Branches & Ecosystem (Matching Screenshot 1) */}
+      {/* Main Content Area: Branches & Ecosystem (Matching the Scientific Botanical Teal & Honey Amber Aesthetic) */}
       <main className="max-w-xl mx-auto w-full space-y-4">
-        {/* 2. Branch 1: সাইন্স লাইব্রেরি (Vibrant Amber/Orange Gradient Card) */}
+        {/* 2. Branch 1: সাইন্স লাইব্রেরি (Rich Botanical Emerald Teal Gradient) */}
         <button
           id="btn-portal-branch-science"
           type="button"
           onClick={() => onSelectBranch('science_library')}
-          className="w-full text-left bg-gradient-to-r from-amber-500 via-orange-500 to-orange-600 hover:from-amber-600 hover:via-orange-600 hover:to-orange-700 text-white p-4 sm:p-5 rounded-2xl shadow-md hover:shadow-lg transition-all transform active:scale-[0.99] flex items-center justify-between group cursor-pointer"
+          className="w-full text-left bg-gradient-to-r from-emerald-800 via-teal-800 to-emerald-900 hover:from-emerald-900 hover:via-teal-900 hover:to-emerald-950 text-white p-4 sm:p-5 rounded-2xl shadow-md hover:shadow-lg transition-all transform active:scale-[0.99] flex items-center justify-between group cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white shadow-inner group-hover:scale-105 transition-transform">
-              <FlaskConical className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-emerald-300 shadow-inner group-hover:scale-105 transition-transform border border-white/10">
+              <FlaskConical className="w-6 h-6 text-emerald-200" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                সাইন্স লাইব্রেরি
-              </h2>
-              <p className="text-xs sm:text-sm text-orange-100/90 font-normal mt-0.5">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                  সাইন্স লাইব্রেরি
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-semibold border border-emerald-300/30">
+                  Science
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-emerald-100/90 font-normal mt-0.5">
                 সিট বুকিং • সকাল ৮:০০ — রাত ১০:০০
               </p>
             </div>
           </div>
 
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:bg-white/30 group-hover:translate-x-1 transition-all">
+          <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-emerald-200 group-hover:bg-white/25 group-hover:translate-x-1 transition-all border border-white/10">
             <ChevronRight className="w-6 h-6" />
           </div>
         </button>
 
-        {/* 3. Branch 2: সেন্ট্রাল লাইব্রেরি (Vibrant Fiery Red-Orange Gradient Card) */}
+        {/* 3. Branch 2: সেন্ট্রাল লাইব্রেরি (Warm Honey Amber & Tangerine Gradient) */}
         <button
           id="btn-portal-branch-central"
           type="button"
           onClick={() => onSelectBranch('central_library')}
-          className="w-full text-left bg-gradient-to-r from-orange-600 via-rose-600 to-red-600 hover:from-orange-700 hover:via-rose-700 hover:to-red-700 text-white p-4 sm:p-5 rounded-2xl shadow-md hover:shadow-lg transition-all transform active:scale-[0.99] flex items-center justify-between group cursor-pointer"
+          className="w-full text-left bg-gradient-to-r from-amber-600 via-amber-700 to-yellow-700 hover:from-amber-700 hover:via-amber-800 hover:to-yellow-800 text-white p-4 sm:p-5 rounded-2xl shadow-md hover:shadow-lg transition-all transform active:scale-[0.99] flex items-center justify-between group cursor-pointer"
         >
           <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-xl bg-white/20 backdrop-blur-xs flex items-center justify-center text-white shadow-inner group-hover:scale-105 transition-transform">
-              <BookOpen className="w-6 h-6 text-white" />
+            <div className="w-12 h-12 rounded-xl bg-white/15 backdrop-blur-xs flex items-center justify-center text-amber-200 shadow-inner group-hover:scale-105 transition-transform border border-white/10">
+              <BookOpen className="w-6 h-6 text-amber-200" />
             </div>
             <div>
-              <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                সেন্ট্রাল লাইব্রেরি
-              </h2>
-              <p className="text-xs sm:text-sm text-rose-100/90 font-normal mt-0.5">
+              <div className="flex items-center gap-2">
+                <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
+                  সেন্ট্রাল লাইব্রেরি
+                </h2>
+                <span className="px-2 py-0.5 rounded-full bg-amber-300/20 text-amber-100 text-[10px] font-semibold border border-amber-300/30">
+                  Central
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm text-amber-100/90 font-normal mt-0.5">
                 সিট বুকিং • সকাল ৮:০০ — রাত ১০:০০
               </p>
             </div>
           </div>
 
-          <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center text-white group-hover:bg-white/30 group-hover:translate-x-1 transition-all">
+          <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-amber-200 group-hover:bg-white/25 group-hover:translate-x-1 transition-all border border-white/10">
             <ChevronRight className="w-6 h-6" />
           </div>
         </button>
 
-        {/* 4. Memorizer Study Room Card (Dark Emerald/Teal Modern Banner) */}
-        <a
-          id="memorizer-study-room-card"
-          href="https://ais-dev-xeniqwh76n7spkxw2xk4sw-1047076485341.asia-southeast1.run.app"
-          target="_blank"
-          rel="noopener noreferrer"
-          className="block w-full bg-gradient-to-br from-emerald-800 via-teal-900 to-slate-900 text-white p-4 sm:p-5 rounded-2xl shadow-md hover:shadow-lg transition-all group relative overflow-hidden"
-        >
-          {/* Subtle glow circle decoration */}
-          <div className="absolute -right-8 -bottom-8 w-32 h-32 bg-emerald-500/20 rounded-full blur-xl pointer-events-none" />
-
-          <div className="flex items-start justify-between">
-            <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-white/15 backdrop-blur-xs text-[11px] font-semibold text-emerald-200">
-                <GraduationCap className="w-3.5 h-3.5" />
-                <span>Study Room</span>
-              </div>
-
-              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2 group-hover:text-emerald-300 transition-colors">
-                Memorizer-bd <span className="group-hover:translate-x-1 transition-transform">→</span>
-              </h3>
-
-              <p className="text-xs sm:text-sm text-emerald-100/80 font-normal">
-                স্মার্ট স্টাডি, ফ্ল্যাশকার্ড ও কুইজ প্র্যাকটিস
-              </p>
-            </div>
-
-            <div className="w-9 h-9 rounded-xl bg-white/10 flex items-center justify-center text-emerald-300 group-hover:bg-white/20 transition-all">
-              <ExternalLink className="w-4 h-4" />
-            </div>
-          </div>
-        </a>
-
-        {/* 5. Action Buttons (Side-by-side: Guidelines & Follow Facebook) */}
+        {/* 4. Action Buttons (Side-by-side: Guidelines & Follow Facebook) */}
         <div className="grid grid-cols-2 gap-3 pt-1">
           {/* Guidelines Button */}
           <button
             id="btn-portal-guidelines"
             type="button"
             onClick={onOpenGuidelines}
-            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-200 text-amber-900 font-semibold text-sm transition-all shadow-2xs"
+            className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-200 text-amber-900 font-semibold text-sm transition-all shadow-2xs cursor-pointer"
           >
             <FileText className="w-4 h-4 text-amber-700" />
             <span>নির্দেশনা</span>
@@ -238,49 +245,6 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
             </svg>
             <span>Follow Facebook</span>
           </a>
-        </div>
-
-        {/* 6. Section Divider */}
-        <div className="relative flex py-3 items-center">
-          <div className="flex-grow border-t border-slate-200"></div>
-          <span className="flex-shrink mx-3 text-xs font-semibold text-slate-500 uppercase tracking-wider">
-            লার্নিং মেথডোলজি ও ডেমো
-          </span>
-          <div className="flex-grow border-t border-slate-200"></div>
-        </div>
-
-        {/* 7. Memorizer Learning Ecosystem Feature Card */}
-        <div
-          id="portal-ecosystem-card"
-          className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs space-y-3.5"
-        >
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-50 border border-indigo-100 text-indigo-700 text-xs font-semibold">
-            <Sparkles className="w-3.5 h-3.5 text-indigo-600" />
-            <span>মেমোরাইজার লার্নিং ইকোসিস্টেম</span>
-          </div>
-
-          <h3 className="text-base sm:text-lg font-bold text-slate-900 leading-snug">
-            স্মার্ট স্টাডি মেথডোলজি ও পূর্ণাঙ্গ প্র্যাকটিস
-          </h3>
-
-          <p className="text-xs sm:text-sm text-slate-600 leading-relaxed">
-            গল্প, আন্তর্জাতিক সম্পাদকীয়, ফ্ল্যাশকার্ড ও ৬+ গেম প্র্যাকটিসের মাধ্যমে ভোকাবুলারি মনে রাখার আধুনিক সমাধান।
-          </p>
-
-          <div className="pt-1">
-            <a
-              href="https://facebook.com"
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex items-center justify-center gap-2 py-2 px-4 rounded-xl bg-[#1877F2] hover:bg-[#166fe5] text-white font-medium text-xs transition-all shadow-2xs"
-            >
-              <svg className="w-3.5 h-3.5 fill-current" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-              <span>Follow Facebook</span>
-              <ExternalLink className="w-3 h-3 ml-0.5 opacity-80" />
-            </a>
-          </div>
         </div>
       </main>
 

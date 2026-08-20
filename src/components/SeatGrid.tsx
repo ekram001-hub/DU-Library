@@ -166,7 +166,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
             onClick={() => setSelectedRoomTab('all')}
             className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all ${
               selectedRoomTab === 'all'
-                ? 'bg-blue-600 text-white shadow-xs'
+                ? 'bg-emerald-700 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
             }`}
           >
@@ -187,7 +187,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
                 onClick={() => setSelectedRoomTab(room.id)}
                 className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all ${
                   selectedRoomTab === room.id
-                    ? 'bg-blue-600 text-white shadow-xs font-semibold'
+                    ? 'bg-emerald-700 text-white shadow-xs font-semibold'
                     : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
                 }`}
               >
@@ -205,7 +205,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="সিট নং খুঁজুন..."
-            className="w-full pl-9 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-blue-500 focus:bg-white transition-colors"
+            className="w-full pl-9 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
           />
           {searchQuery && (
             <button
@@ -218,15 +218,15 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         </div>
       </div>
 
-      {/* 3. 5 Quick Metric Summary Cards (Matching Screenshot 2) */}
+      {/* 3. 5 Quick Metric Summary Cards */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
         {/* Available */}
-        <div className="bg-slate-100/90 border border-slate-200/80 rounded-xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-slate-700">
-            <Armchair className="w-4 h-4 text-slate-500" />
+        <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-emerald-800">
+            <Armchair className="w-4 h-4 text-emerald-600" />
             <span className="text-xs font-semibold">খালি</span>
           </div>
-          <span className="text-sm font-bold text-slate-900 font-mono">
+          <span className="text-sm font-bold text-emerald-900 font-mono">
             {availableCount}
           </span>
         </div>
@@ -265,18 +265,18 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         </div>
 
         {/* Total */}
-        <div className="bg-blue-50/90 border border-blue-200/80 rounded-xl p-3 flex items-center justify-between col-span-2 sm:col-span-1">
-          <div className="flex items-center gap-2 text-blue-900">
-            <BarChart2 className="w-4 h-4 text-blue-600" />
+        <div className="bg-teal-50/90 border border-teal-200/80 rounded-xl p-3 flex items-center justify-between col-span-2 sm:col-span-1">
+          <div className="flex items-center gap-2 text-teal-900">
+            <BarChart2 className="w-4 h-4 text-teal-700" />
             <span className="text-xs font-semibold">মোট সিট</span>
           </div>
-          <span className="text-sm font-bold text-blue-900 font-mono">
+          <span className="text-sm font-bold text-teal-950 font-mono">
             {totalCount}
           </span>
         </div>
       </div>
 
-      {/* 4. Multi-Room Grid Boxes (Matching Screenshot 2) */}
+      {/* 4. Multi-Room Grid Boxes */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {roomsToRender.map((room) => {
           const roomSeats = filteredSeats.filter((s) => s.roomId === room.id);
@@ -294,7 +294,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
               {/* Room Header with badges */}
               <div className="flex items-center justify-between pb-2 border-b border-slate-100">
                 <div className="flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-blue-600" />
+                  <Building2 className="w-4 h-4 text-emerald-700" />
                   <h3 className="font-bold text-slate-900 text-sm sm:text-base">
                     {room.name}
                   </h3>
