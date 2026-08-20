@@ -4,11 +4,11 @@ export const BRANCHES_DATA: Record<string, BranchConfig> = {
   bcs_study: {
     id: 'bcs_study',
     name: 'BCS Study Center',
-    bengaliName: 'বিসিএস স্টাডি সেন্টার',
+    bengaliName: 'BCS Study Center',
     tagline: 'Premier Dedicated Study Hub for BCS & Govt Job Aspirants',
-    bengaliTagline: 'বিসিএস ও সরকারি চাকরির প্রস্তুতি শিক্ষার্থীদের সেরা অধ্যয়ন কেন্দ্র',
+    bengaliTagline: 'Premier Dedicated Study Hub for BCS & Govt Job Aspirants',
     address: 'Nilkhet - Katabon Road, Dhaka-1205 (Opposite Dhaka University)',
-    bengaliAddress: 'নীলক্ষেত - কাটাবন রোড, ঢাকা-১২০৫ (ঢাকা বিশ্ববিদ্যালয়ের বিপরীতে)',
+    bengaliAddress: 'Nilkhet - Katabon Road, Dhaka-1205 (Opposite Dhaka University)',
     phone: '+880 1711-234567',
     email: 'contact@bcsstudycenter.bd',
     facebookUrl: 'https://facebook.com/BCSStudyCenterOfficial',
@@ -21,11 +21,11 @@ export const BRANCHES_DATA: Record<string, BranchConfig> = {
   fresh_study: {
     id: 'fresh_study',
     name: 'Fresh Study Library',
-    bengaliName: 'ফ্রেশ স্টাডি লাইব্রেরি',
+    bengaliName: 'Fresh Study Library',
     tagline: 'Peaceful, Modern & Tech-Enabled 24/7 Smart Study Space',
-    bengaliTagline: 'শান্ত, আধুনিক ও নিরিবিলি ২৪/৭ স্মার্ট স্টাডি লাইব্রেরি',
+    bengaliTagline: 'Peaceful, Modern & Tech-Enabled 24/7 Smart Study Space',
     address: 'Farmgate, Green Road, Tejgaon, Dhaka-1215',
-    bengaliAddress: 'ফার্মগেট, গ্রিন রোড, তেজগাঁও, ঢাকা-১২১৫',
+    bengaliAddress: 'Farmgate, Green Road, Tejgaon, Dhaka-1215',
     phone: '+880 1812-987654',
     email: 'help@freshstudylibrary.com',
     facebookUrl: 'https://facebook.com/FreshStudyLibraryBD',
@@ -43,12 +43,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'bcs_room_1',
     branchId: 'bcs_study',
     name: 'Main Silent Hall (Room 1)',
-    bengaliName: 'প্রধান নীরব অধ্যয়ন কক্ষ (রুম ১)',
+    bengaliName: 'Main Silent Hall (Room 1)',
     category: 'silent_zone',
     seatPrefix: 'A',
     capacity: 20,
     description: 'Pin-drop silence hall with high-speed WiFi, dedicated LED study lamp & individual charging ports.',
-    bengaliDescription: 'সম্পূর্ণ নীরব পরিবেশ, দ্রুতগতির ওয়াইফাই, আলাদা চার্জিং পোর্ট ও ব্যক্তিগত রিডিং ল্যাম্প সুবিধা।',
+    bengaliDescription: 'Pin-drop silence hall with high-speed WiFi, dedicated LED study lamp & individual charging ports.',
     hasAC: true,
     isSilent: true,
   },
@@ -56,12 +56,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'bcs_room_2',
     branchId: 'bcs_study',
     name: 'AC Premium Reading Room (Room 2)',
-    bengaliName: 'এসি প্রিমিয়াম রিডিং রুম (রুম ২)',
+    bengaliName: 'AC Premium Reading Room (Room 2)',
     category: 'ac_hall',
     seatPrefix: 'B',
     capacity: 16,
     description: 'Centrally air-conditioned executive study desks with ergonomic high-back chairs.',
-    bengaliDescription: 'সেন্ট্রাল এয়ার কন্ডিশনড এক্সিকিউটিভ ডেস্ক এবং আরামদায়ক চেয়ার।',
+    bengaliDescription: 'Centrally air-conditioned executive study desks with ergonomic high-back chairs.',
     hasAC: true,
     isSilent: true,
   },
@@ -69,12 +69,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'bcs_room_3',
     branchId: 'bcs_study',
     name: "Women's Reserved Zone (Room 3)",
-    bengaliName: 'মহিলা সংরক্ষিত কর্নার (রুম ৩)',
+    bengaliName: "Women's Reserved Zone (Room 3)",
     category: 'female_only',
     seatPrefix: 'FC',
     capacity: 14,
     description: "Private, safe & quiet dedicated study hall exclusively for female students & aspirants.",
-    bengaliDescription: 'নারী শিক্ষার্থীদের জন্য সম্পূর্ণ নিরাপদ, মার্জিত ও সংরক্ষিত অধ্যয়ন ফ্লোর।',
+    bengaliDescription: "Private, safe & quiet dedicated study hall exclusively for female students & aspirants.",
     hasAC: true,
     isSilent: true,
   },
@@ -82,12 +82,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'bcs_room_4',
     branchId: 'bcs_study',
     name: 'Group Discussion & Mock Room (Room 4)',
-    bengaliName: 'গ্রুপ ডিসকাশন ও মক টেস্ট রুম (রুম ৪)',
+    bengaliName: 'Group Discussion & Mock Room (Room 4)',
     category: 'discussion',
     seatPrefix: 'D',
     capacity: 12,
     description: 'Sound-isolated room for collective problem solving, viva practice & mock test discussions.',
-    bengaliDescription: 'বিসিএস ভাইভা প্র্যাকটিস, গ্রুপ ডিসকাশন ও আলোচনার জন্য বিশেষ কক্ষ।',
+    bengaliDescription: 'Sound-isolated room for collective problem solving, viva practice & mock test discussions.',
     hasAC: true,
     isSilent: false,
   },
@@ -97,12 +97,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'fresh_room_1',
     branchId: 'fresh_study',
     name: 'Central Study Floor (Hall A)',
-    bengaliName: 'কেন্দ্রীয় অধ্যয়ন ফ্লোর (হল এ)',
+    bengaliName: 'Central Study Floor (Hall A)',
     category: 'general',
     seatPrefix: 'FS-A',
     capacity: 18,
     description: 'Spacious study hall with wide wooden cubicles, filtered water & continuous power backup.',
-    bengaliDescription: 'প্রশস্ত কাঠের কিউবিকল, ফিল্টার্ড পানির সুবিধা এবং নিরবচ্ছিন্ন বিদ্যুৎ ব্যাকআপ।',
+    bengaliDescription: 'Spacious study hall with wide wooden cubicles, filtered water & continuous power backup.',
     hasAC: true,
     isSilent: true,
   },
@@ -110,12 +110,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'fresh_room_2',
     branchId: 'fresh_study',
     name: 'Executive AC Chamber (Hall B)',
-    bengaliName: 'এক্সিকিউটিভ এসি চেম্বার (হল বি)',
+    bengaliName: 'Executive AC Chamber (Hall B)',
     category: 'ac_hall',
     seatPrefix: 'FS-B',
     capacity: 14,
     description: 'Chilled ambient room designed for deep concentration with noise isolation.',
-    bengaliDescription: 'গভীর মনোযোগ ও নিরবচ্ছিন্ন স্টাডির জন্য তৈরি সাউন্ড-আইসোলেটেড চেম্বার।',
+    bengaliDescription: 'Chilled ambient room designed for deep concentration with noise isolation.',
     hasAC: true,
     isSilent: true,
   },
@@ -123,12 +123,12 @@ export const INITIAL_ROOMS: Room[] = [
     id: 'fresh_room_3',
     branchId: 'fresh_study',
     name: "Women's Comfort Zone (Hall C)",
-    bengaliName: 'মহিলা কমফোর্ট জোন (হল সি)',
+    bengaliName: "Women's Comfort Zone (Hall C)",
     category: 'female_only',
     seatPrefix: 'FS-W',
     capacity: 12,
     description: "Dedicated peaceful area reserved strictly for female readers & job candidates.",
-    bengaliDescription: 'মহিলা প্রার্থীদের জন্য সংরক্ষিত শান্ত পরিবেশ ও নিরিবিলি সিট ব্যবস্থা।',
+    bengaliDescription: "Dedicated peaceful area reserved strictly for female readers & job candidates.",
     hasAC: true,
     isSilent: true,
   },
@@ -183,8 +183,7 @@ export function generateInitialSeats(): Seat[] {
       const seatNumber = `${room.seatPrefix}-${seatNumPadded}`;
       const seatId = `${room.id}_seat_${i}`;
 
-      // Create realistic initial states:
-      // In Room 1: A-01 to A-04 occupied, A-05 away, A-06 onwards available
+      // Create realistic initial states
       let status: Seat['status'] = 'available';
       let occupantName: string | undefined;
       let occupantPhone: string | undefined;
@@ -205,7 +204,7 @@ export function generateInitialSeats(): Seat[] {
           occupantPhone = '01715******';
           studentId = 'BCS-47-101';
           occupantGender = 'male';
-          bookedAt = now - 2.5 * 3600 * 1000; // 2.5 hours ago
+          bookedAt = now - 2.5 * 3600 * 1000;
           targetDurationHours = 6;
           expectedLeaveAt = bookedAt + 6 * 3600 * 1000;
           passCode = 'PASS-BCS-08191';
@@ -228,8 +227,8 @@ export function generateInitialSeats(): Seat[] {
           bookedAt = now - 3 * 3600 * 1000;
           targetDurationHours = 8;
           expectedLeaveAt = bookedAt + 8 * 3600 * 1000;
-          awaySince = now - 8 * 60 * 1000; // 8 mins ago
-          awayDurationMinutes = 30; // 30 min break
+          awaySince = now - 8 * 60 * 1000;
+          awayDurationMinutes = 30;
           awayReason = 'Prayer';
           passCode = 'PASS-BCS-08193';
         } else if (i === 4) {
@@ -373,9 +372,9 @@ export const INITIAL_NOTICES: LibraryNotice[] = [
   {
     id: 'notice_1',
     title: 'Daily Auto-Reset Policy & Seat Booking Guidelines',
-    bengaliTitle: 'দৈনিক অটো-রিসেট পলিসি ও সিট বুকিং সংক্রান্ত বিশেষ নির্দেশনা',
+    bengaliTitle: 'Daily Auto-Reset Policy & Seat Booking Guidelines',
     content: 'All study center seats are cleared nightly at 11:59 PM to ensure fair access for morning learners. Please release your seat whenever leaving permanently.',
-    bengaliContent: 'প্রতিদিন রাত ১১:৫৯ মিনিটে সকল সিট স্বয়ংক্রিয়ভাবে রিসেট হয় যাতে সকালের শিক্ষার্থীরা নতুন করে সিট বুক করতে পারেন। লাইব্রেরি ত্যাগের সময় অবশ্যই সিট রিলিজ করুন।',
+    bengaliContent: 'All study center seats are cleared nightly at 11:59 PM to ensure fair access for morning learners. Please release your seat whenever leaving permanently.',
     date: '2026-08-20',
     priority: 'urgent',
     targetBranch: 'all',
@@ -384,9 +383,9 @@ export const INITIAL_NOTICES: LibraryNotice[] = [
   {
     id: 'notice_2',
     title: 'Strict Silence Protocol in Silent Halls & AC Rooms',
-    bengaliTitle: 'সাইলেন্ট হল ও এসি রুমে মোবাইল সাইলেন্ট ও নীরবতা বজায় রাখুন',
+    bengaliTitle: 'Strict Silence Protocol in Silent Halls & AC Rooms',
     content: 'Phone calls and whisper conversations are strictly prohibited inside Silent Rooms (A & B halls). Use the cafeteria/lounge for urgent calls.',
-    bengaliContent: 'নীরব অধ্যয়ন কক্ষে ও এসি হলে মোবাইল ফোন বাধ্যতামূলক সাইলেন্ট রাখুন। ফোনে কথা বলার জন্য লাউঞ্জ বা করিডোর ব্যবহার করুন।',
+    bengaliContent: 'Phone calls and whisper conversations are strictly prohibited inside Silent Rooms (A & B halls). Use the cafeteria/lounge for urgent calls.',
     date: '2026-08-19',
     priority: 'guideline',
     targetBranch: 'all',
@@ -395,9 +394,9 @@ export const INITIAL_NOTICES: LibraryNotice[] = [
   {
     id: 'notice_3',
     title: '47th BCS Preliminary Special Mock Test Series Schedule',
-    bengaliTitle: '৪৭তম বিসিএস প্রিলিমিনারি স্পেশাল মক টেস্ট শিডিউল',
+    bengaliTitle: '47th BCS Preliminary Special Mock Test Series Schedule',
     content: 'Mock tests will be held every Friday and Monday at Room 4 (Discussion Corner). Registered members can book discussion seats.',
-    bengaliContent: 'প্রতি শুক্র ও সোমবার রুম ৪-এ বিসিএস মডেল টেস্ট ও স্পেশাল ভাইভা মক সেশন অনুষ্ঠিত হবে।',
+    bengaliContent: 'Mock tests will be held every Friday and Monday at Room 4 (Discussion Corner). Registered members can book discussion seats.',
     date: '2026-08-18',
     priority: 'info',
     targetBranch: 'bcs_study',
@@ -406,12 +405,13 @@ export const INITIAL_NOTICES: LibraryNotice[] = [
   {
     id: 'notice_4',
     title: "High-Speed 5G Optical Fiber Wi-Fi Upgrade Completed",
-    bengaliTitle: 'উচ্চগতির ৫জি অপটিক্যাল ফাইবার ওয়াইফাই সংযোগ সচল',
+    bengaliTitle: "High-Speed 5G Optical Fiber Wi-Fi Upgrade Completed",
     content: 'High-speed seamless internet is now active with backup ISP. Check the notice board for latest Wi-Fi password.',
-    bengaliContent: 'নিরবচ্ছিন্ন পড়াশোনার স্বার্থে হাই-স্পিড অপটিক্যাল ফাইবার সংযোগ আপগ্রেড করা হয়েছে। পাসওয়ার্ড নোটিশ বোর্ডে দেওয়া আছে।',
+    bengaliContent: 'High-speed seamless internet is now active with backup ISP. Check the notice board for latest Wi-Fi password.',
     date: '2026-08-15',
     priority: 'info',
     targetBranch: 'fresh_study',
     author: 'IT Support Team',
   },
 ];
+

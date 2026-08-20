@@ -32,117 +32,117 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-2xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-xl rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden max-h-[85vh] flex flex-col">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-sky-600/20 border border-sky-500/40 flex items-center justify-center text-sky-400">
-              <BookOpen className="w-5 h-5" />
+        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-sky-50 border border-sky-200 flex items-center justify-center text-sky-600">
+              <BookOpen className="w-4 h-4" />
             </div>
             <div>
-              <h3 className="text-base sm:text-lg font-bold text-white">
-                নিয়মাবলী, নোটিশ বোর্ড ও ওয়াইফাই গাইডলাইন
+              <h3 className="text-sm font-semibold text-slate-900">
+                Guidelines, Notices & Amenities
               </h3>
-              <p className="text-xs text-slate-400">
-                {branchConfig.bengaliName} • Guidelines & Rules
+              <p className="text-xs text-slate-500">
+                {branchConfig.name} • Rules & Facilities
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Switcher */}
-        <div className="flex border-b border-slate-800 bg-slate-950/60 p-2 gap-2 shrink-0">
+        <div className="flex border-b border-slate-100 bg-slate-50/50 p-1.5 gap-1.5 shrink-0">
           <button
             onClick={() => setActiveTab('rules')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === 'rules'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <BookOpen className="w-3.5 h-3.5" />
-            <span>লাইব্রেরি আচরণবিধি (Rules)</span>
+            <span>Code of Conduct</span>
           </button>
 
           <button
             onClick={() => setActiveTab('notices')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === 'notices'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Bell className="w-3.5 h-3.5" />
-            <span>নোটিশ বোর্ড ({branchNotices.length})</span>
+            <span>Notice Board ({branchNotices.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('wifi')}
-            className={`flex-1 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all flex items-center justify-center gap-1.5 ${
+            className={`flex-1 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors flex items-center justify-center gap-1.5 ${
               activeTab === 'wifi'
-                ? 'bg-sky-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Wifi className="w-3.5 h-3.5" />
-            <span>ওয়াইফাই ও সুবিধাসমূহ</span>
+            <span>Wi-Fi & Facilities</span>
           </button>
         </div>
 
-        {/* Tab Content Container (Scrollable) */}
-        <div className="p-5 overflow-y-auto space-y-4 text-xs text-slate-300 scrollbar-thin">
+        {/* Tab Content Container */}
+        <div className="p-4 overflow-y-auto space-y-3 text-xs text-slate-600">
           {/* Tab 1: Rules & Guidelines */}
           {activeTab === 'rules' && (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {/* Rule Card 1 */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-100 flex items-center gap-2">
-                  <VolumeX className="w-4 h-4 text-rose-400" />
-                  <span>১. সম্পূর্ণ নীরবতা ও মোবাইল সাইলেন্ট পলিসি</span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-2">
+                  <VolumeX className="w-4 h-4 text-rose-500" />
+                  <span>1. Absolute Silence & Phone Etiquette</span>
                 </div>
-                <p className="text-slate-400 pl-6 leading-relaxed">
-                  স্টাডি রুমে প্রবেশের সাথে সাথে মোবাইল ফোন বাধ্যতামূলকভাবে সাইলেন্ট বা ভাইব্রেশন মোডে রাখতে হবে। রুমে কোনো প্রকার ফিসফিস করে কথা বলা বা ফোনে রিংটোন বাজানো সম্পূর্ণ নিষিদ্ধ। জরুরি ফোন রিসিভের জন্য লাউঞ্জ বা করিডোর ব্যবহার করুন।
+                <p className="text-slate-500 pl-6 leading-relaxed">
+                  Mobile phones must strictly be set to silent or vibration mode inside study chambers. Whispering, phone calls, or audible alarms are strictly prohibited. Use the common lounge for urgent calls.
                 </p>
               </div>
 
               {/* Rule Card 2 */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-100 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-400" />
-                  <span>২. বিরতি টাইমার ও সিট বুকিং নিয়মাবলী</span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Clock className="w-4 h-4 text-amber-500" />
+                  <span>2. Away Timer & Seat Policy</span>
                 </div>
-                <p className="text-slate-400 pl-6 leading-relaxed">
-                  নামায, খাবার বা চা পানের জন্য বাইরে যাওয়ার সময় অ্যাপের "বিরতি নিন (Away Timer)" ব্যবহার করুন। বিরতির নির্ধারিত সময় (১৫-৬০ মিনিট) অতিক্রম হলে সিটটি স্বয়ংক্রিয়ভাবে ফাঁকা হয়ে যেতে পারে। স্টাডি সেশন সমাপ্ত হলে অবশ্যই "সিট ত্যাগ করুন" বাটনে ক্লিক করুন।
+                <p className="text-slate-500 pl-6 leading-relaxed">
+                  Always activate the "Away Timer" when stepping out for prayers, meals, or short breaks (15-60 mins). When you leave for the day, please click "Release Seat" to keep seats available for fellow students.
                 </p>
               </div>
 
               {/* Rule Card 3 */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-100 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-pink-400" />
-                  <span>৩. মহিলা সংরক্ষিত কর্নার (Female-Only Area)</span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Heart className="w-4 h-4 text-pink-500" />
+                  <span>3. Female-Reserved Area</span>
                 </div>
-                <p className="text-slate-400 pl-6 leading-relaxed">
-                  মহিলা সংরক্ষিত কক্ষ বা কর্নারগুলোতে শুধুমাত্র নারী শিক্ষার্থীরাই আসন গ্রহণ করতে পারবেন। এই জোনের পূর্ণ নিরাপত্তা ও শালীনতা নিশ্চিত করা সকলের দায়িত্ব।
+                <p className="text-slate-500 pl-6 leading-relaxed">
+                  Dedicated female sections are strictly reserved for female students to ensure utmost safety, privacy, and a comfortable study environment.
                 </p>
               </div>
 
               {/* Rule Card 4 */}
-              <div className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 space-y-1">
-                <div className="font-bold text-slate-100 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-sky-400" />
-                  <span>৪. ব্যক্তিগত মালামাল ও পরিচ্ছন্নতা</span>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                <div className="font-semibold text-slate-900 flex items-center gap-2">
+                  <Lock className="w-4 h-4 text-sky-500" />
+                  <span>4. Personal Belongings & Cleanliness</span>
                 </div>
-                <p className="text-slate-400 pl-6 leading-relaxed">
-                  আপনার ল্যাপটপ, বইপত্র ও মূল্যবান জিনিসপত্রের দায়িত্ব আপনার নিজের। ডেস্কে কোনো খাবারের উচ্ছিষ্ট বা ময়লা ফেলা যাবে না। প্রতিটি রুম সিসিটিভি ক্যামেরা দ্বারা সার্বক্ষণিক পর্যবেক্ষণে থাকে।
+                <p className="text-slate-500 pl-6 leading-relaxed">
+                  Keep your study desk neat and tidy. Food waste must be placed in designated lounge bins. The study center maintains 24/7 CCTV surveillance for security.
                 </p>
               </div>
             </div>
@@ -150,36 +150,36 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
 
           {/* Tab 2: Notice Board */}
           {activeTab === 'notices' && (
-            <div className="space-y-3">
+            <div className="space-y-2.5">
               {branchNotices.map((n) => (
                 <div
                   key={n.id}
-                  className={`p-4 rounded-xl border space-y-2 ${
+                  className={`p-3.5 rounded-lg border space-y-1.5 ${
                     n.priority === 'urgent'
-                      ? 'bg-rose-950/30 border-rose-500/40'
+                      ? 'bg-rose-50/70 border-rose-200'
                       : n.priority === 'info'
-                      ? 'bg-sky-950/30 border-sky-500/40'
-                      : 'bg-slate-950/70 border-slate-800'
+                      ? 'bg-sky-50/70 border-sky-200'
+                      : 'bg-slate-50 border-slate-200'
                   }`}
                 >
                   <div className="flex items-center justify-between gap-2">
-                    <div className="flex items-center gap-2 font-bold text-sm text-slate-100">
-                      {n.priority === 'urgent' && <AlertTriangle className="w-4 h-4 text-rose-400" />}
-                      {n.priority === 'info' && <Info className="w-4 h-4 text-sky-400" />}
-                      <span>{n.bengaliTitle}</span>
+                    <div className="flex items-center gap-1.5 font-semibold text-xs text-slate-900">
+                      {n.priority === 'urgent' && <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />}
+                      {n.priority === 'info' && <Info className="w-3.5 h-3.5 text-sky-500" />}
+                      <span>{n.title}</span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-mono shrink-0">
                       {n.date}
                     </span>
                   </div>
 
-                  <p className="text-xs text-slate-300 leading-relaxed">
-                    {n.bengaliContent}
+                  <p className="text-xs text-slate-600 leading-relaxed">
+                    {n.content}
                   </p>
 
-                  <div className="text-[10px] text-slate-500 flex items-center justify-between pt-1 border-t border-slate-800/60">
-                    <span>প্রণেতা: {n.author}</span>
-                    <span className="uppercase font-semibold text-slate-400">
+                  <div className="text-[10px] text-slate-400 flex items-center justify-between pt-1 border-t border-slate-200/60">
+                    <span>By: {n.author}</span>
+                    <span className="uppercase font-semibold text-slate-500">
                       {n.priority}
                     </span>
                   </div>
@@ -190,50 +190,50 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
 
           {/* Tab 3: Wi-Fi & Amenities */}
           {activeTab === 'wifi' && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-gradient-to-r from-sky-950/60 to-indigo-950/60 border border-sky-500/40 space-y-3">
-                <div className="flex items-center gap-2 text-sky-300 font-bold text-sm">
-                  <Wifi className="w-5 h-5 text-sky-400" />
-                  <span>হাই-স্পিড অপটিক্যাল ফাইবার ওয়াইফাই তথ্য</span>
+            <div className="space-y-3">
+              <div className="p-3.5 rounded-lg bg-sky-50/70 border border-sky-200 space-y-2.5">
+                <div className="flex items-center gap-1.5 text-sky-800 font-semibold text-xs">
+                  <Wifi className="w-4 h-4 text-sky-600" />
+                  <span>High-Speed Optical Fiber Wi-Fi</span>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 text-xs bg-slate-950/80 p-3 rounded-lg border border-slate-800">
+                <div className="grid grid-cols-2 gap-2 text-xs bg-white p-2.5 rounded-lg border border-sky-100">
                   <div>
-                    <span className="text-slate-500 block text-[10px]">Wi-Fi Network (SSID):</span>
-                    <span className="font-bold text-slate-100 font-mono">
+                    <span className="text-slate-400 block text-[10px] uppercase font-medium">Wi-Fi Network (SSID)</span>
+                    <span className="font-semibold text-slate-900 font-mono text-xs">
                       {currentBranchId === 'bcs_study' ? 'BCS_STUDY_5G_FAST' : 'FRESH_STUDY_5G_PLUS'}
                     </span>
                   </div>
                   <div>
-                    <span className="text-slate-500 block text-[10px]">পাসওয়ার্ড (Password):</span>
-                    <span className="font-bold text-emerald-400 font-mono">
-                      study@2026#bcs
+                    <span className="text-slate-400 block text-[10px] uppercase font-medium">Password</span>
+                    <span className="font-semibold text-emerald-600 font-mono text-xs">
+                      study@2026#pass
                     </span>
                   </div>
                 </div>
 
-                <p className="text-[11px] text-slate-400">
-                  ⚡ আনলিমিটেড ব্যান্ডউইথ ও ভিডিও লেকচার স্পিড অপ্টিমাইজড। অননুমোদিত বড় ফাইল টরেন্ট ডাউনলোড নিষিদ্ধ।
+                <p className="text-[11px] text-slate-500">
+                  Optimized for online video lectures and research. High-volume torrents and unapproved downloads are restricted.
                 </p>
               </div>
 
-              <div className="p-3.5 rounded-xl bg-slate-950/80 border border-slate-800 space-y-2">
-                <div className="font-bold text-slate-200">লাইব্রেরির অন্যান্য সুবিধাসমূহ:</div>
-                <ul className="space-y-1.5 text-slate-400 list-disc list-inside">
-                  <li>প্রতিটি ডেস্কে আলাদা এলইডি রিডিং ল্যাম্প ও চার্জিং সকেট</li>
-                  <li>ঠান্ডা ও স্বাভাবিক ফিল্টার্ড খাওয়ার পানি</li>
-                  <li>নামাযের জন্য আলাদা নিরিবিলি অজুর স্থান ও জায়নামায</li>
-                  <li>চা ও কফি ভেন্ডিং কর্নার (লাউঞ্জে)</li>
-                  <li>২৪ ঘণ্টা আইপিএস ও জেনারেটর বিদ্যুৎ ব্যাকআপ</li>
+              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1.5">
+                <div className="font-semibold text-slate-800 text-xs">Center Amenities:</div>
+                <ul className="space-y-1 text-slate-600 list-disc list-inside text-xs">
+                  <li>Individual desk LED lamps and power sockets</li>
+                  <li>Filtered hot, cold, and ambient drinking water</li>
+                  <li>Quiet prayer room with ablution facility</li>
+                  <li>Coffee and tea refreshment lounge</li>
+                  <li>24/7 IPS and generator power backup</li>
                 </ul>
               </div>
 
-              <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800 flex items-center justify-between text-xs">
-                <div className="flex items-center gap-2">
-                  <Phone className="w-4 h-4 text-emerald-400" />
-                  <span>অফিসিয়াল হেল্পডেস্ক / লাইব্রেরিয়ান:</span>
+              <div className="p-2.5 rounded-lg bg-slate-50 border border-slate-100 flex items-center justify-between text-xs">
+                <div className="flex items-center gap-1.5 text-slate-700">
+                  <Phone className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Helpdesk / Librarian:</span>
                 </div>
-                <span className="font-mono text-emerald-400 font-bold">
+                <span className="font-mono text-slate-900 font-semibold">
                   {branchConfig.phone}
                 </span>
               </div>
@@ -242,15 +242,16 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-950 border-t border-slate-800 flex justify-end shrink-0">
+        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all"
+            className="px-4 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors shadow-xs"
           >
-            বুঝেছি (Close)
+            Close
           </button>
         </div>
       </div>
     </div>
   );
 };
+

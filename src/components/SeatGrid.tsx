@@ -1,16 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  SlidersHorizontal,
   LayoutGrid,
   Layers,
   Wind,
   VolumeX,
-  Sparkles,
-  Users,
-  CheckCircle2,
   AlertCircle,
-  Clock,
   Filter,
   X,
 } from 'lucide-react';
@@ -101,11 +96,11 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
   const activeRoomObj = branchRooms.find((r) => r.id === activeRoomId);
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
       {/* Top Filter Bar: Search, Room Tabs, View Switcher & Status Chips */}
-      <div className="bg-slate-900/90 rounded-2xl border border-slate-800 p-3 sm:p-4 shadow-lg space-y-3">
+      <div className="bg-white rounded-xl border border-slate-200 p-3 shadow-xs space-y-2.5">
         {/* Row 1: Search + View Switcher */}
-        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
           {/* Search Input */}
           <div className="relative flex-1">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -114,13 +109,13 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
               type="text"
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="সিট নম্বর (যেমন: A-01), শিক্ষার্থীর নাম বা আইডি দিয়ে খুঁজুন..."
-              className="w-full pl-9 pr-9 py-2 bg-slate-950/80 border border-slate-700/80 rounded-xl text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 focus:ring-1 focus:ring-sky-500 transition-all"
+              placeholder="Search seat number (e.g. A-01), student name or ID..."
+              className="w-full pl-9 pr-8 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-sky-500 focus:bg-white transition-colors"
             />
             {searchQuery && (
               <button
                 onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-200"
+                className="absolute right-2.5 top-1/2 -translate-y-1/2 p-0.5 rounded text-slate-400 hover:text-slate-600"
               >
                 <X className="w-3.5 h-3.5" />
               </button>
@@ -128,38 +123,38 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
           </div>
 
           {/* Layout Mode Switcher (Single Room vs All Rooms) */}
-          <div className="flex items-center p-1 bg-slate-950 rounded-xl border border-slate-800 self-end sm:self-auto">
+          <div className="flex items-center p-0.5 bg-slate-100 rounded-lg border border-slate-200 self-end sm:self-auto shrink-0">
             <button
               id="view-mode-single"
               onClick={() => setLayoutMode('single')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                 layoutMode === 'single'
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <LayoutGrid className="w-3.5 h-3.5" />
-              <span>রুম ভিত্তিক ভিউ</span>
+              <span>By Room</span>
             </button>
 
             <button
               id="view-mode-all"
               onClick={() => setLayoutMode('all')}
-              className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+              className={`flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${
                 layoutMode === 'all'
-                  ? 'bg-sky-600 text-white shadow-sm'
-                  : 'text-slate-400 hover:text-slate-200'
+                  ? 'bg-white text-slate-900 shadow-xs'
+                  : 'text-slate-600 hover:text-slate-900'
               }`}
             >
               <Layers className="w-3.5 h-3.5" />
-              <span>একত্রে সব রুম</span>
+              <span>All Rooms</span>
             </button>
           </div>
         </div>
 
         {/* Row 2: Room Selection Tabs (Visible in 'single' mode) */}
         {layoutMode === 'single' && (
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-thin">
+          <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-thin">
             {branchRooms.map((room) => {
               const isSelected = room.id === activeRoomId;
               const roomSeats = branchSeats.filter((s) => s.roomId === room.id);
@@ -170,21 +165,21 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
                   key={room.id}
                   id={`tab-room-${room.id}`}
                   onClick={() => setSelectedRoomId(room.id)}
-                  className={`shrink-0 flex items-center gap-2 px-3.5 py-2 rounded-xl border text-xs font-medium transition-all ${
+                  className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                     isSelected
-                      ? 'bg-slate-800 border-sky-500 text-white shadow-md'
-                      : 'bg-slate-950/60 border-slate-800/80 text-slate-400 hover:text-slate-200 hover:bg-slate-800/50'
+                      ? 'bg-sky-50 border-sky-300 text-sky-900 font-semibold shadow-xs'
+                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                   }`}
                 >
-                  <span>{room.bengaliName}</span>
+                  <span>{room.name}</span>
                   <span
-                    className={`px-1.5 py-0.2 text-[10px] rounded-full font-bold font-mono ${
+                    className={`px-1.5 py-0.2 text-[10px] rounded font-mono ${
                       availCount > 0
-                        ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30'
-                        : 'bg-rose-500/20 text-rose-400'
+                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                        : 'bg-rose-50 text-rose-700 border border-rose-200'
                     }`}
                   >
-                    {availCount} ফাঁকা
+                    {availCount} open
                   </span>
                 </button>
               );
@@ -193,82 +188,82 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
         )}
 
         {/* Row 3: Status Filter Chips */}
-        <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 pt-1 border-t border-slate-800/60 text-xs">
+        <div className="flex flex-wrap items-center gap-1.5 pt-1.5 border-t border-slate-100 text-xs">
           <span className="text-[11px] text-slate-400 font-medium flex items-center gap-1 mr-1">
-            <Filter className="w-3 h-3 text-sky-400" />
-            ফিল্টার:
+            <Filter className="w-3 h-3 text-slate-400" />
+            Filter:
           </span>
 
           <button
             onClick={() => setStatusFilter('all')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all ${
+            className={`px-2 py-0.8 rounded-md text-xs font-medium transition-colors ${
               statusFilter === 'all'
-                ? 'bg-slate-700 text-white font-bold'
-                : 'bg-slate-950/70 text-slate-400 hover:text-slate-200'
+                ? 'bg-slate-800 text-white'
+                : 'bg-slate-50 text-slate-600 hover:bg-slate-100 border border-slate-200'
             }`}
           >
-            সব সিট ({filteredSeats.length})
+            All ({filteredSeats.length})
           </button>
 
           <button
             onClick={() => setStatusFilter('available')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+            className={`px-2 py-0.8 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
               statusFilter === 'available'
-                ? 'bg-emerald-600 text-white font-bold'
-                : 'bg-emerald-950/40 text-emerald-300 hover:bg-emerald-900/40 border border-emerald-500/20'
+                ? 'bg-emerald-600 text-white font-semibold'
+                : 'bg-emerald-50 text-emerald-800 hover:bg-emerald-100 border border-emerald-200'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-emerald-400"></span>
-            ফাঁকা
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500"></span>
+            Available
           </button>
 
           <button
             onClick={() => setStatusFilter('occupied')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+            className={`px-2 py-0.8 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
               statusFilter === 'occupied'
-                ? 'bg-rose-600 text-white font-bold'
-                : 'bg-rose-950/40 text-rose-300 hover:bg-rose-900/40 border border-rose-500/20'
+                ? 'bg-rose-600 text-white font-semibold'
+                : 'bg-rose-50 text-rose-800 hover:bg-rose-100 border border-rose-200'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-rose-400"></span>
-            বুকড
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
+            Booked
           </button>
 
           <button
             onClick={() => setStatusFilter('away')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+            className={`px-2 py-0.8 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
               statusFilter === 'away'
-                ? 'bg-amber-600 text-white font-bold'
-                : 'bg-amber-950/40 text-amber-300 hover:bg-amber-900/40 border border-amber-500/20'
+                ? 'bg-amber-600 text-white font-semibold'
+                : 'bg-amber-50 text-amber-800 hover:bg-amber-100 border border-amber-200'
             }`}
           >
-            <span className="w-2 h-2 rounded-full bg-amber-400"></span>
-            বিরতিতে (Away)
+            <span className="w-1.5 h-1.5 rounded-full bg-amber-500"></span>
+            On Break
           </button>
 
           <button
             onClick={() => setStatusFilter('female')}
-            className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+            className={`px-2 py-0.8 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
               statusFilter === 'female'
-                ? 'bg-pink-600 text-white font-bold'
-                : 'bg-pink-950/40 text-pink-300 hover:bg-pink-900/40 border border-pink-500/20'
+                ? 'bg-pink-600 text-white font-semibold'
+                : 'bg-pink-50 text-pink-800 hover:bg-pink-100 border border-pink-200'
             }`}
           >
             <span>🌸</span>
-            মহিলা সংরক্ষিত
+            Female Reserved
           </button>
 
           {currentStudent && (
             <button
               onClick={() => setStatusFilter('my_seat')}
-              className={`px-2.5 py-1 rounded-lg text-xs font-medium transition-all flex items-center gap-1 ${
+              className={`px-2 py-0.8 rounded-md text-xs font-medium transition-colors flex items-center gap-1 ${
                 statusFilter === 'my_seat'
-                  ? 'bg-sky-600 text-white font-bold'
-                  : 'bg-sky-950/40 text-sky-300 hover:bg-sky-900/40 border border-sky-500/20'
+                  ? 'bg-sky-600 text-white font-semibold'
+                  : 'bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200'
               }`}
             >
-              <span className="w-2 h-2 rounded-full bg-sky-400"></span>
-              আমার সিট
+              <span className="w-1.5 h-1.5 rounded-full bg-sky-500"></span>
+              My Seat
             </button>
           )}
         </div>
@@ -278,38 +273,37 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
       {layoutMode === 'single' ? (
         // Single Room View
         activeRoomObj ? (
-          <div className="space-y-4">
+          <div className="space-y-3">
             {/* Room Header Banner */}
-            <div className="bg-slate-900/60 rounded-xl border border-slate-800/80 p-3.5 flex flex-wrap items-center justify-between gap-3">
+            <div className="bg-white rounded-lg border border-slate-200 p-3 flex flex-wrap items-center justify-between gap-2.5">
               <div>
                 <div className="flex items-center gap-2">
-                  <h3 className="text-base sm:text-lg font-bold text-white">
-                    {activeRoomObj.bengaliName}
+                  <h3 className="text-sm font-semibold text-slate-900">
+                    {activeRoomObj.name}
                   </h3>
-                  <span className="text-xs text-slate-400">({activeRoomObj.name})</span>
                 </div>
-                <p className="text-xs text-slate-400 mt-0.5">
-                  {activeRoomObj.bengaliDescription}
+                <p className="text-xs text-slate-500 mt-0.5">
+                  {activeRoomObj.description}
                 </p>
               </div>
 
               {/* Room Amenities Badges */}
-              <div className="flex items-center gap-2 text-xs">
+              <div className="flex items-center gap-1.5 text-xs">
                 {activeRoomObj.hasAC && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-cyan-950/50 border border-cyan-500/30 text-cyan-300 text-[11px] font-medium">
-                    <Wind className="w-3 h-3 text-cyan-400" />
-                    এসি সুবিধা
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-sky-50 border border-sky-200 text-sky-700 text-[11px] font-medium">
+                    <Wind className="w-3 h-3 text-sky-600" />
+                    AC
                   </span>
                 )}
                 {activeRoomObj.isSilent && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-indigo-950/50 border border-indigo-500/30 text-indigo-300 text-[11px] font-medium">
-                    <VolumeX className="w-3 h-3 text-indigo-400" />
-                    নীরব জোন
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-indigo-50 border border-indigo-200 text-indigo-700 text-[11px] font-medium">
+                    <VolumeX className="w-3 h-3 text-indigo-600" />
+                    Silent Zone
                   </span>
                 )}
                 {activeRoomObj.category === 'female_only' && (
-                  <span className="flex items-center gap-1 px-2 py-0.5 rounded-md bg-pink-950/50 border border-pink-500/30 text-pink-300 text-[11px] font-medium">
-                    🌸 মহিলা সংরক্ষিত
+                  <span className="flex items-center gap-1 px-2 py-0.5 rounded bg-pink-50 border border-pink-200 text-pink-700 text-[11px] font-medium">
+                    🌸 Female Reserved
                   </span>
                 )}
               </div>
@@ -317,7 +311,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
 
             {/* Seat Cards Grid */}
             {filteredSeats.length > 0 ? (
-              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+              <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
                 {filteredSeats.map((seat) => (
                   <SeatCard
                     key={seat.id}
@@ -328,11 +322,11 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
                 ))}
               </div>
             ) : (
-              <div className="bg-slate-900/40 rounded-2xl border border-dashed border-slate-800 p-8 text-center text-slate-400">
-                <AlertCircle className="w-8 h-8 mx-auto text-slate-500 mb-2" />
-                <p className="font-semibold text-sm">কোনো সিট পাওয়া যায়নি</p>
-                <p className="text-xs text-slate-500 mt-1">
-                  অনুগ্রহ করে অন্য ফিল্টার বা সার্চ টার্ম ব্যবহার করে দেখুন।
+              <div className="bg-white rounded-xl border border-dashed border-slate-300 p-8 text-center text-slate-500">
+                <AlertCircle className="w-6 h-6 mx-auto text-slate-400 mb-1.5" />
+                <p className="font-semibold text-xs text-slate-700">No seats found</p>
+                <p className="text-[11px] text-slate-400 mt-0.5">
+                  Try adjusting your filters or search keywords.
                 </p>
               </div>
             )}
@@ -340,7 +334,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
         ) : null
       ) : (
         // Combined All Rooms View
-        <div className="space-y-8">
+        <div className="space-y-6">
           {branchRooms.map((room) => {
             const roomSeats = seatsGroupedByRoom.get(room.id) || [];
             if (roomSeats.length === 0 && (searchQuery || statusFilter !== 'all')) {
@@ -350,31 +344,31 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
             const availCount = roomSeats.filter((s) => s.status === 'available').length;
 
             return (
-              <div key={room.id} className="space-y-3">
+              <div key={room.id} className="space-y-2.5">
                 {/* Room Subheader */}
-                <div className="flex items-center justify-between pb-2 border-b border-slate-800">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-2.5 h-2.5 rounded-full bg-sky-500"></div>
-                    <h3 className="text-base font-bold text-white">
-                      {room.bengaliName}
+                <div className="flex items-center justify-between pb-1.5 border-b border-slate-200">
+                  <div className="flex items-center gap-2">
+                    <div className="w-2 h-2 rounded-full bg-sky-500"></div>
+                    <h3 className="text-sm font-semibold text-slate-900">
+                      {room.name}
                     </h3>
-                    <span className="text-xs text-slate-500 hidden sm:inline">
-                      ({room.description.split('.')[0]})
+                    <span className="text-xs text-slate-400 hidden sm:inline">
+                      • {room.description.split('.')[0]}
                     </span>
                   </div>
 
                   <div className="flex items-center gap-2 text-xs">
-                    <span className="text-slate-400">
-                      মোট সিট: <span className="text-slate-200 font-bold">{roomSeats.length}</span>
+                    <span className="text-slate-500 text-[11px]">
+                      Total: <span className="text-slate-800 font-semibold">{roomSeats.length}</span>
                     </span>
-                    <span className="text-emerald-400 font-bold">
-                      ({availCount} ফাঁকা)
+                    <span className="text-emerald-700 font-semibold text-[11px]">
+                      ({availCount} open)
                     </span>
                   </div>
                 </div>
 
                 {/* Seat Cards Grid */}
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6 gap-2.5">
                   {roomSeats.map((seat) => (
                     <SeatCard
                       key={seat.id}
@@ -392,3 +386,4 @@ export const SeatGrid: React.FC<SeatGridProps> = ({ onSelectSeat }) => {
     </div>
   );
 };
+

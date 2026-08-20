@@ -59,7 +59,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const [isAddingRoom, setIsAddingRoom] = useState(false);
   const [editingRoomId, setEditingRoomId] = useState<string | null>(null);
   const [roomName, setRoomName] = useState('');
-  const [roomBengaliName, setRoomBengaliName] = useState('');
   const [roomCategory, setRoomCategory] = useState<RoomCategory>('general');
   const [roomPrefix, setRoomPrefix] = useState('R');
   const [roomCapacity, setRoomCapacity] = useState<number>(16);
@@ -87,17 +86,17 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   // Handle Room Create / Update
   const handleSaveRoom = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!roomName.trim() || !roomBengaliName.trim()) return;
+    if (!roomName.trim()) return;
 
     if (editingRoomId) {
       updateRoom(editingRoomId, {
         name: roomName.trim(),
-        bengaliName: roomBengaliName.trim(),
+        bengaliName: roomName.trim(),
         category: roomCategory,
         seatPrefix: roomPrefix.trim(),
         capacity: Number(roomCapacity),
         description: roomDesc.trim() || 'Study Hall equipped with high speed WiFi.',
-        bengaliDescription: roomDesc.trim() || 'শান্ত ও সুসজ্জিত অধ্যয়ন কক্ষ।',
+        bengaliDescription: roomDesc.trim() || 'Quiet study hall with high speed WiFi.',
         hasAC: roomHasAC,
         isSilent: roomIsSilent,
       });
@@ -106,12 +105,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
       addRoom({
         branchId: currentBranchId,
         name: roomName.trim(),
-        bengaliName: roomBengaliName.trim(),
+        bengaliName: roomName.trim(),
         category: roomCategory,
         seatPrefix: roomPrefix.trim(),
         capacity: Number(roomCapacity),
         description: roomDesc.trim() || 'Study Hall equipped with high speed WiFi.',
-        bengaliDescription: roomDesc.trim() || 'শান্ত ও সুসজ্জিত অধ্যয়ন কক্ষ।',
+        bengaliDescription: roomDesc.trim() || 'Quiet study hall with high speed WiFi.',
         hasAC: roomHasAC,
         isSilent: roomIsSilent,
       });
@@ -120,7 +119,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
     // Reset Form
     setRoomName('');
-    setRoomBengaliName('');
     setRoomPrefix('R');
     setRoomCapacity(16);
     setRoomDesc('');
@@ -129,11 +127,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   const startEditRoom = (room: Room) => {
     setEditingRoomId(room.id);
     setRoomName(room.name);
-    setRoomBengaliName(room.bengaliName);
     setRoomCategory(room.category);
     setRoomPrefix(room.seatPrefix);
     setRoomCapacity(room.capacity);
-    setRoomDesc(room.bengaliDescription);
+    setRoomDesc(room.description);
     setRoomHasAC(room.hasAC);
     setRoomIsSilent(room.isSilent);
     setIsAddingRoom(true);
@@ -148,7 +145,6 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
     setAssignSeatId('');
     setAssignName('');
     setAssignPhone('');
-    alert('শিক্ষার্থীকে সফলভাবে সিটে নিযুক্ত করা হয়েছে!');
   };
 
   // Handle Settings Save
@@ -191,100 +187,100 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-4xl rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-5 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-4xl rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden max-h-[90vh] flex flex-col">
         {/* Header */}
-        <div className="p-4 sm:p-5 bg-gradient-to-r from-rose-950/80 via-slate-900 to-rose-950/80 border-b border-rose-500/30 flex items-center justify-between shrink-0">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-rose-600/20 border border-rose-500/40 flex items-center justify-center text-rose-400">
-              <ShieldCheck className="w-6 h-6" />
+        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-2.5">
+            <div className="w-8 h-8 rounded-lg bg-rose-50 border border-rose-200 flex items-center justify-center text-rose-600">
+              <ShieldCheck className="w-4 h-4" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  অ্যাডমিন কন্ট্রোল সেন্টার ও সিস্টেম কনফিগারেশন
+                <h3 className="text-sm font-semibold text-slate-900">
+                  Admin Control Panel
                 </h3>
-                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
-                  MASTER ADMIN
+                <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-50 text-rose-700 border border-rose-200">
+                  Admin Access
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                {branchConfig.bengaliName} • Capacity, Rooms & Override Tools
+              <p className="text-xs text-slate-500">
+                {branchConfig.name} • Manage Rooms, Capacity & Overrides
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex border-b border-slate-800 bg-slate-950/60 p-2 gap-1.5 shrink-0 overflow-x-auto">
+        <div className="flex border-b border-slate-100 bg-slate-50/50 p-1.5 gap-1 shrink-0 overflow-x-auto">
           <button
             onClick={() => setActiveTab('rooms')}
-            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
               activeTab === 'rooms'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Layers className="w-3.5 h-3.5" />
-            <span>রুম ও ক্যাপাসিটি ব্যবস্থাপনা ({branchRooms.length})</span>
+            <span>Rooms & Capacity ({branchRooms.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('seats')}
-            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
               activeTab === 'seats'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Armchair className="w-3.5 h-3.5" />
-            <span>সিট কন্ট্রোল ও মেরামত</span>
+            <span>Seat Control</span>
           </button>
 
           <button
             onClick={() => setActiveTab('attendance')}
-            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
               activeTab === 'attendance'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <FileText className="w-3.5 h-3.5" />
-            <span>অ্যাটেনডেন্স ও হিস্ট্রি ({attendanceRecords.length})</span>
+            <span>Attendance Log ({attendanceRecords.length})</span>
           </button>
 
           <button
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-lg text-xs font-semibold transition-colors shrink-0 ${
               activeTab === 'settings'
-                ? 'bg-rose-600 text-white shadow-sm'
-                : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/40'
+                ? 'bg-white text-slate-900 shadow-xs border border-slate-200/80'
+                : 'text-slate-500 hover:text-slate-800'
             }`}
           >
             <Settings className="w-3.5 h-3.5" />
-            <span>সোশ্যাল লিঙ্ক ও সিস্টেম রিসেট</span>
+            <span>Settings & Reset</span>
           </button>
         </div>
 
         {/* Tab Body */}
-        <div className="p-4 sm:p-5 overflow-y-auto space-y-4 text-xs text-slate-300 scrollbar-thin">
+        <div className="p-4 overflow-y-auto space-y-4 text-xs text-slate-600">
           {/* TAB 1: Room Management */}
           {activeTab === 'rooms' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-100">
-                    স্টাডি রুম তালিকা ও আসন সংখ্যা
+                  <h4 className="text-xs font-semibold text-slate-900">
+                    Study Rooms & Capacity
                   </h4>
                   <p className="text-slate-400 text-[11px]">
-                    রুম যোগ করুন, ধারণক্ষমতা ও সিরিয়াল প্রেফিক্স পরিবর্তন করুন
+                    Create rooms, adjust capacities, and seat prefixes
                   </p>
                 </div>
 
@@ -293,15 +289,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     onClick={() => {
                       setEditingRoomId(null);
                       setRoomName('');
-                      setRoomBengaliName('');
                       setRoomPrefix('R');
                       setRoomCapacity(16);
                       setIsAddingRoom(true);
                     }}
-                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs shadow-md"
+                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition-colors shadow-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>নতুন রুম যোগ করুন</span>
+                    <span>Add Room</span>
                   </button>
                 )}
               </div>
@@ -310,16 +305,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               {isAddingRoom && (
                 <form
                   onSubmit={handleSaveRoom}
-                  className="bg-slate-950/90 rounded-xl border border-sky-500/40 p-4 space-y-3"
+                  className="bg-slate-50 rounded-xl border border-slate-200 p-3.5 space-y-3"
                 >
-                  <div className="flex items-center justify-between border-b border-slate-800 pb-2">
-                    <span className="font-bold text-sky-400">
-                      {editingRoomId ? 'রুম তথ্য সম্পাদনা (Edit Room)' : 'নতুন স্টাডি রুম তৈরি করুন'}
+                  <div className="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span className="font-semibold text-slate-900 text-xs">
+                      {editingRoomId ? 'Edit Room' : 'Create New Room'}
                     </span>
                     <button
                       type="button"
                       onClick={() => setIsAddingRoom(false)}
-                      className="text-slate-400 hover:text-slate-200"
+                      className="text-slate-400 hover:text-slate-600"
                     >
                       <X className="w-4 h-4" />
                     </button>
@@ -327,54 +322,40 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                        রুমের নাম (বাংলায়)*
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={roomBengaliName}
-                        onChange={(e) => setRoomBengaliName(e.target.value)}
-                        placeholder="যেমন: এক্সিকিউটিভ এসি হল ৩"
-                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                        Room Name (English)*
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Room Name *
                       </label>
                       <input
                         type="text"
                         required
                         value={roomName}
                         onChange={(e) => setRoomName(e.target.value)}
-                        placeholder="e.g., Executive AC Hall 3"
-                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
+                        placeholder="e.g. Executive AC Hall 3"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
                       />
                     </div>
 
                     <div>
-                      <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                        ক্যাটাগরি / ধরন
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Category
                       </label>
                       <select
                         value={roomCategory}
                         onChange={(e) => setRoomCategory(e.target.value as RoomCategory)}
-                        className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200"
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
                       >
-                        <option value="general">সাধারণ স্টাডি হল (General)</option>
-                        <option value="female_only">🌸 মহিলা সংরক্ষিত (Female Only)</option>
-                        <option value="ac_hall">❄️ এয়ার কন্ডিশন্ড হল (AC Hall)</option>
-                        <option value="silent_zone">🤫 পিন-ড্রপ নীরব জোন (Silent Zone)</option>
-                        <option value="discussion">👥 গ্রুপ ডিসকাশন ও মক কর্নার</option>
+                        <option value="general">General Study Hall</option>
+                        <option value="female_only">Female Reserved</option>
+                        <option value="ac_hall">AC Hall</option>
+                        <option value="silent_zone">Silent Zone</option>
+                        <option value="discussion">Group Discussion</option>
                       </select>
                     </div>
 
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                          সিট প্রেফিক্স (Prefix)
+                        <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                          Prefix
                         </label>
                         <input
                           type="text"
@@ -382,13 +363,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           value={roomPrefix}
                           onChange={(e) => setRoomPrefix(e.target.value)}
                           placeholder="A, B, FC"
-                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 font-mono"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
                         />
                       </div>
 
                       <div>
-                        <label className="block text-[11px] font-medium text-slate-300 mb-1">
-                          ধারণক্ষমতা (Capacity)
+                        <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                          Capacity
                         </label>
                         <input
                           type="number"
@@ -397,47 +378,60 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                           max={60}
                           value={roomCapacity}
                           onChange={(e) => setRoomCapacity(Number(e.target.value))}
-                          className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 font-mono"
+                          className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
                         />
                       </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-[11px] font-medium text-slate-700 mb-1">
+                        Description
+                      </label>
+                      <input
+                        type="text"
+                        value={roomDesc}
+                        onChange={(e) => setRoomDesc(e.target.value)}
+                        placeholder="Quiet study hall with high-speed WiFi."
+                        className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
+                      />
                     </div>
                   </div>
 
                   <div className="flex items-center gap-4 pt-1">
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
                       <input
                         type="checkbox"
                         checked={roomHasAC}
                         onChange={(e) => setRoomHasAC(e.target.checked)}
-                        className="rounded border-slate-700 bg-slate-900 text-sky-600 focus:ring-0"
+                        className="rounded border-slate-300 text-sky-600 focus:ring-0"
                       />
-                      <span>❄️ এসি সুবিধা আছে</span>
+                      <span>Air Conditioned</span>
                     </label>
 
-                    <label className="flex items-center gap-2 cursor-pointer">
+                    <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
                       <input
                         type="checkbox"
                         checked={roomIsSilent}
                         onChange={(e) => setRoomIsSilent(e.target.checked)}
-                        className="rounded border-slate-700 bg-slate-900 text-sky-600 focus:ring-0"
+                        className="rounded border-slate-300 text-sky-600 focus:ring-0"
                       />
-                      <span>🤫 নীরব এলাকা (Silent Zone)</span>
+                      <span>Silent Zone</span>
                     </label>
                   </div>
 
-                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-800">
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
                     <button
                       type="button"
                       onClick={() => setIsAddingRoom(false)}
-                      className="px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700"
+                      className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-medium"
                     >
-                      বাতিল
+                      Cancel
                     </button>
                     <button
                       type="submit"
-                      className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold"
+                      className="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs shadow-xs"
                     >
-                      {editingRoomId ? 'আপডেট করুন' : 'সংরক্ষণ করুন'}
+                      {editingRoomId ? 'Update Room' : 'Save Room'}
                     </button>
                   </div>
                 </form>
@@ -452,53 +446,52 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   return (
                     <div
                       key={room.id}
-                      className="p-3.5 rounded-xl bg-slate-950/70 border border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="p-3 rounded-lg bg-white border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5"
                     >
-                      <div className="space-y-1">
+                      <div className="space-y-0.5">
                         <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-100 text-sm">
-                            {room.bengaliName}
+                          <span className="font-semibold text-slate-900 text-xs">
+                            {room.name}
                           </span>
-                          <span className="text-slate-500">({room.name})</span>
                           {room.category === 'female_only' && (
-                            <span className="px-1.5 py-0.2 rounded bg-pink-500/20 text-pink-300 text-[10px] font-bold">
-                              মহিলা সংরক্ষিত
+                            <span className="px-1.5 py-0.2 rounded bg-pink-50 text-pink-700 border border-pink-200 text-[10px] font-medium">
+                              Female Reserved
                             </span>
                           )}
                         </div>
 
-                        <div className="flex flex-wrap items-center gap-3 text-slate-400 text-[11px]">
+                        <div className="flex flex-wrap items-center gap-2 text-slate-500 text-[11px]">
                           <span>
-                            প্রেফিক্স: <strong className="text-sky-400 font-mono">{room.seatPrefix}-XX</strong>
+                            Prefix: <strong className="text-slate-800 font-mono">{room.seatPrefix}-XX</strong>
                           </span>
                           <span>•</span>
                           <span>
-                            মোট সিট: <strong className="text-white font-mono">{room.capacity}</strong>
+                            Capacity: <strong className="text-slate-800 font-mono">{room.capacity}</strong>
                           </span>
                           <span>•</span>
                           <span>
-                            বর্তমান অকুপেন্সি: <strong className="text-emerald-400 font-mono">{occCount}/{roomSeats.length}</strong>
+                            Occupancy: <strong className="text-emerald-700 font-mono">{occCount}/{roomSeats.length}</strong>
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-2 self-end sm:self-auto">
+                      <div className="flex items-center gap-1.5 self-end sm:self-auto">
                         <button
                           onClick={() => startEditRoom(room)}
-                          className="p-2 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white"
-                          title="সম্পাদনা করুন"
+                          className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
+                          title="Edit Room"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
 
                         <button
                           onClick={() => {
-                            if (window.confirm(`আপনি কি নিশ্চিতভাবে "${room.bengaliName}" এবং এর অন্তর্ভুক্ত সকল সিট ডিলিট করতে চান?`)) {
+                            if (window.confirm(`Delete "${room.name}" and all its seats?`)) {
                               deleteRoom(room.id);
                             }
                           }}
-                          className="p-2 rounded-lg bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/30 text-rose-300"
-                          title="রুম ডিলিট করুন"
+                          className="p-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition-colors"
+                          title="Delete Room"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -512,57 +505,57 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
           {/* TAB 2: Seat Control & Maintenance */}
           {activeTab === 'seats' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Manual Assign Section */}
               <form
                 onSubmit={handleManualAssign}
-                className="bg-slate-950/80 rounded-xl p-4 border border-slate-800 space-y-3"
+                className="bg-slate-50 rounded-lg p-3 border border-slate-200 space-y-2.5"
               >
-                <div className="font-bold text-slate-100 flex items-center gap-2">
-                  <Armchair className="w-4 h-4 text-emerald-400" />
-                  <span>ম্যানুয়ালি কোনো শিক্ষার্থীকে সরাসরি সিট বরাদ্দ করুন:</span>
+                <div className="font-semibold text-slate-800 text-xs flex items-center gap-1.5">
+                  <Armchair className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Manually Assign Seat to Student:</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">সিট নির্বাচন</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Select Available Seat</label>
                     <select
                       value={assignSeatId}
                       onChange={(e) => setAssignSeatId(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs font-mono"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
                     >
-                      <option value="">-- ফাঁকা সিট নির্বাচন করুন --</option>
+                      <option value="">-- Choose Seat --</option>
                       {branchSeats
                         .filter((s) => s.status === 'available')
                         .map((s) => (
                           <option key={s.id} value={s.id}>
-                            {s.seatNumber} ({s.isFemaleReserved ? 'মহিলা' : 'সাধারণ'})
+                            {s.seatNumber} ({s.isFemaleReserved ? 'Female' : 'General'})
                           </option>
                         ))}
                     </select>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">শিক্ষার্থীর নাম</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Student Name</label>
                     <input
                       type="text"
                       required
-                      placeholder="নাম লিখুন"
+                      placeholder="e.g. Tanvir"
                       value={assignName}
                       onChange={(e) => setAssignName(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">মোবাইল</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Mobile Number</label>
                     <input
                       type="tel"
                       required
                       placeholder="017xxxxxxxx"
                       value={assignPhone}
                       onChange={(e) => setAssignPhone(e.target.value)}
-                      className="w-full px-2.5 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs font-mono"
+                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
                     />
                   </div>
 
@@ -570,9 +563,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <button
                       type="submit"
                       disabled={!assignSeatId}
-                      className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs disabled:opacity-40"
+                      className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs disabled:opacity-40 shadow-xs transition-colors"
                     >
-                      সিট এসাইন করুন
+                      Assign Seat
                     </button>
                   </div>
                 </div>
@@ -580,44 +573,48 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
               {/* Occupied Seats Table with Force Release Button */}
               <div>
-                <h4 className="text-sm font-bold text-slate-100 mb-2">
-                  সকল সক্রিয় বুকিং তালিকা ({branchSeats.filter((s) => s.status === 'occupied' || s.status === 'away').length})
+                <h4 className="text-xs font-semibold text-slate-900 mb-1.5">
+                  Active Occupied Seats ({branchSeats.filter((s) => s.status === 'occupied' || s.status === 'away').length})
                 </h4>
 
-                <div className="overflow-x-auto rounded-xl border border-slate-800">
-                  <table className="w-full text-left text-[11px]">
-                    <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+                <div className="overflow-x-auto rounded-lg border border-slate-200">
+                  <table className="w-full text-left text-xs">
+                    <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 text-[11px]">
                       <tr>
-                        <th className="p-2.5">সিট</th>
-                        <th className="p-2.5">শিক্ষার্থীর নাম</th>
-                        <th className="p-2.5">ফোন নম্বর</th>
-                        <th className="p-2.5">স্ট্যাটাস</th>
-                        <th className="p-2.5">প্রবেশ সময়</th>
-                        <th className="p-2.5 text-right">অ্যাকশন</th>
+                        <th className="p-2 font-medium">Seat</th>
+                        <th className="p-2 font-medium">Student</th>
+                        <th className="p-2 font-medium">Phone</th>
+                        <th className="p-2 font-medium">Status</th>
+                        <th className="p-2 font-medium">Check-In</th>
+                        <th className="p-2 font-medium text-right">Action</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-800 bg-slate-900/60">
+                    <tbody className="divide-y divide-slate-100 bg-white">
                       {branchSeats
                         .filter((s) => s.status === 'occupied' || s.status === 'away')
                         .map((seat) => (
-                          <tr key={seat.id} className="hover:bg-slate-800/40">
-                            <td className="p-2.5 font-bold font-mono text-sky-400">
+                          <tr key={seat.id} className="hover:bg-slate-50">
+                            <td className="p-2 font-mono font-semibold text-sky-700">
                               {seat.seatNumber}
                             </td>
-                            <td className="p-2.5 text-slate-200 font-medium">
+                            <td className="p-2 text-slate-800 font-medium">
                               {seat.occupantName}
                             </td>
-                            <td className="p-2.5 font-mono text-slate-400">
+                            <td className="p-2 font-mono text-slate-500">
                               {seat.occupantPhone}
                             </td>
-                            <td className="p-2.5">
+                            <td className="p-2">
                               {seat.status === 'away' ? (
-                                <span className="text-amber-400 font-bold">বিরতিতে</span>
+                                <span className="text-amber-700 font-medium text-[11px] bg-amber-50 px-1.5 py-0.5 rounded border border-amber-200">
+                                  On Break
+                                </span>
                               ) : (
-                                <span className="text-emerald-400 font-medium">অধ্যয়নরত</span>
+                                <span className="text-emerald-700 font-medium text-[11px] bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
+                                  Studying
+                                </span>
                               )}
                             </td>
-                            <td className="p-2.5 font-mono text-slate-400">
+                            <td className="p-2 font-mono text-slate-500 text-[11px]">
                               {seat.bookedAt
                                 ? new Date(seat.bookedAt).toLocaleTimeString([], {
                                     hour: '2-digit',
@@ -625,16 +622,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                                   })
                                 : 'N/A'}
                             </td>
-                            <td className="p-2.5 text-right">
+                            <td className="p-2 text-right">
                               <button
                                 onClick={() => {
-                                  if (window.confirm(`সিট ${seat.seatNumber} জোরপূর্বক ফাঁকা করতে চান?`)) {
+                                  if (window.confirm(`Force release seat ${seat.seatNumber}?`)) {
                                     adminForceReleaseSeat(seat.id);
                                   }
                                 }}
-                                className="px-2.5 py-1 rounded bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 font-bold text-[10px]"
+                                className="px-2 py-0.8 rounded border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 font-medium text-[11px] transition-colors"
                               >
-                                ফাঁকা করুন
+                                Release
                               </button>
                             </td>
                           </tr>
@@ -651,53 +648,53 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <div>
-                  <h4 className="text-sm font-bold text-slate-100">
-                    দৈনিক উপস্থিতি ও লগ রেকর্ড (Attendance Logs)
+                  <h4 className="text-xs font-semibold text-slate-900">
+                    Attendance Logs & History
                   </h4>
                   <p className="text-slate-400 text-[11px]">
-                    আজকের মোট উপস্থিতি ও সম্পন্ন হওয়া স্টাডি সেশন হিস্ট্রি
+                    Today's check-in sessions and completed visits
                   </p>
                 </div>
 
                 <button
                   onClick={handleExportAttendance}
-                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 font-bold text-xs border border-slate-700 shadow-sm"
+                  className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-white hover:bg-slate-50 text-slate-700 font-medium text-xs border border-slate-200 shadow-xs transition-colors"
                 >
-                  <Download className="w-3.5 h-3.5" />
+                  <Download className="w-3.5 h-3.5 text-slate-500" />
                   <span>Export CSV</span>
                 </button>
               </div>
 
-              <div className="overflow-x-auto rounded-xl border border-slate-800">
-                <table className="w-full text-left text-[11px]">
-                  <thead className="bg-slate-950 text-slate-400 border-b border-slate-800">
+              <div className="overflow-x-auto rounded-lg border border-slate-200">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-slate-50 text-slate-500 border-b border-slate-200 text-[11px]">
                     <tr>
-                      <th className="p-2.5">তারিখ</th>
-                      <th className="p-2.5">শিক্ষার্থী</th>
-                      <th className="p-2.5">মোবাইল</th>
-                      <th className="p-2.5">রুম ও সিট</th>
-                      <th className="p-2.5">প্রবেশ সময়</th>
-                      <th className="p-2.5">টোকেন পাসকোড</th>
+                      <th className="p-2 font-medium">Date</th>
+                      <th className="p-2 font-medium">Student</th>
+                      <th className="p-2 font-medium">Phone</th>
+                      <th className="p-2 font-medium">Room & Seat</th>
+                      <th className="p-2 font-medium">Check-In</th>
+                      <th className="p-2 font-medium">Token Passcode</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-slate-800 bg-slate-900/60 font-mono">
+                  <tbody className="divide-y divide-slate-100 bg-white font-mono text-[11px]">
                     {attendanceRecords.map((record) => (
-                      <tr key={record.id} className="hover:bg-slate-800/40">
-                        <td className="p-2.5 text-slate-400">{record.dateStr}</td>
-                        <td className="p-2.5 font-sans font-semibold text-slate-200">
+                      <tr key={record.id} className="hover:bg-slate-50">
+                        <td className="p-2 text-slate-500">{record.dateStr}</td>
+                        <td className="p-2 font-sans font-medium text-slate-800">
                           {record.studentName}
                         </td>
-                        <td className="p-2.5 text-slate-400">{record.studentPhone}</td>
-                        <td className="p-2.5 text-sky-300">
+                        <td className="p-2 text-slate-500">{record.studentPhone}</td>
+                        <td className="p-2 text-sky-700">
                           {record.seatNumber} ({record.roomName.split('(')[0]})
                         </td>
-                        <td className="p-2.5 text-emerald-400 font-sans">
+                        <td className="p-2 text-emerald-700 font-sans">
                           {new Date(record.checkInTime).toLocaleTimeString([], {
                             hour: '2-digit',
                             minute: '2-digit',
                           })}
                         </td>
-                        <td className="p-2.5 text-slate-400">{record.passCode}</td>
+                        <td className="p-2 text-slate-500">{record.passCode}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -708,20 +705,20 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
           {/* TAB 4: Settings & System Reset */}
           {activeTab === 'settings' && (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {/* Branch Config Form */}
               <form
                 onSubmit={handleSaveSettings}
-                className="bg-slate-950/80 rounded-xl p-4 border border-slate-800 space-y-3"
+                className="bg-slate-50 rounded-lg p-3.5 border border-slate-200 space-y-3"
               >
-                <div className="font-bold text-slate-100 flex items-center gap-2">
-                  <Facebook className="w-4 h-4 text-blue-400" />
-                  <span>অফিসিয়াল সোশ্যাল পেজ ও অ্যাপ লিংক কনফিগারেশন:</span>
+                <div className="font-semibold text-slate-800 text-xs flex items-center gap-2">
+                  <Facebook className="w-4 h-4 text-blue-600" />
+                  <span>Branch Social & External Link Settings:</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 mb-1">
                       Official Facebook Page URL
                     </label>
                     <input
@@ -729,12 +726,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       required
                       value={fbUrl}
                       onChange={(e) => setFbUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 mb-1">
                       Facebook Page Display Name
                     </label>
                     <input
@@ -742,98 +739,96 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       required
                       value={fbPageName}
                       onChange={(e) => setFbPageName(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 mb-1">
                       Followers Badge Text
                     </label>
                     <input
                       type="text"
                       value={fbFollowers}
                       onChange={(e) => setFbFollowers(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-sky-500"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-400 mb-1">
+                    <label className="block text-[10px] font-medium text-slate-600 mb-1">
                       Memorizer Learning App URL
                     </label>
                     <input
                       type="url"
                       value={memoUrl}
                       onChange={(e) => setMemoUrl(e.target.value)}
-                      className="w-full px-3 py-1.5 bg-slate-900 border border-slate-700 rounded-lg text-slate-200 text-xs font-mono"
+                      className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono focus:outline-none focus:border-sky-500"
                     />
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between pt-2 border-t border-slate-800">
+                <div className="flex items-center justify-between pt-2 border-t border-slate-200">
                   {settingsSaved && (
-                    <span className="text-emerald-400 text-xs font-bold flex items-center gap-1">
+                    <span className="text-emerald-700 text-xs font-medium flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      সেটিংস সংরক্ষিত হয়েছে!
+                      Settings updated successfully!
                     </span>
                   )}
                   <button
                     type="submit"
-                    className="ml-auto px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs"
+                    className="ml-auto px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition-colors shadow-xs"
                   >
-                    লিঙ্ক আপডেট করুন
+                    Update Links
                   </button>
                 </div>
               </form>
 
               {/* Maintenance Tools Card */}
-              <div className="bg-slate-950/80 rounded-xl p-4 border border-rose-500/30 space-y-3">
-                <div className="font-bold text-rose-300 flex items-center gap-2">
-                  <AlertTriangle className="w-4 h-4 text-rose-400" />
-                  <span>সিস্টেম অটো-রিসেট ও ডেটা ম্যানেজমেন্ট:</span>
+              <div className="bg-slate-50 rounded-lg p-3.5 border border-slate-200 space-y-2.5">
+                <div className="font-semibold text-slate-800 text-xs flex items-center gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
+                  <span>Maintenance & System Controls:</span>
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
-                    <div className="font-semibold text-slate-200 text-xs">
-                      🌙 দৈনিক নাইট অটো-রিসেট (Nightly Auto-Reset)
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1.5">
+                    <div className="font-semibold text-slate-800 text-xs">
+                      Nightly Auto-Reset
                     </div>
-                    <p className="text-[11px] text-slate-400">
-                      পরবর্তী দিনের জন্য সমস্ত বুকড ও বিরতিতে থাকা সিটগুলো তাৎক্ষণিকভাবে রিলিজ করুন।
+                    <p className="text-[11px] text-slate-500">
+                      Release all active bookings and breaks ready for next morning.
                     </p>
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('আপনি কি আজকের সমস্ত সিট রিসেট করে ফাঁকা করতে চান?')) {
+                        if (window.confirm('Reset and release all seats now?')) {
                           triggerDailyAutoReset();
-                          alert('সমস্ত সিট সফলভাবে ফাঁকা করা হয়েছে!');
                         }
                       }}
-                      className="w-full py-1.5 px-3 rounded-lg bg-amber-600/20 hover:bg-amber-600/40 text-amber-300 font-bold text-xs border border-amber-500/30"
+                      className="w-full py-1.5 px-3 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-800 font-medium text-xs transition-colors"
                     >
-                      এখনই অটো-রিসেট কার্যকর করুন
+                      Trigger Auto-Reset
                     </button>
                   </div>
 
-                  <div className="p-3 rounded-lg bg-slate-900 border border-slate-800 space-y-2">
-                    <div className="font-semibold text-slate-200 text-xs">
-                      🔄 সম্পূর্ণ ফ্রেশ ডেমো ডেটা রিস্টোর
+                  <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1.5">
+                    <div className="font-semibold text-slate-800 text-xs">
+                      Restore Default Data
                     </div>
-                    <p className="text-[11px] text-slate-400">
-                      অ্যাপের সকল কাস্টম ডেটা ও পরিবর্তন মুছে প্রাথমিক অবস্থায় ফিরিয়ে আনুন।
+                    <p className="text-[11px] text-slate-500">
+                      Reset the application to initial demo structure and seats.
                     </p>
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('সতর্কতা: এটি ব্রাউজারের সকল কাস্টম ডেটা মুছে প্রাথমিক ডেমো ডেটা লোড করবে। নিশ্চিত?')) {
+                        if (window.confirm('Warning: This will reload default demo data. Continue?')) {
                           resetToDefaultData();
-                          alert('সিস্টেম রিসেট সম্পন্ন হয়েছে!');
                         }
                       }}
-                      className="w-full py-1.5 px-3 rounded-lg bg-rose-600/20 hover:bg-rose-600/40 text-rose-300 font-bold text-xs border border-rose-500/30"
+                      className="w-full py-1.5 px-3 rounded-lg bg-white border border-rose-300 hover:bg-rose-50 text-rose-700 font-medium text-xs transition-colors"
                     >
-                      ফ্যাক্টরি রিসেট করুন
+                      Restore Defaults
                     </button>
                   </div>
                 </div>
@@ -843,15 +838,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
         </div>
 
         {/* Footer */}
-        <div className="p-4 bg-slate-950 border-t border-slate-800 flex justify-end shrink-0">
+        <div className="p-3 bg-slate-50 border-t border-slate-100 flex justify-end shrink-0">
           <button
             onClick={onClose}
-            className="px-5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold transition-all"
+            className="px-4 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-medium transition-colors shadow-xs"
           >
-            বন্ধ করুন (Close)
+            Close
           </button>
         </div>
       </div>
     </div>
   );
 };
+

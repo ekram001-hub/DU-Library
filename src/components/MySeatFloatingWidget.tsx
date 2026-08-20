@@ -6,8 +6,6 @@ import {
   RotateCcw,
   LogOut,
   Ticket,
-  Sparkles,
-  ChevronUp,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { Seat, Room } from '../types';
@@ -37,15 +35,15 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
 
   // Elapsed study time calculation
   const elapsedStudyTime = useMemo(() => {
-    if (!currentStudentSeat.bookedAt) return '0 মিনিট';
+    if (!currentStudentSeat.bookedAt) return '0m';
     const diffMs = currentTime.getTime() - currentStudentSeat.bookedAt;
     const totalMinutes = Math.floor(diffMs / (60 * 1000));
     const hours = Math.floor(totalMinutes / 60);
     const mins = totalMinutes % 60;
     if (hours > 0) {
-      return `${hours} ঘণ্টা ${mins} মি`;
+      return `${hours}h ${mins}m`;
     }
-    return `${mins} মিনিট`;
+    return `${mins}m`;
   }, [currentStudentSeat.bookedAt, currentTime]);
 
   // Away countdown if on break
@@ -62,7 +60,7 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: 'সময় শেষ' };
+      return { expired: true, text: 'Expired' };
     }
     const totalSecs = Math.floor(remainingMs / 1000);
     const mins = Math.floor(totalSecs / 60);
@@ -74,77 +72,77 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
   }, [currentStudentSeat, currentTime]);
 
   const handleRelease = () => {
-    if (window.confirm('আপনি কি নিশ্চিতভাবে এই সিটটি ত্যাগ করতে চান?')) {
+    if (window.confirm('Are you sure you want to release your seat?')) {
       releaseSeat(currentStudentSeat.id);
     }
   };
 
   return (
-    <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-md z-40 animate-slideUp">
-      <div className="rounded-2xl bg-slate-900/95 backdrop-blur-md border border-sky-500/50 shadow-2xl p-3 sm:p-4 text-white">
+    <div className="fixed bottom-4 left-3 right-3 sm:left-auto sm:right-6 sm:max-w-sm z-40 animate-slideUp">
+      <div className="rounded-xl bg-white border border-slate-200/90 shadow-lg p-3 text-slate-800">
         <div className="flex items-center justify-between gap-3">
           {/* Seat & Status Information */}
           <div
             onClick={() => onSelectSeat(currentStudentSeat)}
-            className="flex items-center gap-2.5 cursor-pointer group"
+            className="flex items-center gap-2.5 cursor-pointer group min-w-0"
           >
-            <div className="w-10 h-10 rounded-xl bg-sky-600 flex items-center justify-center font-mono font-bold text-sm shadow-lg shadow-sky-600/30 group-hover:scale-105 transition-transform">
+            <div className="w-8 h-8 rounded-lg bg-sky-600 flex items-center justify-center font-mono font-semibold text-xs text-white shadow-xs shrink-0">
               {currentStudentSeat.seatNumber}
             </div>
 
-            <div>
+            <div className="min-w-0">
               <div className="flex items-center gap-1.5">
-                <span className="font-bold text-xs sm:text-sm text-sky-300 group-hover:text-white transition-colors">
-                  আমার সক্রিয় সিট
+                <span className="font-semibold text-xs text-slate-900 group-hover:text-sky-600 transition-colors truncate">
+                  My Active Seat
                 </span>
-                <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
+                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 shrink-0"></span>
               </div>
-              <div className="text-[11px] text-slate-400 line-clamp-1">
-                {room ? room.bengaliName.split('(')[0] : 'Study Room'} • {elapsedStudyTime}
+              <div className="text-[11px] text-slate-500 truncate">
+                {room ? room.name : 'Study Room'} • {elapsedStudyTime}
               </div>
             </div>
           </div>
 
           {/* Quick Action Buttons */}
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1 shrink-0">
             {currentStudentSeat.status === 'away' ? (
               <button
                 id="floating-return-btn"
                 onClick={() => returnFromAway(currentStudentSeat.id)}
-                className="px-2.5 py-1.5 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white text-xs font-bold transition-all shadow-md flex items-center gap-1"
+                className="px-2 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[11px] font-medium transition-colors shadow-xs flex items-center gap-1"
                 title="Return from break"
               >
-                <RotateCcw className="w-3.5 h-3.5" />
-                <span>ফিরেছি {awayCountdown && `(${awayCountdown.text})`}</span>
+                <RotateCcw className="w-3 h-3" />
+                <span>Return {awayCountdown && `(${awayCountdown.text})`}</span>
               </button>
             ) : (
               <button
                 id="floating-break-btn"
                 onClick={onOpenAwayModal}
-                className="px-2.5 py-1.5 rounded-xl bg-amber-600/30 hover:bg-amber-600/50 border border-amber-500/40 text-amber-300 text-xs font-semibold transition-all flex items-center gap-1"
+                className="px-2 py-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-[11px] font-medium transition-colors flex items-center gap-1"
                 title="Take a short break"
               >
-                <Timer className="w-3.5 h-3.5" />
-                <span>বিরতি</span>
+                <Timer className="w-3 h-3 text-amber-600" />
+                <span>Break</span>
               </button>
             )}
 
             <button
               id="floating-pass-btn"
               onClick={onOpenPassModal}
-              className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-sky-400 hover:text-white transition-all border border-slate-700"
+              className="p-1.5 rounded-md border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 transition-colors"
               title="View Digital Pass"
             >
-              <Ticket className="w-4 h-4" />
+              <Ticket className="w-3.5 h-3.5" />
             </button>
 
             <button
               id="floating-release-btn"
               onClick={handleRelease}
-              className="p-2 rounded-xl bg-rose-950/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-300 transition-all"
+              className="p-1.5 rounded-md border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition-colors"
               title="Release Seat"
             >
-              <LogOut className="w-4 h-4" />
+              <LogOut className="w-3.5 h-3.5" />
             </button>
           </div>
         </div>
@@ -152,3 +150,4 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
     </div>
   );
 };
+

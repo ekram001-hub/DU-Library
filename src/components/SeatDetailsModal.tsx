@@ -73,14 +73,14 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     : 'N/A';
 
   const handleRelease = () => {
-    if (window.confirm('আপনি কি নিশ্চিতভাবে এই সিটটি ত্যাগ করতে চান? (Are you sure you want to release this seat?)')) {
+    if (window.confirm('Are you sure you want to release this seat?')) {
       releaseSeat(seat.id);
       onClose();
     }
   };
 
   const handleAdminForceRelease = () => {
-    if (window.confirm('অ্যাডমিন অ্যাকশন: আপনি কি এই সিটটি জোরপূর্বক ফাঁকা করতে চান?')) {
+    if (window.confirm('Admin Action: Force release this seat?')) {
       adminForceReleaseSeat(seat.id);
       onClose();
     }
@@ -92,107 +92,107 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-sm rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden">
         {/* Header */}
-        <div className="p-5 bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 border-b border-slate-800 flex items-center justify-between">
+        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-slate-800 border border-slate-700 flex items-center justify-center text-white font-mono font-bold text-sm">
+            <div className="w-9 h-9 rounded-lg bg-white border border-slate-200 flex items-center justify-center text-slate-800 font-mono font-bold text-sm shadow-xs">
               {seat.seatNumber}
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-white">সিটের বিস্তারিত তথ্য</h3>
+                <h3 className="text-sm font-semibold text-slate-900">Seat Details</h3>
                 {isMySeat && (
-                  <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-sky-500 text-white">
-                    আমার সিট
+                  <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-sky-100 text-sky-700">
+                    My Seat
                   </span>
                 )}
               </div>
-              <p className="text-xs text-slate-400">
-                {room ? room.bengaliName : 'Study Room'}
+              <p className="text-xs text-slate-500 font-medium">
+                {room ? room.name : 'Study Room'}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-colors"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4 h-4" />
           </button>
         </div>
 
         {/* Content */}
-        <div className="p-5 space-y-4">
+        <div className="p-4 space-y-3.5">
           {/* Status Banner */}
           <div
-            className={`p-3.5 rounded-xl border flex items-center justify-between text-xs font-semibold ${
+            className={`p-3 rounded-lg border flex items-center justify-between text-xs font-medium ${
               seat.status === 'available'
-                ? 'bg-emerald-950/40 border-emerald-500/40 text-emerald-300'
+                ? 'bg-emerald-50/70 border-emerald-200 text-emerald-700'
                 : seat.status === 'away'
-                ? 'bg-amber-950/40 border-amber-500/40 text-amber-300'
+                ? 'bg-amber-50/70 border-amber-200 text-amber-700'
                 : seat.status === 'occupied'
-                ? 'bg-rose-950/40 border-rose-500/40 text-rose-300'
-                : 'bg-slate-800 border-slate-700 text-slate-400'
+                ? 'bg-rose-50/70 border-rose-200 text-rose-700'
+                : 'bg-slate-50 border-slate-200 text-slate-600'
             }`}
           >
             <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-current"></span>
+              <span className="w-2 h-2 rounded-full bg-current"></span>
               <span>
                 {seat.status === 'available'
-                  ? '🟢 ফাঁকা সিট (Available Now)'
+                  ? 'Available'
                   : seat.status === 'away'
-                  ? `🟡 বিরতিতে আছেন (${seat.awayReason || 'Away'})`
+                  ? `On Break (${seat.awayReason || 'Away'})`
                   : seat.status === 'occupied'
-                  ? '🔴 বুকড (Occupied)'
-                  : '🔧 সিট মেরামত চলছে (Under Maintenance)'}
+                  ? 'Occupied'
+                  : 'Under Maintenance'}
               </span>
             </div>
 
             {seat.isFemaleReserved && (
-              <span className="px-2 py-0.5 rounded bg-pink-500/20 text-pink-300 border border-pink-500/30 text-[10px]">
-                🌸 মহিলা সংরক্ষিত
+              <span className="px-1.5 py-0.5 rounded bg-pink-100 text-pink-700 border border-pink-200 text-[10px] font-medium">
+                Female Reserved
               </span>
             )}
           </div>
 
           {/* Occupant Info if occupied or away */}
           {seat.status !== 'available' && seat.status !== 'maintenance' && (
-            <div className="bg-slate-950/80 rounded-xl p-4 border border-slate-800 space-y-2.5 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                <span className="text-slate-400">শিক্ষার্থীর নাম:</span>
-                <span className="font-bold text-slate-100">{seat.occupantName}</span>
+            <div className="bg-slate-50 rounded-lg p-3 border border-slate-100 space-y-2 text-xs">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                <span className="text-slate-500">Occupant:</span>
+                <span className="font-semibold text-slate-800">{seat.occupantName}</span>
               </div>
 
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                <span className="text-slate-400">স্টুডেন্ট আইডি:</span>
-                <span className="font-mono text-slate-300">{seat.studentId || 'N/A'}</span>
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                <span className="text-slate-500">Student ID:</span>
+                <span className="font-mono text-slate-700">{seat.studentId || 'N/A'}</span>
               </div>
 
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                <span className="text-slate-400">মোবাইল নম্বর:</span>
-                <span className="font-mono text-slate-300">
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                <span className="text-slate-500">Contact:</span>
+                <span className="font-mono text-slate-700">
                   {isAdminLoggedIn || isMySeat
                     ? seat.occupantPhone
                     : seat.occupantPhone?.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between border-b border-slate-800/80 pb-2">
-                <span className="text-slate-400">প্রবেশ সময় (Check-in):</span>
-                <span className="font-mono text-emerald-400 font-semibold">{bookedTimeFormatted}</span>
+              <div className="flex items-center justify-between border-b border-slate-200/60 pb-1.5">
+                <span className="text-slate-500">Check-in:</span>
+                <span className="font-mono text-emerald-600 font-semibold">{bookedTimeFormatted}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-400">মেয়াদ শেষ (Valid Till):</span>
-                <span className="font-mono text-amber-400 font-semibold">{expectedLeaveFormatted}</span>
+                <span className="text-slate-500">Valid Until:</span>
+                <span className="font-mono text-amber-600 font-semibold">{expectedLeaveFormatted}</span>
               </div>
             </div>
           )}
 
           {/* Action Buttons based on User Context */}
-          <div className="space-y-2 pt-2">
+          <div className="space-y-2 pt-1">
             {/* If seat is available -> Book Button */}
             {seat.status === 'available' && (
               <button
@@ -201,10 +201,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   onClose();
                   onOpenBook();
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-bold text-xs sm:text-sm transition-all shadow-lg shadow-emerald-600/30 flex items-center justify-center gap-2"
+                className="w-full py-2 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs"
               >
-                <Armchair className="w-4 h-4" />
-                <span>এই সিটটি বুক করুন (Book Seat Now)</span>
+                <Armchair className="w-3.5 h-3.5" />
+                <span>Book This Seat</span>
               </button>
             )}
 
@@ -219,10 +219,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         returnFromAway(seat.id);
                         onClose();
                       }}
-                      className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5"
+                      className="py-2 px-2.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>আমি ফিরে এসেছি</span>
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>I am Back</span>
                     </button>
                   ) : (
                     <button
@@ -231,10 +231,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         onClose();
                         onOpenAwayTimer();
                       }}
-                      className="py-2.5 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5"
+                      className="py-2 px-2.5 rounded-lg bg-amber-500 hover:bg-amber-600 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5"
                     >
-                      <Timer className="w-4 h-4" />
-                      <span>বিরতি নিন (Take Break)</span>
+                      <Timer className="w-3.5 h-3.5" />
+                      <span>Take Break</span>
                     </button>
                   )}
 
@@ -244,43 +244,43 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                       onClose();
                       onOpenPass();
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-bold text-xs transition-all shadow-md flex items-center justify-center gap-1.5"
+                    className="py-2 px-2.5 rounded-lg bg-slate-800 hover:bg-slate-900 text-white font-medium text-xs transition-colors flex items-center justify-center gap-1.5"
                   >
-                    <Ticket className="w-4 h-4" />
-                    <span>পাস দেখুন (View Pass)</span>
+                    <Ticket className="w-3.5 h-3.5" />
+                    <span>View Pass</span>
                   </button>
                 </div>
 
                 <button
                   id="btn-release-seat"
                   onClick={handleRelease}
-                  className="w-full py-2.5 px-3 rounded-xl bg-rose-600/20 hover:bg-rose-600/30 border border-rose-500/40 text-rose-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5"
+                  className="w-full py-2 px-3 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-medium text-xs transition-colors flex items-center justify-center gap-1.5"
                 >
-                  <LogOut className="w-4 h-4" />
-                  <span>সিট ত্যাগ করুন (Release Seat)</span>
+                  <LogOut className="w-3.5 h-3.5" />
+                  <span>Release Seat</span>
                 </button>
               </div>
             )}
 
             {/* Admin Override Controls */}
             {isAdminLoggedIn && (
-              <div className="pt-2 border-t border-slate-800 space-y-2">
-                <div className="text-[11px] font-bold text-rose-400 uppercase tracking-wider">
-                  Admin Seat Controls:
+              <div className="pt-2 border-t border-slate-100 space-y-1.5">
+                <div className="text-[10px] font-semibold text-slate-500 uppercase tracking-wider">
+                  Admin Controls
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     onClick={handleAdminForceRelease}
-                    className="py-2 px-3 rounded-xl bg-rose-900/40 hover:bg-rose-900/60 border border-rose-500/40 text-rose-200 text-xs font-semibold transition-all"
+                    className="py-1.5 px-2.5 rounded-lg bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-medium transition-colors"
                   >
-                    জোরপূর্বক ফাঁকা করুন
+                    Force Release
                   </button>
 
                   <button
                     onClick={handleAdminMaintenance}
-                    className="py-2 px-3 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-300 text-xs font-semibold transition-all"
+                    className="py-1.5 px-2.5 rounded-lg bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-medium transition-colors"
                   >
-                    {seat.status === 'maintenance' ? 'সচল করুন' : 'মেরামতে পাঠান'}
+                    {seat.status === 'maintenance' ? 'Set Active' : 'Set Maintenance'}
                   </button>
                 </div>
               </div>
@@ -291,3 +291,4 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     </div>
   );
 };
+

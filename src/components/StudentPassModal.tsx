@@ -60,96 +60,95 @@ export const StudentPassModal: React.FC<StudentPassModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-sm rounded-xl bg-white border border-slate-200 shadow-xl overflow-hidden">
         {/* Modal Close Icon */}
         <button
           onClick={onClose}
-          className="absolute right-3 top-3 z-20 p-1.5 rounded-lg bg-slate-800/80 hover:bg-slate-700 text-slate-400 hover:text-white transition-all print:hidden"
+          className="absolute right-3 top-3 z-20 p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-500 hover:text-slate-800 transition-colors print:hidden"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
         {/* Printable Pass Card */}
-        <div id="digital-library-pass" className="p-6 space-y-5 bg-gradient-to-b from-slate-900 via-slate-950 to-slate-900">
+        <div id="digital-library-pass" className="p-5 space-y-4 bg-white">
           {/* Pass Top Branding */}
-          <div className="text-center pb-4 border-b border-dashed border-slate-800 space-y-1">
-            <div className="inline-flex items-center gap-1.5 px-3 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-emerald-300 text-xs font-bold uppercase tracking-wider mb-1">
-              <ShieldCheck className="w-3.5 h-3.5" />
+          <div className="text-center pb-3 border-b border-dashed border-slate-200 space-y-1">
+            <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-[10px] font-semibold uppercase tracking-wider mb-1">
+              <ShieldCheck className="w-3 h-3" />
               <span>Official Digital Study Pass</span>
             </div>
-            <h2 className="text-lg font-extrabold text-white tracking-tight">
-              {branchConfig.bengaliName}
+            <h2 className="text-base font-bold text-slate-900 tracking-tight">
+              {branchConfig.name}
             </h2>
-            <p className="text-xs text-slate-400 font-medium">
-              {branchConfig.name} • {branchConfig.badge}
+            <p className="text-xs text-slate-500 font-medium">
+              {branchConfig.badge}
             </p>
           </div>
 
           {/* Seat Number Hero Display */}
-          <div className="bg-gradient-to-r from-sky-950/60 via-indigo-950/60 to-sky-950/60 rounded-xl border border-sky-500/40 p-4 text-center shadow-inner">
-            <div className="text-xs font-semibold text-sky-400 uppercase tracking-widest">
-              Allocated Seat Number
+          <div className="bg-sky-50/70 rounded-xl border border-sky-100 p-3.5 text-center">
+            <div className="text-[10px] font-semibold text-sky-700 uppercase tracking-wider">
+              Allocated Seat
             </div>
-            <div className="text-4xl font-extrabold text-white font-mono my-1 tracking-wider">
+            <div className="text-3xl font-extrabold text-slate-900 font-mono my-0.5 tracking-wider">
               {seat.seatNumber}
             </div>
-            <div className="text-xs text-slate-300 font-medium">
-              {room ? room.bengaliName : 'Central Study Chamber'}
+            <div className="text-xs text-slate-600 font-medium">
+              {room ? room.name : 'Central Study Chamber'}
             </div>
           </div>
 
           {/* Student & Session Information Grid */}
-          <div className="grid grid-cols-2 gap-3 text-xs bg-slate-950/80 rounded-xl p-3.5 border border-slate-800">
+          <div className="grid grid-cols-2 gap-2 text-xs bg-slate-50 rounded-xl p-3 border border-slate-100">
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">শিক্ষার্থীর নাম</span>
-              <span className="font-semibold text-slate-200 text-sm">
+              <span className="text-slate-400 block text-[10px] uppercase font-medium">Student Name</span>
+              <span className="font-semibold text-slate-800 text-xs">
                 {seat.occupantName || 'Student'}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">মোবাইল নম্বর</span>
-              <span className="font-mono text-slate-200">
+              <span className="text-slate-400 block text-[10px] uppercase font-medium">Contact</span>
+              <span className="font-mono text-slate-800 text-xs">
                 {seat.occupantPhone || 'N/A'}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">স্টুডেন্ট আইডি / রোল</span>
-              <span className="font-mono text-slate-200">
-                {seat.studentId || 'STUDENT-PASS'}
+              <span className="text-slate-400 block text-[10px] uppercase font-medium">Student ID</span>
+              <span className="font-mono text-slate-800 text-xs">
+                {seat.studentId || 'PASS-STUDENT'}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">তারিখ</span>
-              <span className="text-slate-200 font-mono">
+              <span className="text-slate-400 block text-[10px] uppercase font-medium">Date</span>
+              <span className="text-slate-800 font-mono text-xs">
                 {formatDate(bookedTime)}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">প্রবেশ সময় (Entry)</span>
-              <span className="font-bold text-emerald-400 font-mono">
+              <span className="text-slate-400 block text-[10px] uppercase font-medium">Entry Time</span>
+              <span className="font-bold text-emerald-600 font-mono text-xs">
                 {formatTime(bookedTime)}
               </span>
             </div>
 
             <div>
-              <span className="text-slate-500 block text-[10px] uppercase font-bold">মেয়াদ শেষ (Valid Till)</span>
-              <span className="font-bold text-amber-400 font-mono">
+              <span className="text-slate-400 block text-[10px] uppercase font-medium">Valid Till</span>
+              <span className="font-bold text-amber-600 font-mono text-xs">
                 {formatTime(validUntilTime)}
               </span>
             </div>
           </div>
 
           {/* Barcode & Security Pass Code Graphic */}
-          <div className="pt-2 text-center space-y-2">
-            <div className="inline-flex items-center justify-center p-3 bg-white rounded-xl shadow-md">
-              {/* Simulated crisp Barcode / QR lines */}
+          <div className="pt-1 text-center space-y-1.5">
+            <div className="inline-flex items-center justify-center p-2.5 bg-slate-50 border border-slate-200 rounded-lg">
               <div className="space-y-1">
-                <div className="flex items-center justify-center gap-1 h-10 px-2 bg-white">
+                <div className="flex items-center justify-center gap-1 h-8 px-2 bg-white rounded border border-slate-200">
                   <div className="w-1 h-full bg-slate-900"></div>
                   <div className="w-0.5 h-full bg-slate-900"></div>
                   <div className="w-1.5 h-full bg-slate-900"></div>
@@ -162,41 +161,39 @@ export const StudentPassModal: React.FC<StudentPassModalProps> = ({
                   <div className="w-0.5 h-full bg-slate-900"></div>
                   <div className="w-1 h-full bg-slate-900"></div>
                   <div className="w-1.5 h-full bg-slate-900"></div>
-                  <div className="w-0.5 h-full bg-slate-900"></div>
-                  <div className="w-2 h-full bg-slate-900"></div>
-                  <div className="w-1 h-full bg-slate-900"></div>
                 </div>
-                <div className="text-[10px] font-mono font-bold tracking-widest text-slate-800">
+                <div className="text-[10px] font-mono font-bold tracking-widest text-slate-700">
                   {seat.passCode || 'PASS-BCS-08191'}
                 </div>
               </div>
             </div>
 
-            <p className="text-[10px] text-slate-500">
-              লাইব্রেরিতে অবস্থানকালে ও ডেস্কে এই ডিজিটাল পাস সংরক্ষণ করুন।
+            <p className="text-[10px] text-slate-400">
+              Keep this token pass ready during desk checks and inspection.
             </p>
           </div>
         </div>
 
         {/* Modal Bottom Actions */}
-        <div className="p-4 bg-slate-950 border-t border-slate-800 flex items-center justify-between gap-3 print:hidden">
+        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between gap-2 print:hidden">
           <button
             onClick={onClose}
-            className="flex-1 py-2 px-4 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-750 text-slate-300 text-xs font-semibold transition-all text-center"
+            className="flex-1 py-1.5 px-3 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-medium transition-colors text-center"
           >
-            বন্ধ করুন (Close)
+            Close
           </button>
 
           <button
             id="print-pass-btn"
             onClick={handlePrint}
-            className="flex-1 py-2 px-4 rounded-xl bg-gradient-to-r from-sky-600 to-indigo-600 hover:from-sky-500 hover:to-indigo-500 text-white text-xs font-bold transition-all shadow-md shadow-sky-600/30 flex items-center justify-center gap-1.5"
+            className="flex-1 py-1.5 px-3 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs font-medium transition-colors flex items-center justify-center gap-1.5"
           >
-            <Printer className="w-4 h-4" />
-            <span>প্রিন্ট / সেভ টোকেন</span>
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Pass</span>
           </button>
         </div>
       </div>
     </div>
   );
 };
+

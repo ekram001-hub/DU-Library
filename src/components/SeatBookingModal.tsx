@@ -7,7 +7,6 @@ import {
   Phone,
   Hash,
   ShieldCheck,
-  Sparkles,
   AlertTriangle,
   Heart,
   CheckCircle2,
@@ -65,17 +64,17 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
     setErrorMsg(null);
 
     if (!name.trim()) {
-      setErrorMsg('অনুগ্রহ করে আপনার পুরো নাম লিখুন (Enter your full name)');
+      setErrorMsg('Please enter your full name');
       return;
     }
     if (!phone.trim()) {
-      setErrorMsg('অনুগ্রহ করে মোবাইল নম্বর লিখুন (Enter phone number)');
+      setErrorMsg('Please enter your mobile phone number');
       return;
     }
 
     // Gender check for female zone
     if (seat.isFemaleReserved && gender !== 'female') {
-      setErrorMsg('⚠️ এই সিটটি শুধুমাত্র নারী শিক্ষার্থীদের জন্য সংরক্ষিত।');
+      setErrorMsg('This seat is reserved strictly for female students.');
       return;
     }
 
@@ -128,38 +127,38 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
   };
 
   const durationOptions = [
-    { hours: 2, label: '২ ঘণ্টা', sub: 'Short Session' },
-    { hours: 4, label: '৪ ঘণ্টা', sub: 'Standard Study' },
-    { hours: 6, label: '৬ ঘণ্টা', sub: 'Deep Focus' },
-    { hours: 8, label: '৮ ঘণ্টা', sub: 'Full Day' },
-    { hours: 12, label: '১২ ঘণ্টা', sub: 'Marathon Session' },
+    { hours: 2, label: '2 Hours', sub: 'Short' },
+    { hours: 4, label: '4 Hours', sub: 'Standard' },
+    { hours: 6, label: '6 Hours', sub: 'Deep Focus' },
+    { hours: 8, label: '8 Hours', sub: 'Full Day' },
+    { hours: 12, label: '12 Hours', sub: 'Marathon' },
   ];
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/75 backdrop-blur-sm animate-fadeIn">
-      <div className="relative w-full max-w-lg rounded-2xl bg-slate-900 border border-slate-700 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-xl overflow-hidden animate-slideUp">
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-slate-950 via-slate-900 to-slate-950 p-5 border-b border-slate-800 flex items-center justify-between">
+        <div className="bg-slate-50/80 px-5 py-4 border-b border-slate-200 flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-emerald-500/20 border border-emerald-500/40 flex items-center justify-center text-emerald-400">
+            <div className="w-9 h-9 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-600">
               <Armchair className="w-5 h-5" />
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-lg font-bold text-white">সিট বুকিং নিশ্চিতকরণ</h3>
-                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-500/20 border border-emerald-500/40 text-emerald-300">
+                <h3 className="text-base font-bold text-slate-900">Seat Booking</h3>
+                <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-100 text-emerald-800">
                   {seat.seatNumber}
                 </span>
               </div>
-              <p className="text-xs text-slate-400">
-                {room ? room.bengaliName : 'Study Center Hall'}
+              <p className="text-xs text-slate-500">
+                {room ? room.name : 'Study Hall'}
               </p>
             </div>
           </div>
 
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-slate-800 transition-all"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 transition-all"
           >
             <X className="w-5 h-5" />
           </button>
@@ -167,18 +166,18 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
 
         {/* Female reserved warning banner if applicable */}
         {seat.isFemaleReserved && (
-          <div className="bg-pink-950/40 border-b border-pink-500/30 px-5 py-2.5 flex items-center gap-2 text-xs text-pink-300">
-            <Heart className="w-4 h-4 text-pink-400 shrink-0" />
+          <div className="bg-pink-50 border-b border-pink-200 px-5 py-2.5 flex items-center gap-2 text-xs text-pink-800">
+            <Heart className="w-4 h-4 text-pink-600 shrink-0" />
             <span>
-              <strong>মহিলা সংরক্ষিত জোন:</strong> এই সিটটি শুধুমাত্র নারী শিক্ষার্থীদের ব্যবহারের জন্য নির্ধারিত।
+              <strong>Female Reserved Zone:</strong> This seat is designated exclusively for female students.
             </span>
           </div>
         )}
 
         {/* Error Message */}
         {errorMsg && (
-          <div className="mx-5 mt-4 p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-300 text-xs flex items-center gap-2">
-            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-400" />
+          <div className="mx-5 mt-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertTriangle className="w-4 h-4 shrink-0 text-rose-600" />
             <span>{errorMsg}</span>
           </div>
         )}
@@ -187,11 +186,11 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
         <form onSubmit={handleSubmit} className="p-5 space-y-4">
           {/* Target Duration Selector */}
           <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-2 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-sky-400" />
-              <span>কত সময় অধ্যয়ন করবেন? (Target Duration):</span>
+            <label className="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-sky-600" />
+              <span>Target Study Duration:</span>
             </label>
-            <div className="grid grid-cols-3 sm:grid-cols-5 gap-2">
+            <div className="grid grid-cols-5 gap-1.5">
               {durationOptions.map((opt) => (
                 <button
                   key={opt.hours}
@@ -199,12 +198,12 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                   onClick={() => setTargetHours(opt.hours)}
                   className={`py-2 px-1 rounded-xl text-center border text-xs transition-all ${
                     targetHours === opt.hours
-                      ? 'bg-sky-600 border-sky-400 text-white font-bold shadow-md shadow-sky-600/30'
-                      : 'bg-slate-950/60 border-slate-800 text-slate-400 hover:border-slate-700 hover:text-slate-200'
+                      ? 'bg-slate-900 border-slate-900 text-white font-semibold shadow-xs'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  <div className="font-bold">{opt.label}</div>
-                  <div className="text-[9px] opacity-80">{opt.sub}</div>
+                  <div className="font-semibold text-[11px]">{opt.label}</div>
+                  <div className="text-[9px] opacity-75">{opt.sub}</div>
                 </button>
               ))}
             </div>
@@ -214,9 +213,9 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {/* Full Name */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>শিক্ষার্থীর পুরো নাম (Full Name)*</span>
+                <span>Full Name *</span>
               </label>
               <input
                 id="booking-name"
@@ -224,16 +223,16 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="যেমন: তানভীর আহমেদ"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                placeholder="e.g. John Doe"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-slate-400"
               />
             </div>
 
             {/* Phone Number */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
-                <span>মোবাইল নম্বর (Phone Number)*</span>
+                <span>Phone Number *</span>
               </label>
               <input
                 id="booking-phone"
@@ -242,30 +241,30 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
                 placeholder="017xxxxxxxx"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500 font-mono"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-slate-400 font-mono"
               />
             </div>
 
             {/* Student ID / Roll (Optional) */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1 flex items-center gap-1">
+              <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <Hash className="w-3.5 h-3.5 text-slate-400" />
-                <span>স্টুডেন্ট আইডি / রোল (ঐচ্ছিক)</span>
+                <span>Student ID (Optional)</span>
               </label>
               <input
                 id="booking-student-id"
                 type="text"
                 value={studentId}
                 onChange={(e) => setStudentId(e.target.value)}
-                placeholder="যেমন: BCS-47-2026"
-                className="w-full px-3 py-2 bg-slate-950 border border-slate-700 rounded-xl text-xs sm:text-sm text-slate-200 placeholder-slate-500 focus:outline-none focus:border-sky-500"
+                placeholder="e.g. STU-2026"
+                className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs sm:text-sm text-slate-900 placeholder-slate-400 focus:bg-white focus:outline-none focus:border-slate-400"
               />
             </div>
 
             {/* Gender Selection */}
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1">
-                জেন্ডার (Gender)*
+              <label className="block text-xs font-semibold text-slate-700 mb-1">
+                Gender *
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -274,55 +273,55 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                   disabled={seat.isFemaleReserved}
                   className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
                     gender === 'male'
-                      ? 'bg-sky-600 border-sky-400 text-white font-bold'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-slate-900 border-slate-900 text-white font-semibold'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   } ${seat.isFemaleReserved ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
-                  👨 পুরুষ (Male)
+                  Male
                 </button>
                 <button
                   type="button"
                   onClick={() => setGender('female')}
                   className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-all ${
                     gender === 'female'
-                      ? 'bg-pink-600 border-pink-400 text-white font-bold'
-                      : 'bg-slate-950 border-slate-800 text-slate-400 hover:text-slate-200'
+                      ? 'bg-pink-600 border-pink-600 text-white font-semibold'
+                      : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  👩 মহিলা (Female)
+                  Female
                 </button>
               </div>
             </div>
           </div>
 
           {/* Quick Notice */}
-          <div className="p-3 rounded-xl bg-slate-950/80 border border-slate-800/80 text-[11px] text-slate-400 space-y-1">
-            <div className="flex items-center gap-1.5 font-semibold text-slate-300">
-              <ShieldCheck className="w-3.5 h-3.5 text-emerald-400" />
-              <span>ডিজিটাল লাইব্রেরি পাস ও লাইভ ট্র্যাকিং</span>
+          <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1">
+            <div className="flex items-center gap-1.5 font-semibold text-slate-800">
+              <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+              <span>Digital Pass & Live Away Tracking</span>
             </div>
             <p>
-              বুকিং সম্পন্ন হলে সাথে সাথে আপনার ডিজিটাল স্টাডি টোকেন/পাস জেনারেট হবে। বাইরে যাওয়ার সময় ‘বিরতি নিন’ অপশনটি ব্যবহার করতে পারবেন।
+              Your digital pass token will be created immediately. You can take temporary study breaks using the Away Timer anytime.
             </p>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center justify-end gap-3 pt-2">
+          <div className="flex items-center justify-end gap-2.5 pt-2">
             <button
               type="button"
               onClick={onClose}
-              className="px-4 py-2.5 rounded-xl border border-slate-700 bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold transition-all"
+              className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all"
             >
-              বাতিল করুন
+              Cancel
             </button>
 
             <button
               id="confirm-booking-btn"
               type="submit"
-              className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white text-xs sm:text-sm font-bold transition-all shadow-lg shadow-emerald-600/30 flex items-center gap-2"
+              className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs flex items-center gap-2"
             >
-              <CheckCircle2 className="w-4 h-4" />
-              <span>বুকিং কনফার্ম করুন ({targetHours} ঘণ্টা)</span>
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span>Confirm Booking ({targetHours}h)</span>
             </button>
           </div>
         </form>
@@ -330,3 +329,4 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
     </div>
   );
 };
+

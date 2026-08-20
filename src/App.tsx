@@ -17,12 +17,7 @@ import {
   BookOpen,
   Sparkles,
   ExternalLink,
-  ShieldCheck,
-  Heart,
   Facebook,
-  Phone,
-  Mail,
-  MapPin,
 } from 'lucide-react';
 
 function MainApp() {
@@ -77,7 +72,7 @@ function MainApp() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100 flex flex-col selection:bg-sky-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col selection:bg-sky-500 selection:text-white">
       {/* Top Navigation Bar */}
       <Navbar
         onOpenAuth={() => setIsAuthModalOpen(true)}
@@ -109,19 +104,19 @@ function MainApp() {
       />
 
       {/* Footer */}
-      <footer className="mt-12 bg-slate-900/90 border-t border-slate-800/80 py-8 px-4 text-xs text-slate-400">
+      <footer className="mt-12 bg-white border-t border-slate-200 py-6 px-4 text-xs text-slate-500">
         <div className="max-w-7xl mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
           <div className="flex items-center gap-3 text-center md:text-left">
-            <div className="w-8 h-8 rounded-lg bg-sky-600/20 border border-sky-500/30 flex items-center justify-center text-sky-400">
+            <div className="w-8 h-8 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center text-slate-700">
               {currentBranchId === 'bcs_study' ? (
-                <GraduationCap className="w-4 h-4" />
+                <GraduationCap className="w-4 h-4 text-sky-600" />
               ) : (
-                <BookOpen className="w-4 h-4" />
+                <BookOpen className="w-4 h-4 text-emerald-600" />
               )}
             </div>
             <div>
-              <div className="font-bold text-slate-200">
-                {branchConfig.bengaliName} • Smart Study Center & Library
+              <div className="font-semibold text-slate-800">
+                {branchConfig.name} • Smart Study Center
               </div>
               <div className="text-[11px] text-slate-500">
                 {branchConfig.address} • Phone: {branchConfig.phone}
@@ -129,15 +124,15 @@ function MainApp() {
             </div>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-400">
+          <div className="flex flex-wrap items-center justify-center gap-4 text-slate-600">
             <a
               href={branchConfig.memorizerAppUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-amber-300 transition-colors flex items-center gap-1 font-medium text-amber-400/90"
+              className="hover:text-amber-600 transition-colors flex items-center gap-1 font-medium text-amber-700"
             >
               <Sparkles className="w-3.5 h-3.5" />
-              <span>Memorizer Learning App</span>
+              <span>Memorizer App</span>
               <ExternalLink className="w-3 h-3" />
             </a>
 
@@ -145,24 +140,24 @@ function MainApp() {
               href={branchConfig.facebookUrl}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-blue-300 transition-colors flex items-center gap-1 font-medium text-blue-400/90"
+              className="hover:text-blue-700 transition-colors flex items-center gap-1 font-medium text-blue-600"
             >
               <Facebook className="w-3.5 h-3.5" />
-              <span>Facebook Page</span>
+              <span>Facebook</span>
             </a>
 
             <button
               onClick={() => setIsGuidelinesModalOpen(true)}
-              className="hover:text-slate-200 transition-colors"
+              className="hover:text-slate-900 transition-colors"
             >
-              নিয়মাবলী ও নোটিশ
+              Rules & Notices
             </button>
 
             <button
               onClick={() => setIsAdminModalOpen(true)}
-              className="hover:text-rose-400 transition-colors"
+              className="hover:text-rose-600 transition-colors"
             >
-              অ্যাডমিন পোর্টাল
+              Admin Portal
             </button>
           </div>
         </div>
@@ -228,3 +223,4 @@ export default function App() {
     </LibraryProvider>
   );
 }
+
