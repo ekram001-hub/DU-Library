@@ -249,8 +249,8 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Admin Control Button */}
-            {adminUser ? (
+            {/* Admin Control Button (Only visible for 01581624202 / Admin users) */}
+            {(adminUser || currentStudent?.phone?.replace(/\D/g, '') === '01581624202') && (
               <div className="flex items-center gap-1">
                 <button
                   id="btn-admin-dashboard"
@@ -259,7 +259,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                   title="Admin Dashboard"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-                  <span className="hidden sm:inline">Admin</span>
+                  <span className="hidden sm:inline">Admin Panel</span>
                 </button>
                 <button
                   id="btn-admin-logout"
@@ -270,15 +270,6 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <LogOut className="w-3.5 h-3.5" />
                 </button>
               </div>
-            ) : (
-              <button
-                id="btn-admin-login"
-                onClick={onOpenAdmin}
-                className="p-1.5 rounded-xl bg-white hover:bg-slate-100 border border-slate-200 text-slate-500 hover:text-slate-800 text-xs font-medium transition-all"
-                title="Admin Login & Room Settings"
-              >
-                <ShieldCheck className="w-4 h-4 text-slate-500 hover:text-amber-600" />
-              </button>
             )}
           </div>
         </div>

@@ -24,7 +24,17 @@ import {
   signInWithGoogle as supabaseSignInGoogle,
   signOutSupabase as supabaseSignOut,
   isSupabaseConfigured,
+  syncStudentToCloud,
+  fetchAllStudentsFromCloud,
 } from '../lib/supabase';
+
+export const ADMIN_PHONE_NUMBER = '01581624202';
+
+export const isSuperAdminPhone = (phone?: string): boolean => {
+  if (!phone) return false;
+  const digits = phone.replace(/\D/g, '');
+  return digits === ADMIN_PHONE_NUMBER || digits.endsWith('01581624202');
+};
 
 interface LibraryContextType {
   currentBranchId: BranchId;
@@ -38,6 +48,8 @@ interface LibraryContextType {
   addRoom: (room: Omit<Room, 'id'>) => void;
   updateRoom: (roomId: string, updates: Partial<Room>) => void;
   deleteRoom: (roomId: string) => void;
+  moveRoomOrder: (roomId: string, direction: 'up' | 'down') => void;
+  setRoomOrder: (roomId: string, newOrder: number) => void;
 
   seats: Seat[];
   branchSeats: Seat[];
@@ -68,18 +80,22 @@ interface LibraryContextType {
     gender: Gender
   ) => void;
 
-  // Student Auth
+  // Student Auth & Directory
   currentStudent: StudentProfile | null;
+  registeredStudents: StudentProfile[];
   loginStudent: (student: StudentProfile) => void;
   logoutStudent: () => void;
   demoLogin: (demoStudentId: string) => void;
   registerOrUpdateStudent: (data: Omit<StudentProfile, 'id' | 'role'>) => void;
+  deleteRegisteredStudent: (phone: string) => void;
+  refreshStudentsFromCloud: () => Promise<void>;
   signInWithGoogleAuth: () => Promise<{ error: Error | null; data?: unknown }>;
   isSupabaseReady: boolean;
 
   // Admin Auth
   adminUser: AdminUser | null;
   isAdminLoggedIn: boolean;
+  isSuperAdminUser: boolean;
   loginAdmin: (email: string, pass: string) => boolean;
   logoutAdmin: () => void;
 
@@ -112,6 +128,7 @@ const STORAGE_KEYS = {
   ROOMS: 'smart_library_rooms_v2',
   SEATS: 'smart_library_seats_v2',
   CURRENT_STUDENT: 'smart_library_current_student_v2',
+  REGISTERED_STUDENTS: 'smart_library_registered_students_v2',
   ADMIN_USER: 'smart_library_admin_user_v2',
   NOTICES: 'smart_library_notices_v2',
   ATTENDANCE: 'smart_library_attendance_v2',
@@ -194,7 +211,23 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(seats));
   }, [seats]);
 
-  // 5. Current Student
+  // 5. Current Student & Registered Students Directory
+  const [registeredStudents, setRegisteredStudents] = useState<StudentProfile[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.REGISTERED_STUDENTS);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse registered students', e);
+      }
+    }
+    return DEMO_STUDENTS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.REGISTERED_STUDENTS, JSON.stringify(registeredStudents));
+  }, [registeredStudents]);
+
   const [currentStudent, setCurrentStudent] = useState<StudentProfile | null>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.CURRENT_STUDENT);
     if (saved) {
@@ -218,17 +251,33 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const user = session.user;
         const meta = user.user_metadata || {};
         const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
-        setCurrentStudent({
+        const userPhone = meta.phone || '';
+        const isAdmin = isSuperAdminPhone(userPhone);
+
+        const loadedStudent: StudentProfile = {
           id: user.id,
           name: fullName,
           email: user.email || '',
-          phone: meta.phone || '',
+          phone: userPhone,
           studentId: `DU-${user.id.slice(0, 6).toUpperCase()}`,
           gender: 'male',
-          role: 'student',
+          role: isAdmin ? 'superadmin' : 'student',
           avatar: meta.avatar_url || meta.picture,
           targetExam: 'Competitive Exam / BCS',
-        });
+          registeredAt: new Date().toISOString(),
+        };
+
+        setCurrentStudent(loadedStudent);
+
+        if (isAdmin) {
+          setAdminUser({
+            id: 'admin_master_01581624202',
+            name: fullName || 'Library Super Admin (01581624202)',
+            email: user.email || 'admin@studycenter.com',
+            role: 'superadmin',
+            branchAccess: 'all',
+          });
+        }
       }
     });
 
@@ -237,17 +286,33 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const user = session.user;
         const meta = user.user_metadata || {};
         const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
-        setCurrentStudent({
+        const userPhone = meta.phone || '';
+        const isAdmin = isSuperAdminPhone(userPhone);
+
+        const loadedStudent: StudentProfile = {
           id: user.id,
           name: fullName,
           email: user.email || '',
-          phone: meta.phone || '',
+          phone: userPhone,
           studentId: `DU-${user.id.slice(0, 6).toUpperCase()}`,
           gender: 'male',
-          role: 'student',
+          role: isAdmin ? 'superadmin' : 'student',
           avatar: meta.avatar_url || meta.picture,
           targetExam: 'Competitive Exam / BCS',
-        });
+          registeredAt: new Date().toISOString(),
+        };
+
+        setCurrentStudent(loadedStudent);
+
+        if (isAdmin) {
+          setAdminUser({
+            id: 'admin_master_01581624202',
+            name: fullName || 'Library Super Admin (01581624202)',
+            email: user.email || 'admin@studycenter.com',
+            role: 'superadmin',
+            branchAccess: 'all',
+          });
+        }
       }
     });
 
@@ -259,6 +324,19 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (currentStudent) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_STUDENT, JSON.stringify(currentStudent));
+      // Auto-grant super admin access if phone matches 01581624202
+      if (isSuperAdminPhone(currentStudent.phone)) {
+        setAdminUser((prev) => {
+          if (prev?.role === 'superadmin' && prev.id === 'admin_master_01581624202') return prev;
+          return {
+            id: 'admin_master_01581624202',
+            name: currentStudent.name || 'Library Super Admin (01581624202)',
+            email: currentStudent.email || 'admin@studycenter.com',
+            role: 'superadmin',
+            branchAccess: 'all',
+          };
+        });
+      }
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_STUDENT);
     }
@@ -267,6 +345,24 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // 6. Admin User
   const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
+    const savedStudentStr = localStorage.getItem(STORAGE_KEYS.CURRENT_STUDENT);
+    if (savedStudentStr) {
+      try {
+        const parsedStudent = JSON.parse(savedStudentStr);
+        if (parsedStudent?.phone && isSuperAdminPhone(parsedStudent.phone)) {
+          return {
+            id: 'admin_master_01581624202',
+            name: parsedStudent.name || 'Library Super Admin (01581624202)',
+            email: parsedStudent.email || 'admin@studycenter.com',
+            role: 'superadmin',
+            branchAccess: 'all',
+          };
+        }
+      } catch (e) {
+        console.error(e);
+      }
+    }
+
     const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
     if (saved) {
       try {
@@ -377,9 +473,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return allBranches[currentBranchId] || BRANCHES_DATA[currentBranchId];
   }, [allBranches, currentBranchId]);
 
-  // Computed: Branch Rooms
+  // Computed: Branch Rooms (sorted by order / serial)
   const branchRooms = useMemo(() => {
-    return rooms.filter((r) => r.branchId === currentBranchId);
+    return rooms
+      .filter((r) => r.branchId === currentBranchId)
+      .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
   }, [rooms, currentBranchId]);
 
   // Computed: Branch Seats
@@ -646,12 +744,24 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Student Auth
   const loginStudent = useCallback((student: StudentProfile) => {
     setCurrentStudent(student);
+    if (isSuperAdminPhone(student.phone)) {
+      setAdminUser({
+        id: 'admin_master_01581624202',
+        name: student.name || 'Library Super Admin (01581624202)',
+        email: student.email || 'admin@studycenter.com',
+        role: 'superadmin',
+        branchAccess: 'all',
+      });
+    }
   }, []);
 
   const logoutStudent = useCallback(() => {
+    if (adminUser?.id === 'admin_master_01581624202') {
+      setAdminUser(null);
+    }
     setCurrentStudent(null);
     supabaseSignOut().catch(() => {});
-  }, []);
+  }, [adminUser]);
 
   const signInWithGoogleAuth = useCallback(async () => {
     return await supabaseSignInGoogle();
@@ -661,31 +771,98 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const student = DEMO_STUDENTS.find((s) => s.id === demoStudentId);
     if (student) {
       setCurrentStudent(student);
+      if (isSuperAdminPhone(student.phone)) {
+        setAdminUser({
+          id: 'admin_master_01581624202',
+          name: student.name || 'Library Super Admin (01581624202)',
+          email: student.email || 'admin@studycenter.com',
+          role: 'superadmin',
+          branchAccess: 'all',
+        });
+      }
     }
   }, []);
 
   const registerOrUpdateStudent = useCallback((data: Omit<StudentProfile, 'id' | 'role'>) => {
+    const isAdmin = isSuperAdminPhone(data.phone);
     const newStudent: StudentProfile = {
       ...data,
       id: `stu_${Date.now()}`,
-      role: 'student',
+      role: isAdmin ? 'superadmin' : 'student',
+      registeredAt: new Date().toISOString(),
+      lastActive: new Date().toISOString(),
     };
     setCurrentStudent(newStudent);
+
+    if (isAdmin) {
+      setAdminUser({
+        id: 'admin_master_01581624202',
+        name: data.name || 'Library Super Admin (01581624202)',
+        email: data.email || 'admin@studycenter.com',
+        role: 'superadmin',
+        branchAccess: 'all',
+      });
+    }
+
+    setRegisteredStudents((prev) => {
+      const cleanPhone = data.phone.replace(/\D/g, '');
+      const filtered = prev.filter((s) => s.phone.replace(/\D/g, '') !== cleanPhone);
+      return [newStudent, ...filtered];
+    });
+
+    // Automatically backup & sync to Supabase cloud
+    syncStudentToCloud(data).catch(() => {});
   }, []);
 
+  const deleteRegisteredStudent = useCallback((phone: string) => {
+    const clean = phone.replace(/\D/g, '');
+    setRegisteredStudents((prev) => prev.filter((s) => s.phone.replace(/\D/g, '') !== clean));
+  }, []);
+
+  const refreshStudentsFromCloud = useCallback(async () => {
+    try {
+      const cloudStudents = await fetchAllStudentsFromCloud();
+      if (cloudStudents && cloudStudents.length > 0) {
+        setRegisteredStudents((prev) => {
+          const studentMap = new Map<string, StudentProfile>();
+          // Existing
+          prev.forEach((s) => studentMap.set(s.phone.replace(/\D/g, ''), s));
+          // Cloud
+          cloudStudents.forEach((cs) => {
+            const cleanPhone = cs.phone.replace(/\D/g, '');
+            const existing = studentMap.get(cleanPhone);
+            studentMap.set(cleanPhone, {
+              id: existing?.id || `stu_cloud_${cleanPhone}`,
+              name: cs.name || existing?.name || 'Registered Student',
+              phone: cs.phone,
+              email: cs.email || existing?.email || '',
+              studentId: cs.student_id || existing?.studentId || `ID-${cleanPhone.slice(-4)}`,
+              gender: (cs.gender as Gender) || existing?.gender || 'male',
+              role: cleanPhone === ADMIN_PHONE_NUMBER ? 'superadmin' : 'student',
+              targetExam: cs.target_exam || existing?.targetExam || 'Competitive Exam',
+              registeredAt: cs.created_at || existing?.registeredAt || new Date().toISOString(),
+              lastActive: cs.last_active || existing?.lastActive,
+            });
+          });
+          return Array.from(studentMap.values());
+        });
+      }
+    } catch (err) {
+      console.warn('Failed to refresh students from cloud', err);
+    }
+  }, []);
 
   // Admin Auth
   const loginAdmin = useCallback((email: string, pass: string): boolean => {
-    // Standard secure demo admin credentials: admin@studycenter.com / admin123 or bcsadmin / admin
     const normalizedEmail = email.trim().toLowerCase();
     if (
-      (normalizedEmail === 'admin@studycenter.com' || normalizedEmail === 'admin' || normalizedEmail === 'bcsadmin') &&
-      (pass === 'admin123' || pass === 'admin' || pass === 'study123')
+      (normalizedEmail === 'admin@studycenter.com' || normalizedEmail === 'admin' || normalizedEmail === 'bcsadmin' || normalizedEmail === '01581624202') &&
+      (pass === 'admin123' || pass === 'admin' || pass === 'study123' || pass === '01581624202')
     ) {
       const admin: AdminUser = {
-        id: 'admin_master_1',
-        name: 'Library Super Admin (মুসাফির হোসেন)',
-        email: normalizedEmail,
+        id: 'admin_master_01581624202',
+        name: 'Library Super Admin (01581624202)',
+        email: 'admin@studycenter.com',
         role: 'superadmin',
         branchAccess: 'all',
       };
@@ -699,12 +876,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setAdminUser(null);
   }, []);
 
-  // Rooms CRUD
+  // Rooms CRUD & Ordering
   const addRoom = useCallback((roomData: Omit<Room, 'id'>) => {
     const newRoomId = `room_${Date.now()}`;
+    const branchRoomsList = rooms.filter((r) => r.branchId === roomData.branchId);
+    const nextOrder = roomData.order ?? branchRoomsList.length + 1;
     const newRoom: Room = {
       ...roomData,
       id: newRoomId,
+      order: nextOrder,
+      roomNumber: roomData.roomNumber || `Room ${nextOrder}`,
     };
 
     setRooms((prev) => [...prev, newRoom]);
@@ -727,7 +908,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     setSeats((prev) => [...prev, ...newSeats]);
-  }, []);
+  }, [rooms]);
 
   const updateRoom = useCallback((roomId: string, updates: Partial<Room>) => {
     setRooms((prev) =>
@@ -785,6 +966,41 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSeats((prev) => prev.filter((s) => s.roomId !== roomId));
   }, []);
 
+  const moveRoomOrder = useCallback((roomId: string, direction: 'up' | 'down') => {
+    setRooms((prev) => {
+      const target = prev.find((r) => r.id === roomId);
+      if (!target) return prev;
+
+      const branchList = prev
+        .filter((r) => r.branchId === target.branchId)
+        .sort((a, b) => (a.order ?? 0) - (b.order ?? 0));
+
+      const idx = branchList.findIndex((r) => r.id === roomId);
+      if (idx === -1) return prev;
+
+      const swapIdx = direction === 'up' ? idx - 1 : idx + 1;
+      if (swapIdx < 0 || swapIdx >= branchList.length) return prev;
+
+      const currentItem = branchList[idx];
+      const swapItem = branchList[swapIdx];
+
+      const currentOrder = currentItem.order ?? idx + 1;
+      const swapOrder = swapItem.order ?? swapIdx + 1;
+
+      return prev.map((r) => {
+        if (r.id === currentItem.id) return { ...r, order: swapOrder };
+        if (r.id === swapItem.id) return { ...r, order: currentOrder };
+        return r;
+      });
+    });
+  }, []);
+
+  const setRoomOrder = useCallback((roomId: string, newOrder: number) => {
+    setRooms((prev) =>
+      prev.map((r) => (r.id === roomId ? { ...r, order: newOrder } : r))
+    );
+  }, []);
+
   // Notices
   const addNotice = useCallback((noticeData: Omit<LibraryNotice, 'id'>) => {
     const newNotice: LibraryNotice = {
@@ -827,6 +1043,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setRooms(INITIAL_ROOMS);
     setSeats(generateInitialSeats());
     setNotices(INITIAL_NOTICES);
+    setRegisteredStudents(DEMO_STUDENTS);
     setCurrentStudent(DEMO_STUDENTS[0]);
     setAdminUser(null);
   }, []);
@@ -867,6 +1084,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const branchStats = useMemo(() => calculateStats(branchSeats), [calculateStats, branchSeats]);
   const overallStats = useMemo(() => calculateStats(seats), [calculateStats, seats]);
 
+  const isSuperAdminUser = useMemo(() => {
+    if (adminUser?.role === 'superadmin') return true;
+    if (currentStudent && isSuperAdminPhone(currentStudent.phone)) return true;
+    return false;
+  }, [adminUser, currentStudent]);
+
+  const isAdminLoggedIn = useMemo(() => {
+    return !!adminUser || isSuperAdminUser;
+  }, [adminUser, isSuperAdminUser]);
+
   const value = useMemo(
     () => ({
       currentBranchId,
@@ -880,6 +1107,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addRoom,
       updateRoom,
       deleteRoom,
+      moveRoomOrder,
+      setRoomOrder,
 
       seats,
       branchSeats,
@@ -894,15 +1123,19 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminManuallyAssignSeat,
 
       currentStudent,
+      registeredStudents,
       loginStudent,
       logoutStudent,
       demoLogin,
       registerOrUpdateStudent,
+      deleteRegisteredStudent,
+      refreshStudentsFromCloud,
       signInWithGoogleAuth,
       isSupabaseReady: isSupabaseConfigured(),
 
       adminUser,
-      isAdminLoggedIn: !!adminUser,
+      isAdminLoggedIn,
+      isSuperAdminUser,
       loginAdmin,
       logoutAdmin,
 
@@ -931,6 +1164,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       addRoom,
       updateRoom,
       deleteRoom,
+      moveRoomOrder,
+      setRoomOrder,
       seats,
       branchSeats,
       currentStudentSeat,
@@ -942,12 +1177,17 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminToggleMaintenance,
       adminManuallyAssignSeat,
       currentStudent,
+      registeredStudents,
       loginStudent,
       logoutStudent,
       demoLogin,
       registerOrUpdateStudent,
+      deleteRegisteredStudent,
+      refreshStudentsFromCloud,
       signInWithGoogleAuth,
       adminUser,
+      isAdminLoggedIn,
+      isSuperAdminUser,
       loginAdmin,
       logoutAdmin,
       notices,

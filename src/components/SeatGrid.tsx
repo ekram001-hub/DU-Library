@@ -39,6 +39,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
     branchRooms,
     branchSeats,
     currentStudent,
+    isAdminLoggedIn,
   } = useLibrary();
 
   // Tab selection: 'all' or specific room ID
@@ -129,6 +130,19 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
             <FileText className="w-3.5 h-3.5 text-amber-700" />
             <span>নির্দেশনা</span>
           </button>
+
+          {/* Admin Panel button - ONLY visible for Admin (01581624202 or admin user) */}
+          {isAdminLoggedIn && (
+            <button
+              type="button"
+              onClick={onOpenAdmin}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-bold transition-all shadow-2xs"
+              title="অ্যাডমিন কন্ট্রোল প্যানেল খুলুন"
+            >
+              <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+              <span>এডমিন প্যানেল</span>
+            </button>
+          )}
 
           {/* Active User profile badge */}
           <button

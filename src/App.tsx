@@ -19,6 +19,7 @@ function MainApp() {
     branchConfig,
     rooms,
     currentStudentSeat,
+    isAdminLoggedIn,
   } = useLibrary();
 
   // Navigation state: 'portal' (Landing Hub, Image 1) or 'seats' (Live Seat View, Image 2)
@@ -119,14 +120,18 @@ function MainApp() {
                 >
                   নির্দেশনা
                 </button>
-                <span>•</span>
-                <button
-                  type="button"
-                  onClick={() => setIsAdminModalOpen(true)}
-                  className="hover:text-indigo-600 transition-colors"
-                >
-                  এডমিন
-                </button>
+                {isAdminLoggedIn && (
+                  <>
+                    <span>•</span>
+                    <button
+                      type="button"
+                      onClick={() => setIsAdminModalOpen(true)}
+                      className="text-rose-600 font-semibold hover:text-rose-700 transition-colors"
+                    >
+                      এডমিন প্যানেল
+                    </button>
+                  </>
+                )}
               </div>
             </div>
           </footer>

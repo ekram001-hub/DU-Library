@@ -1,25 +1,23 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   X,
   User,
-  ShieldCheck,
   Phone,
-  Hash,
+  CreditCard,
+  Target,
   Sparkles,
-  Lock,
-  LogOut,
   CheckCircle2,
   AlertCircle,
-  GraduationCap,
+  Loader2,
+  ShieldCheck,
   KeyRound,
-  ExternalLink,
-  Settings,
-  HelpCircle,
+  LogOut,
+  ArrowRight,
+  Zap,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
-import { DEMO_STUDENTS } from '../data/initialData';
 import { Gender } from '../types';
-import { SUPABASE_PROJECT_URL, isSupabaseConfigured } from '../lib/supabase';
+import { fetchStudentByPhone } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -29,95 +27,110 @@ interface AuthModalProps {
 export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const {
     currentStudent,
-    loginStudent,
     logoutStudent,
-    demoLogin,
     registerOrUpdateStudent,
-    signInWithGoogleAuth,
     loginAdmin,
     isAdminLoggedIn,
     adminUser,
     logoutAdmin,
+    registeredStudents,
   } = useLibrary();
 
-  const [activeTab, setActiveTab] = useState<'google' | 'student' | 'demo' | 'admin'>('google');
-  const [googleLoading, setGoogleLoading] = useState(false);
-  const [googleError, setGoogleError] = useState<string | null>(null);
+  // Mode: standard clean single-page login or admin manual login
+  const [isAdminMode, setIsAdminMode] = useState(false);
 
-  // Student Form State
-  const [studentName, setStudentName] = useState(currentStudent?.name || '');
-  const [studentPhone, setStudentPhone] = useState(currentStudent?.phone || '');
-  const [studentEmail, setStudentEmail] = useState(currentStudent?.email || '');
+  // Form Fields
+  const [phone, setPhone] = useState(currentStudent?.phone || '');
+  const [name, setName] = useState(currentStudent?.name || '');
   const [studentId, setStudentId] = useState(currentStudent?.studentId || '');
-  const [studentGender, setStudentGender] = useState<Gender>(currentStudent?.gender || 'male');
-  const [studentTarget, setStudentTarget] = useState(currentStudent?.targetExam || 'BCS & Competitive Exams');
-
-  // Supabase Manual Key Setup Modal/Input (for instant testing if env isn't loaded yet)
-  const [showKeySetup, setShowKeySetup] = useState(false);
-  const [tempAnonKey, setTempAnonKey] = useState(
-    () => localStorage.getItem('supabase_anon_key') || ''
+  const [gender, setGender] = useState<Gender>(currentStudent?.gender || 'male');
+  const [targetExam, setTargetExam] = useState(
+    currentStudent?.targetExam || 'General Study / BCS'
   );
-  const [keySaved, setKeySaved] = useState(false);
 
-  // Admin Form State
+  // Status indicators
+  const [isSearchingPhone, setIsSearchingPhone] = useState(false);
+  const [phoneFound, setPhoneFound] = useState<boolean | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+
+  // Admin credentials
   const [adminEmail, setAdminEmail] = useState('admin@studycenter.com');
   const [adminPass, setAdminPass] = useState('admin123');
   const [adminError, setAdminError] = useState<string | null>(null);
 
+  // Sync state when currentStudent changes or modal opens
+  useEffect(() => {
+    if (currentStudent) {
+      setPhone(currentStudent.phone);
+      setName(currentStudent.name);
+      setStudentId(currentStudent.studentId || '');
+      setGender(currentStudent.gender || 'male');
+      setTargetExam(currentStudent.targetExam || 'General Study / BCS');
+    }
+  }, [currentStudent, isOpen]);
+
   if (!isOpen) return null;
 
-  const handleGoogleLogin = async () => {
-    setGoogleLoading(true);
-    setGoogleError(null);
+  const cleanPhone = phone.replace(/\D/g, '');
+  const isSuperAdminPhone = cleanPhone === '01581624202';
 
-    const configured = isSupabaseConfigured();
-    if (!configured) {
-      setGoogleError(
-        'Supabase Anon Key দেওয়া হয়নি। নিচে "Supabase Key কনফিগার" অপশনে গিয়ে Anon Key পেস্ট করুন অথবা .env এ যোগ করুন।'
-      );
-      setShowKeySetup(true);
-      setGoogleLoading(false);
+  // Auto search phone when user types number
+  const handlePhoneChange = async (newPhone: string) => {
+    setPhone(newPhone);
+    const cleaned = newPhone.trim().replace(/\D/g, '');
+
+    // Check local registered students first for fast responsiveness
+    const localMatch = registeredStudents.find(
+      (s) => s.phone.replace(/\D/g, '') === cleaned
+    );
+
+    if (localMatch) {
+      setPhoneFound(true);
+      setName(localMatch.name);
+      if (localMatch.studentId) setStudentId(localMatch.studentId);
+      if (localMatch.gender) setGender(localMatch.gender as Gender);
+      if (localMatch.targetExam) setTargetExam(localMatch.targetExam);
       return;
     }
 
-    try {
-      const res = await signInWithGoogleAuth();
-      if (res.error) {
-        setGoogleError(res.error.message);
+    // Check cloud database if 10+ digits
+    if (cleaned.length >= 10) {
+      setIsSearchingPhone(true);
+      const existing = await fetchStudentByPhone(cleaned);
+      setIsSearchingPhone(false);
+
+      if (existing) {
+        setPhoneFound(true);
+        setName(existing.name || name);
+        if (existing.studentId) setStudentId(existing.studentId);
+        if (existing.gender) setGender(existing.gender as Gender);
+        if (existing.targetExam) setTargetExam(existing.targetExam);
+      } else {
+        setPhoneFound(false);
       }
-    } catch (err: unknown) {
-      const error = err instanceof Error ? err : new Error(String(err));
-      setGoogleError(error.message || 'গুগল লগইনে সমস্যা হয়েছে');
-    } finally {
-      setGoogleLoading(false);
+    } else {
+      setPhoneFound(null);
     }
   };
 
-  const handleSaveAnonKey = (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (tempAnonKey.trim()) {
-      localStorage.setItem('supabase_anon_key', tempAnonKey.trim());
-      setKeySaved(true);
-      setTimeout(() => {
-        setKeySaved(false);
-        setShowKeySetup(false);
-      }, 1000);
-    }
-  };
-
-  const handleStudentSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!studentName.trim() || !studentPhone.trim()) return;
+    if (!name.trim() || !phone.trim()) return;
 
     registerOrUpdateStudent({
-      name: studentName.trim(),
-      phone: studentPhone.trim(),
-      email: studentEmail.trim() || `${studentName.toLowerCase().replace(/\s+/g, '')}@student.du.ac.bd`,
-      studentId: studentId.trim() || `DU-${Math.floor(1000 + Math.random() * 9000)}`,
-      gender: studentGender,
-      targetExam: studentTarget,
+      name: name.trim(),
+      phone: phone.trim(),
+      email: `${phone.trim()}@studycenter.com`,
+      studentId: studentId.trim() || `ID-${phone.trim().slice(-4)}`,
+      gender,
+      targetExam: targetExam.trim() || 'General Study',
     });
-    onClose();
+
+    setSubmitSuccess(true);
+    setTimeout(() => {
+      setSubmitSuccess(false);
+      onClose();
+    }, 400);
   };
 
   const handleAdminSubmit = (e: React.FormEvent) => {
@@ -127,26 +140,49 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     if (success) {
       onClose();
     } else {
-      setAdminError('ভুল ইমেইল বা পাসওয়ার্ড (অ্যাডমিন ক্রেডেনশিয়াল: admin@studycenter.com / admin123)');
+      setAdminError('ভুল ইমেইল বা পাসওয়ার্ড (অ্যাডমিন: admin@studycenter.com / admin123)');
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn font-['Hind_Siliguri',_'Poppins',_sans-serif]">
-      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
+      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+        
         {/* Header */}
-        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between">
+        <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-blue-50 border border-blue-200 flex items-center justify-center text-blue-600 font-bold">
-              <User className="w-5 h-5" />
+            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
+              isSuperAdminPhone || isAdminMode
+                ? 'bg-rose-50 border border-rose-200 text-rose-600'
+                : 'bg-blue-50 border border-blue-200 text-blue-600'
+            }`}>
+              {isSuperAdminPhone || isAdminMode ? (
+                <ShieldCheck className="w-5 h-5" />
+              ) : (
+                <User className="w-5 h-5" />
+              )}
             </div>
             <div>
-              <h3 className="text-sm font-bold text-slate-900 leading-tight">ইউজার অথেনটিকেশন</h3>
-              <p className="text-xs text-slate-500">গুগল লগইন, স্টুডেন্ট প্রোফাইল ও অ্যাডমিন</p>
+              <div className="flex items-center gap-2">
+                <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                  {isAdminMode ? 'এডমিন পোর্টাল লগইন' : 'লগইন ও প্রোফাইল'}
+                </h3>
+                {isSuperAdminPhone && (
+                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
+                    Super Admin
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500">
+                {isAdminMode
+                  ? 'লাইব্রেরি ম্যানেজমেন্ট সিস্টেম'
+                  : 'নাম, মোবাইল নাম্বার ও আইডি দিয়ে সহজে এক পেজে লগইন'}
+              </p>
             </div>
           </div>
 
           <button
+            id="close-auth-modal"
             onClick={onClose}
             className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
@@ -154,443 +190,291 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Tab Switcher */}
-        <div className="flex border-b border-slate-100 bg-slate-50/70 p-1.5 gap-1 text-xs">
-          <button
-            onClick={() => setActiveTab('google')}
-            className={`flex-1 py-1.5 font-semibold rounded-lg transition-all text-center ${
-              activeTab === 'google'
-                ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            গুগল লগইন
-          </button>
-
-          <button
-            onClick={() => setActiveTab('student')}
-            className={`flex-1 py-1.5 font-semibold rounded-lg transition-all text-center ${
-              activeTab === 'student'
-                ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            ম্যানুয়াল সাইন-ইন
-          </button>
-
-          <button
-            onClick={() => setActiveTab('demo')}
-            className={`flex-1 py-1.5 font-semibold rounded-lg transition-all text-center ${
-              activeTab === 'demo'
-                ? 'bg-white text-blue-600 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            ডেমো ইউজার
-          </button>
-
-          <button
-            onClick={() => setActiveTab('admin')}
-            className={`flex-1 py-1.5 font-semibold rounded-lg transition-all text-center ${
-              activeTab === 'admin'
-                ? 'bg-white text-slate-900 shadow-xs border border-slate-200'
-                : 'text-slate-600 hover:text-slate-900'
-            }`}
-          >
-            এডমিন
-          </button>
-        </div>
-
-        {/* Tab 1: Google OAuth with Supabase */}
-        {activeTab === 'google' && (
-          <div className="p-5 space-y-4">
-            {currentStudent ? (
-              <div className="p-4 rounded-xl bg-slate-50 border border-slate-200 text-center space-y-2.5">
-                <div className="w-12 h-12 mx-auto rounded-full bg-blue-600 text-white font-bold text-lg flex items-center justify-center shadow-xs">
-                  {currentStudent.name.charAt(0)}
-                </div>
-                <div>
-                  <h4 className="font-bold text-slate-900 text-base">{currentStudent.name}</h4>
-                  <p className="text-xs text-slate-500">{currentStudent.email || currentStudent.phone}</p>
-                </div>
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 text-emerald-700 text-xs font-semibold border border-emerald-200">
-                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                  সফলভাবে লগইন করা আছে
-                </div>
-
-                <div className="pt-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      logoutStudent();
-                    }}
-                    className="px-4 py-2 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-all"
-                  >
-                    লগ আউট করুন
-                  </button>
-                </div>
+        {/* Current Logged In Profile Banner if already active */}
+        {!isAdminMode && currentStudent && (
+          <div className="mx-4 mt-3 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between text-xs shrink-0">
+            <div className="flex items-center gap-2.5">
+              <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
+                {currentStudent.name.charAt(0)}
               </div>
-            ) : (
-              <div className="space-y-3.5">
-                <div className="text-center space-y-1">
-                  <h4 className="font-bold text-slate-900 text-sm">সুপাবেজ গুগল অথেনটিকেশন</h4>
-                  <p className="text-xs text-slate-500">
-                    আপনার গুগল অ্যাকাউন্ট দিয়ে এক ক্লিকে সাইন-ইন করুন
-                  </p>
-                </div>
-
-                {googleError && (
-                  <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs flex items-start gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0 mt-0.5 text-rose-600" />
-                    <div>
-                      <p className="font-medium">{googleError}</p>
-                    </div>
-                  </div>
-                )}
-
-                {/* Google Sign In Button */}
-                <button
-                  type="button"
-                  disabled={googleLoading}
-                  onClick={handleGoogleLogin}
-                  className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 text-slate-800 font-semibold text-sm border border-slate-300 shadow-xs hover:shadow-md transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-50"
-                >
-                  <svg className="w-5 h-5" viewBox="0 0 24 24">
-                    <path
-                      fill="#4285F4"
-                      d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.52-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-9.17z"
-                    />
-                    <path
-                      fill="#34A853"
-                      d="M12 24c3.24 0 5.95-1.08 7.93-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.05 1.16-3.12 0-5.77-2.1-6.72-4.93H1.26v3.15C3.25 21.36 7.33 24 12 24z"
-                    />
-                    <path
-                      fill="#FBBC05"
-                      d="M5.28 14.27c-.25-.72-.38-1.49-.38-2.27s.13-1.55.38-2.27V6.58H1.26C.46 8.16 0 9.98 0 12s.46 3.84 1.26 5.42l4.02-3.15z"
-                    />
-                    <path
-                      fill="#EA4335"
-                      d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.24 0 12 0 7.33 0 3.25 2.64 1.26 6.58l4.02 3.15c.95-2.83 3.6-4.98 6.72-4.98z"
-                    />
-                  </svg>
-                  <span>{googleLoading ? 'গুগলে কানেক্ট হচ্ছে...' : 'Continue with Google'}</span>
-                </button>
-
-                {/* Supabase Status Pill */}
-                <div className="pt-2 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500">
-                  <div className="flex items-center gap-1.5">
-                    <span
-                      className={`w-2 h-2 rounded-full ${
-                        isSupabaseConfigured() ? 'bg-emerald-500' : 'bg-amber-500'
-                      }`}
-                    />
-                    <span>
-                      Supabase:{' '}
-                      <span className="font-mono text-slate-700">
-                        {SUPABASE_PROJECT_URL.replace('https://', '').replace('.supabase.co', '')}
-                      </span>
-                    </span>
-                  </div>
-
-                  <button
-                    type="button"
-                    onClick={() => setShowKeySetup(!showKeySetup)}
-                    className="text-blue-600 hover:text-blue-700 font-medium flex items-center gap-1 text-[11px]"
-                  >
-                    <Settings className="w-3 h-3" />
-                    <span>API কি সেটআপ</span>
-                  </button>
-                </div>
-
-                {/* Supabase Key Quick Input */}
-                {showKeySetup && (
-                  <form
-                    onSubmit={handleSaveAnonKey}
-                    className="p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-2 text-xs"
-                  >
-                    <div className="flex items-center justify-between">
-                      <label className="font-semibold text-slate-700">
-                        Supabase Anon Key (Project Settings &gt; API Keys):
-                      </label>
-                    </div>
-                    <input
-                      type="text"
-                      value={tempAnonKey}
-                      onChange={(e) => setTempAnonKey(e.target.value)}
-                      placeholder="eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-                      className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-[11px] font-mono text-slate-900 focus:outline-none focus:border-blue-500"
-                    />
-                    <div className="flex items-center justify-between pt-1">
-                      <span className="text-[10px] text-slate-500">
-                        সুপাবেজ ড্যাশবোর্ড থেকে কপি করে এখানে সেভ করুন
-                      </span>
-                      <button
-                        type="submit"
-                        className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-xs font-semibold shadow-2xs"
-                      >
-                        {keySaved ? '✓ সেভ হয়েছে' : 'সেভ করুন'}
-                      </button>
-                    </div>
-                  </form>
-                )}
+              <div>
+                <div className="font-semibold text-slate-900">{currentStudent.name}</div>
+                <div className="text-[11px] text-slate-500 font-mono">{currentStudent.phone}</div>
               </div>
-            )}
+            </div>
+
+            <button
+              type="button"
+              onClick={() => {
+                logoutStudent();
+                setName('');
+                setPhone('');
+                setStudentId('');
+                setPhoneFound(null);
+              }}
+              className="px-2.5 py-1 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-semibold text-[11px] transition-colors"
+            >
+              লগ আউট
+            </button>
           </div>
         )}
 
-        {/* Tab 2: Custom Student Sign in */}
-        {activeTab === 'student' && (
-          <form onSubmit={handleStudentSubmit} className="p-4 space-y-3">
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                শিক্ষার্থীর পুরো নাম *
-              </label>
-              <input
-                type="text"
-                required
-                value={studentName}
-                onChange={(e) => setStudentName(e.target.value)}
-                placeholder="যেমন: মো: একরাম ভুঁইয়া"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-              />
-            </div>
+        {/* Super Admin Notice if 01581624202 entered */}
+        {!isAdminMode && isSuperAdminPhone && (
+          <div className="mx-4 mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-2">
+            <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0" />
+            <span>
+              <strong>সুপার এডমিন নাম্বার সনাক্ত:</strong> এই নাম্বার দিয়ে লগইন করলে এডমিন প্যানেল এবং সব কন্ট্রোল চালু হবে।
+            </span>
+          </div>
+        )}
 
-            <div className="grid grid-cols-2 gap-2">
+        {/* MAIN SINGLE-PAGE FORM */}
+        <div className="overflow-y-auto p-4 flex-1">
+          {!isAdminMode ? (
+            <form onSubmit={handleStudentSubmit} className="space-y-3.5 text-xs">
+              {/* Phone Number Field with Auto-Lookup */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  মোবাইল নম্বর *
-                </label>
-                <input
-                  type="tel"
-                  required
-                  value={studentPhone}
-                  onChange={(e) => setStudentPhone(e.target.value)}
-                  placeholder="017xxxxxxxx"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 font-mono"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-blue-600" />
+                    <span>মোবাইল নম্বর *</span>
+                  </label>
+
+                  {isSearchingPhone && (
+                    <span className="flex items-center gap-1 text-[11px] text-blue-600">
+                      <Loader2 className="w-3 h-3 animate-spin" /> প্রোফাইল খোঁজা হচ্ছে...
+                    </span>
+                  )}
+                  {phoneFound === true && (
+                    <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> আগের তথ্য লোড হয়েছে!
+                    </span>
+                  )}
+                </div>
+
+                <div className="relative">
+                  <input
+                    type="tel"
+                    required
+                    value={phone}
+                    onChange={(e) => handlePhoneChange(e.target.value)}
+                    placeholder="01581624202 বা 017xxxxxxxx"
+                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-sm tracking-wide"
+                  />
+                  {phoneFound && (
+                    <Zap className="w-4 h-4 text-amber-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                  )}
+                </div>
+                <p className="text-[10px] text-slate-400 mt-1">
+                  💡 পরবর্তীতে শুধু নাম্বার টাইপ করলেই অটোমেটিক নাম ও আইডি কার্ড নাম্বার পূরণ হয়ে যাবে।
+                </p>
               </div>
 
+              {/* Student Full Name */}
               <div>
-                <label className="block text-xs font-medium text-slate-700 mb-1">
-                  স্টুডেন্ট আইডি / রোল
+                <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                  <User className="w-3.5 h-3.5 text-slate-500" />
+                  <span>শিক্ষার্থীর নাম *</span>
                 </label>
                 <input
                   type="text"
-                  value={studentId}
-                  onChange={(e) => setStudentId(e.target.value)}
-                  placeholder="DU-4819"
-                  className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500 font-mono"
+                  required
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="যেমন: একরাম ভুঁইয়া"
+                  className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
                 />
               </div>
-            </div>
 
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                লিঙ্গ (Gender) *
-              </label>
-              <div className="grid grid-cols-2 gap-2">
-                <button
-                  type="button"
-                  onClick={() => setStudentGender('male')}
-                  className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-colors ${
-                    studentGender === 'male'
-                      ? 'bg-blue-50 border-blue-300 text-blue-800 font-semibold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  ছাত্র (Male)
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setStudentGender('female')}
-                  className={`py-2 px-2 rounded-xl text-xs font-medium border text-center transition-colors ${
-                    studentGender === 'female'
-                      ? 'bg-purple-50 border-purple-300 text-purple-800 font-semibold'
-                      : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
-                  }`}
-                >
-                  ছাত্রী (Female)
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-xs font-medium text-slate-700 mb-1">
-                টার্গেট বা লক্ষ্য
-              </label>
-              <input
-                type="text"
-                value={studentTarget}
-                onChange={(e) => setStudentTarget(e.target.value)}
-                placeholder="যেমন: ৪৭তম বিসিএস / ব্যাংক জব / গবেষণা"
-                className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-              />
-            </div>
-
-            <div className="flex items-center justify-between pt-2">
-              {currentStudent && (
-                <button
-                  type="button"
-                  onClick={() => {
-                    logoutStudent();
-                    onClose();
-                  }}
-                  className="px-3 py-2 rounded-xl text-xs text-rose-600 hover:bg-rose-50 font-semibold transition-colors"
-                >
-                  লগ আউট
-                </button>
-              )}
-
-              <button
-                type="submit"
-                className="ml-auto px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold transition-colors shadow-xs"
-              >
-                সংরক্ষণ ও প্রবেশ করুন
-              </button>
-            </div>
-          </form>
-        )}
-
-        {/* Tab 3: Demo Profiles */}
-        {activeTab === 'demo' && (
-          <div className="p-4 space-y-3">
-            <p className="text-xs text-slate-500">
-              দ্রুত টেস্ট করার জন্য যেকোনো একটি ডেমো স্টুডেন্ট প্রোফাইল বেছে নিন:
-            </p>
-
-            <div className="space-y-2">
-              {DEMO_STUDENTS.map((demo) => {
-                const isCurrent = currentStudent?.id === demo.id;
-
-                return (
-                  <button
-                    key={demo.id}
-                    onClick={() => {
-                      demoLogin(demo.id);
-                      onClose();
-                    }}
-                    className={`w-full p-3 rounded-xl border text-left flex items-center justify-between transition-colors ${
-                      isCurrent
-                        ? 'bg-blue-50/80 border-blue-300 text-slate-900 shadow-2xs'
-                        : 'bg-white border-slate-200 text-slate-700 hover:border-slate-300 hover:bg-slate-50'
-                    }`}
-                  >
-                    <div className="flex items-center gap-3">
-                      <div
-                        className={`w-8 h-8 rounded-lg flex items-center justify-center font-bold text-xs text-white ${
-                          demo.gender === 'female' ? 'bg-purple-600' : 'bg-blue-600'
-                        }`}
-                      >
-                        {demo.name.charAt(0)}
-                      </div>
-                      <div>
-                        <div className="font-semibold text-xs text-slate-900 flex items-center gap-1.5">
-                          <span>{demo.name}</span>
-                          {demo.gender === 'female' && (
-                            <span className="text-[10px] text-purple-700 bg-purple-50 border border-purple-200 px-1.5 py-0.2 rounded font-medium">
-                              Female
-                            </span>
-                          )}
-                        </div>
-                        <div className="text-[11px] text-slate-500 truncate">
-                          {demo.targetExam}
-                        </div>
-                      </div>
-                    </div>
-
-                    {isCurrent ? (
-                      <span className="px-2.5 py-1 rounded-lg text-[10px] bg-blue-100 text-blue-700 font-bold">
-                        সক্রিয়
-                      </span>
-                    ) : (
-                      <span className="text-xs text-blue-600 font-medium hover:underline">
-                        নির্বাচন করুন
-                      </span>
-                    )}
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-        )}
-
-        {/* Tab 4: Admin Login */}
-        {activeTab === 'admin' && (
-          <div className="p-4 space-y-3.5">
-            {isAdminLoggedIn && adminUser ? (
-              <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                  <ShieldCheck className="w-6 h-6" />
-                </div>
-                <div className="font-bold text-slate-900 text-sm">{adminUser.name}</div>
-                <div className="text-xs text-emerald-700">লাইব্রেরি সুপার এডমিন হিসেবে লগইন আছেন</div>
-
-                <button
-                  onClick={() => {
-                    logoutAdmin();
-                    onClose();
-                  }}
-                  className="mt-2 px-4 py-2 rounded-xl bg-white border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-50 transition-colors shadow-xs"
-                >
-                  এডমিন লগআউট
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleAdminSubmit} className="space-y-3">
-                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
-                  <div className="font-semibold flex items-center gap-1.5 text-slate-900">
-                    <KeyRound className="w-4 h-4 text-slate-500" />
-                    <span>এডমিন লগইন তথ্য:</span>
-                  </div>
-                  <p className="text-[11px] text-slate-600 font-mono">
-                    Email: admin@studycenter.com • Pass: admin123
-                  </p>
-                </div>
-
-                {adminError && (
-                  <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                    <AlertCircle className="w-4 h-4 shrink-0" />
-                    <span>{adminError}</span>
-                  </div>
-                )}
-
+              {/* Student ID / Roll & Gender */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    এডমিন ইমেইল
+                  <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                    <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                    <span>আইডি কার্ড নাম্বার / রোল</span>
                   </label>
                   <input
                     type="text"
-                    required
-                    value={adminEmail}
-                    onChange={(e) => setAdminEmail(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                    value={studentId}
+                    onChange={(e) => setStudentId(e.target.value)}
+                    placeholder="যেমন: ID-2026 / DU-890"
+                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-xs"
                   />
                 </div>
 
                 <div>
-                  <label className="block text-xs font-medium text-slate-700 mb-1">
-                    পাসওয়ার্ড
+                  <label className="font-semibold text-slate-800 block mb-1">
+                    লিঙ্গ (Gender) *
                   </label>
-                  <input
-                    type="password"
-                    required
-                    value={adminPass}
-                    onChange={(e) => setAdminPass(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-                  />
+                  <div className="grid grid-cols-2 gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                    <button
+                      type="button"
+                      onClick={() => setGender('male')}
+                      className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
+                        gender === 'male'
+                          ? 'bg-white text-blue-700 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      ছাত্র (Male)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGender('female')}
+                      className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
+                        gender === 'female'
+                          ? 'bg-white text-pink-700 shadow-2xs'
+                          : 'text-slate-600 hover:text-slate-900'
+                      }`}
+                    >
+                      ছাত্রী (Female)
+                    </button>
+                  </div>
                 </div>
+              </div>
 
+              {/* Target / Prep */}
+              <div>
+                <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                  <Target className="w-3.5 h-3.5 text-slate-500" />
+                  <span>টার্গেট / পড়াশোনার লক্ষ্য</span>
+                </label>
+                <input
+                  type="text"
+                  value={targetExam}
+                  onChange={(e) => setTargetExam(e.target.value)}
+                  placeholder="যেমন: বিসিএস / ব্যাংক / বিশ্ববিদ্যালয় ভর্তি / মেডিকেল"
+                  className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
+                />
+              </div>
+
+              {/* Submit Button */}
+              <div className="pt-2">
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  id="submit-student-login-btn"
+                  className={`w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] ${
+                    isSuperAdminPhone
+                      ? 'bg-rose-600 hover:bg-rose-700'
+                      : 'bg-blue-600 hover:bg-blue-700'
+                  }`}
                 >
-                  <ShieldCheck className="w-4 h-4" />
-                  <span>এডমিন প্যানেলে প্রবেশ করুন</span>
+                  <span>
+                    {submitSuccess
+                      ? 'সংরক্ষিত হচ্ছে...'
+                      : isSuperAdminPhone
+                      ? 'এডমিন হিসেবে প্রবেশ করুন'
+                      : 'লগইন ও প্রোফাইল সংরক্ষণ'}
+                  </span>
+                  <ArrowRight className="w-4 h-4" />
                 </button>
-              </form>
+              </div>
+            </form>
+          ) : (
+            /* ADMIN PORTAL FORM */
+            <div className="space-y-3.5 text-xs">
+              {isAdminLoggedIn && adminUser ? (
+                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
+                  <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
+                    <ShieldCheck className="w-6 h-6" />
+                  </div>
+                  <div className="font-bold text-slate-900 text-sm">{adminUser.name}</div>
+                  <div className="text-xs text-emerald-700">লাইব্রেরি সুপার এডমিন হিসেবে লগইন আছেন</div>
+
+                  <button
+                    onClick={() => {
+                      logoutAdmin();
+                      onClose();
+                    }}
+                    className="mt-2 px-4 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-50 transition-colors shadow-xs"
+                  >
+                    এডমিন লগআউট
+                  </button>
+                </div>
+              ) : (
+                <form onSubmit={handleAdminSubmit} className="space-y-3">
+                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
+                    <div className="font-semibold flex items-center gap-1.5 text-slate-900">
+                      <KeyRound className="w-3.5 h-3.5 text-slate-500" />
+                      <span>এডমিন এক্সেস:</span>
+                    </div>
+                    <p className="text-[11px] text-slate-600 font-mono">
+                      অথবা সরাসরি <strong className="text-rose-600">01581624202</strong> নাম্বার দিয়ে স্টুডেন্ট লগইনেই প্রবেশ করুন।
+                    </p>
+                  </div>
+
+                  {adminError && (
+                    <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 shrink-0" />
+                      <span>{adminError}</span>
+                    </div>
+                  )}
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      এডমিন ইমেইল
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={adminEmail}
+                      onChange={(e) => setAdminEmail(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      পাসওয়ার্ড
+                    </label>
+                    <input
+                      type="password"
+                      required
+                      value={adminPass}
+                      onChange={(e) => setAdminPass(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <button
+                    type="submit"
+                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    <ShieldCheck className="w-4 h-4" />
+                    <span>এডমিন প্যানেলে প্রবেশ করুন</span>
+                  </button>
+                </form>
+              )}
+            </div>
+          )}
+        </div>
+
+        {/* Footer switch for admin vs student */}
+        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsAdminMode(!isAdminMode)}
+            className="text-slate-600 hover:text-blue-600 font-medium flex items-center gap-1.5 transition-colors"
+          >
+            {isAdminMode ? (
+              <>
+                <User className="w-3.5 h-3.5" />
+                <span>← স্টুডেন্ট লগইনে ফিরে যান</span>
+              </>
+            ) : (
+              <>
+                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
+                <span>বিকল্প এডমিন লগইন</span>
+              </>
             )}
-          </div>
-        )}
+          </button>
+
+          <span className="text-[11px] text-slate-400 font-mono">
+            {phone ? `01...${phone.slice(-4)}` : 'Cloud Sync Ready'}
+          </span>
+        </div>
+
       </div>
     </div>
   );

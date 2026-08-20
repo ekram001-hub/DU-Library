@@ -38,6 +38,8 @@ export interface Room {
   bengaliDescription: string;
   hasAC: boolean;
   isSilent: boolean;
+  roomNumber?: string; // e.g. "Room 101", "1", "Executive-1"
+  order?: number; // serial / ordering (1, 2, 3...)
 }
 
 export interface Seat {
@@ -71,10 +73,12 @@ export interface StudentProfile {
   email: string;
   studentId: string;
   gender: Gender;
-  role: 'student';
+  role: 'student' | 'admin' | 'superadmin';
   avatar?: string;
   institution?: string;
   targetExam?: string; // e.g., 47th BCS, Bank PO, Primary, Medical
+  registeredAt?: string;
+  lastActive?: string;
 }
 
 export interface AdminUser {

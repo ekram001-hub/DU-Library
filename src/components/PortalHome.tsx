@@ -31,12 +31,13 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
   onOpenMyPass,
 }) => {
   const {
-    currentStudent,
-    currentStudentSeat,
-    currentTime,
-    branchStats,
-    overallStats,
-  } = useLibrary();
+  currentStudent,
+  currentStudentSeat,
+  currentTime,
+  branchStats,
+  overallStats,
+  isAdminLoggedIn,
+} = useLibrary();
 
   // Format 12-hour clock (HH:MM:SS AM/PM)
   const formatTime = (date: Date) => {
@@ -297,15 +298,20 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
           >
             নিয়মাবলী
           </button>
-          <span>•</span>
-          <button
-            type="button"
-            onClick={onOpenAdmin}
-            className="flex items-center gap-1 hover:text-slate-900 font-medium transition-colors text-slate-600"
-          >
-            <ShieldCheck className="w-3.5 h-3.5 text-slate-500" />
-            <span>এডমিন প্যানেল</span>
-          </button>
+          {isAdminLoggedIn && (
+            <>
+              <span>•</span>
+              <button
+                id="btn-portal-admin-panel"
+                type="button"
+                onClick={onOpenAdmin}
+                className="flex items-center gap-1 hover:text-rose-700 font-semibold transition-colors text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200"
+              >
+                <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+                <span>এডমিন প্যানেল</span>
+              </button>
+            </>
+          )}
         </div>
       </footer>
     </div>
