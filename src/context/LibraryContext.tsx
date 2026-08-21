@@ -26,6 +26,8 @@ import {
   isSupabaseConfigured,
   syncStudentToCloud,
   fetchAllStudentsFromCloud,
+  syncLibraryStateToCloud,
+  fetchLibraryStateFromCloud,
 } from '../lib/supabase';
 
 export const ADMIN_PHONE_NUMBER = '01581624202';
@@ -63,6 +65,7 @@ interface LibraryContextType {
       studentId?: string;
       gender: Gender;
       targetHours: number;
+      pin?: string;
     }
   ) => { success: boolean; message: string; passCode?: string };
   leaveSeatTemporarily: (seatId: string, durationMinutes: number, reason: AwayReason, customReason?: string) => void;
@@ -79,6 +82,17 @@ interface LibraryContextType {
     durationHours: number,
     gender: Gender
   ) => void;
+  adminResetStudentPin: (phone: string, newPin: string) => void;
+  adminToggleBlockStudent: (phone: string) => void;
+  adminAddCustomSeat: (seatData: Omit<Seat, 'id'>) => void;
+  adminDeleteSeat: (seatId: string) => void;
+  adminToggleSeatFemaleReserved: (seatId: string) => void;
+
+  // Data Backup & Cloud Sync
+  exportFullBackupJSON: () => string;
+  importFullBackupJSON: (jsonStr: string) => { success: boolean; message: string };
+  syncStateToCloudManual: () => Promise<{ success: boolean; message: string }>;
+  cloudLastSyncedAt: string | null;
 
   // Student Auth & Directory
   currentStudent: StudentProfile | null;
@@ -434,10 +448,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         studentId: 'BCS-47-301',
         gender: 'female',
         seatNumber: 'FC-01',
-        roomName: "Women's Reserved Zone (Room 3)",
-        checkInTime: Date.now() - 2 * 3600 * 1000,
+        roomName: 'Female Study Lounge',
+        checkInTime: Date.now() - 1.2 * 3600 * 1000,
         dateStr: todayStr,
-        passCode: 'PASS-BCS-08301',
+        passCode: 'PASS-BCS-94812',
       },
     ];
   });
@@ -445,6 +459,59 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceRecords));
   }, [attendanceRecords]);
+
+  // Cloud Sync & Backup State
+  const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<string | null>(null);
+
+  // Cross-Tab Realtime Broadcast Channel
+  const broadcastSync = useCallback((payload: { rooms?: Room[]; seats?: Seat[]; notices?: LibraryNotice[] }) => {
+    if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
+      try {
+        const channel = new BroadcastChannel('smart_library_sync_channel');
+        channel.postMessage({ type: 'STATE_UPDATE', payload });
+        channel.close();
+      } catch (err) {
+        // ignore
+      }
+    }
+  }, []);
+
+  // Listen for Cross-Tab broadcast
+  useEffect(() => {
+    if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
+    const channel = new BroadcastChannel('smart_library_sync_channel');
+
+    channel.onmessage = (event) => {
+      if (event.data?.type === 'STATE_UPDATE') {
+        const p = event.data.payload;
+        if (Array.isArray(p.rooms)) setRooms(p.rooms);
+        if (Array.isArray(p.seats)) setSeats(p.seats);
+        if (Array.isArray(p.notices)) setNotices(p.notices);
+      }
+    };
+
+    return () => {
+      channel.close();
+    };
+  }, []);
+
+  // Fetch initial global library configuration from Supabase Cloud
+  useEffect(() => {
+    fetchLibraryStateFromCloud().then((cloudState) => {
+      if (cloudState) {
+        if (Array.isArray(cloudState.rooms) && cloudState.rooms.length > 0) {
+          setRooms(cloudState.rooms as Room[]);
+        }
+        if (Array.isArray(cloudState.seats) && cloudState.seats.length > 0) {
+          setSeats(cloudState.seats as Seat[]);
+        }
+        if (Array.isArray(cloudState.notices) && cloudState.notices.length > 0) {
+          setNotices(cloudState.notices as LibraryNotice[]);
+        }
+        setCloudLastSyncedAt(new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }));
+      }
+    }).catch(() => {});
+  }, []);
 
   // 9. Live Digital Clock (1s tick)
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -888,7 +955,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       roomNumber: roomData.roomNumber || `Room ${nextOrder}`,
     };
 
-    setRooms((prev) => [...prev, newRoom]);
+    const nextRooms = [...rooms, newRoom];
+    setRooms(nextRooms);
 
     // Automatically generate seats for the new room
     const newSeats: Seat[] = [];
@@ -907,28 +975,35 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
     }
 
-    setSeats((prev) => [...prev, ...newSeats]);
-  }, [rooms]);
+    const nextAllSeats = [...seats, ...newSeats];
+    setSeats(nextAllSeats);
+
+    // Cross-tab and Cloud sync
+    broadcastSync({ rooms: nextRooms, seats: nextAllSeats });
+    syncLibraryStateToCloud({
+      rooms: nextRooms,
+      seats: nextAllSeats,
+      notices,
+      branchesConfig: allBranches,
+    }).catch(() => {});
+  }, [rooms, seats, notices, allBranches, broadcastSync]);
 
   const updateRoom = useCallback((roomId: string, updates: Partial<Room>) => {
-    setRooms((prev) =>
-      prev.map((r) => {
-        if (r.id === roomId) {
-          const updated = { ...r, ...updates };
-          return updated;
-        }
-        return r;
-      })
-    );
+    const updatedRooms = rooms.map((r) => {
+      if (r.id === roomId) {
+        return { ...r, ...updates };
+      }
+      return r;
+    });
+    setRooms(updatedRooms);
 
     // If capacity changed or prefix changed, refresh seat prefixes or add/remove seats
+    let updatedAllSeats = seats;
     if (updates.seatPrefix || updates.capacity !== undefined || updates.category !== undefined) {
-      setSeats((prev) => {
-        const roomSeats = prev.filter((s) => s.roomId === roomId);
-        const otherSeats = prev.filter((s) => s.roomId !== roomId);
-        const room = rooms.find((r) => r.id === roomId);
-        if (!room) return prev;
-
+      const roomSeats = seats.filter((s) => s.roomId === roomId);
+      const otherSeats = seats.filter((s) => s.roomId !== roomId);
+      const room = rooms.find((r) => r.id === roomId);
+      if (room) {
         const targetCap = updates.capacity !== undefined ? updates.capacity : room.capacity;
         const targetPrefix = updates.seatPrefix !== undefined ? updates.seatPrefix : room.seatPrefix;
         const targetIsFemale = updates.category !== undefined ? updates.category === 'female_only' : room.category === 'female_only';
@@ -956,15 +1031,34 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
           }
         }
 
-        return [...otherSeats, ...updatedRoomSeats];
-      });
+        updatedAllSeats = [...otherSeats, ...updatedRoomSeats];
+        setSeats(updatedAllSeats);
+      }
     }
-  }, [rooms]);
+
+    broadcastSync({ rooms: updatedRooms, seats: updatedAllSeats });
+    syncLibraryStateToCloud({
+      rooms: updatedRooms,
+      seats: updatedAllSeats,
+      notices,
+      branchesConfig: allBranches,
+    }).catch(() => {});
+  }, [rooms, seats, notices, allBranches, broadcastSync]);
 
   const deleteRoom = useCallback((roomId: string) => {
-    setRooms((prev) => prev.filter((r) => r.id !== roomId));
-    setSeats((prev) => prev.filter((s) => s.roomId !== roomId));
-  }, []);
+    const nextRooms = rooms.filter((r) => r.id !== roomId);
+    const nextSeats = seats.filter((s) => s.roomId !== roomId);
+    setRooms(nextRooms);
+    setSeats(nextSeats);
+
+    broadcastSync({ rooms: nextRooms, seats: nextSeats });
+    syncLibraryStateToCloud({
+      rooms: nextRooms,
+      seats: nextSeats,
+      notices,
+      branchesConfig: allBranches,
+    }).catch(() => {});
+  }, [rooms, seats, notices, allBranches, broadcastSync]);
 
   const moveRoomOrder = useCallback((roomId: string, direction: 'up' | 'down') => {
     setRooms((prev) => {
@@ -987,19 +1081,165 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const currentOrder = currentItem.order ?? idx + 1;
       const swapOrder = swapItem.order ?? swapIdx + 1;
 
-      return prev.map((r) => {
+      const reordered = prev.map((r) => {
         if (r.id === currentItem.id) return { ...r, order: swapOrder };
         if (r.id === swapItem.id) return { ...r, order: currentOrder };
         return r;
       });
+
+      broadcastSync({ rooms: reordered });
+      syncLibraryStateToCloud({ rooms: reordered, seats, notices, branchesConfig: allBranches }).catch(() => {});
+      return reordered;
     });
-  }, []);
+  }, [seats, notices, allBranches, broadcastSync]);
 
   const setRoomOrder = useCallback((roomId: string, newOrder: number) => {
-    setRooms((prev) =>
-      prev.map((r) => (r.id === roomId ? { ...r, order: newOrder } : r))
+    setRooms((prev) => {
+      const updated = prev.map((r) => (r.id === roomId ? { ...r, order: newOrder } : r));
+      broadcastSync({ rooms: updated });
+      syncLibraryStateToCloud({ rooms: updated, seats, notices, branchesConfig: allBranches }).catch(() => {});
+      return updated;
+    });
+  }, [seats, notices, allBranches, broadcastSync]);
+
+  // Admin Custom Seats and Student Control Actions
+  const adminResetStudentPin = useCallback((phone: string, newPin: string) => {
+    const clean = phone.replace(/\D/g, '');
+    setRegisteredStudents((prev) =>
+      prev.map((s) => {
+        if (s.phone.replace(/\D/g, '') === clean) {
+          const updated = { ...s, pin: newPin };
+          syncStudentToCloud(updated).catch(() => {});
+          return updated;
+        }
+        return s;
+      })
     );
-  }, []);
+    if (currentStudent?.phone.replace(/\D/g, '') === clean) {
+      setCurrentStudent((prev) => (prev ? { ...prev, pin: newPin } : null));
+    }
+  }, [currentStudent]);
+
+  const adminToggleBlockStudent = useCallback((phone: string) => {
+    const clean = phone.replace(/\D/g, '');
+    setRegisteredStudents((prev) =>
+      prev.map((s) => {
+        if (s.phone.replace(/\D/g, '') === clean) {
+          const updated = { ...s, isBlocked: !s.isBlocked };
+          syncStudentToCloud(updated).catch(() => {});
+          return updated;
+        }
+        return s;
+      })
+    );
+    if (currentStudent?.phone.replace(/\D/g, '') === clean) {
+      setCurrentStudent((prev) => (prev ? { ...prev, isBlocked: !prev.isBlocked } : null));
+    }
+  }, [currentStudent]);
+
+  const adminAddCustomSeat = useCallback((seatData: Omit<Seat, 'id'>) => {
+    const newSeat: Seat = {
+      ...seatData,
+      id: `seat_${Date.now()}_${Math.floor(100 + Math.random() * 900)}`,
+    };
+    setSeats((prev) => {
+      const next = [...prev, newSeat];
+      broadcastSync({ seats: next });
+      syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches }).catch(() => {});
+      return next;
+    });
+  }, [rooms, notices, allBranches, broadcastSync]);
+
+  const adminDeleteSeat = useCallback((seatId: string) => {
+    setSeats((prev) => {
+      const next = prev.filter((s) => s.id !== seatId);
+      broadcastSync({ seats: next });
+      syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches }).catch(() => {});
+      return next;
+    });
+  }, [rooms, notices, allBranches, broadcastSync]);
+
+  const adminToggleSeatFemaleReserved = useCallback((seatId: string) => {
+    setSeats((prev) => {
+      const next = prev.map((s) => (s.id === seatId ? { ...s, isFemaleReserved: !s.isFemaleReserved } : s));
+      broadcastSync({ seats: next });
+      syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches }).catch(() => {});
+      return next;
+    });
+  }, [rooms, notices, allBranches, broadcastSync]);
+
+  // Data Backup & Restore
+  const exportFullBackupJSON = useCallback(() => {
+    const backupData = {
+      app: 'Smart Library & BCS Study Center',
+      version: '2.5.0',
+      exportedAt: new Date().toISOString(),
+      branchesConfig: allBranches,
+      rooms,
+      seats,
+      notices,
+      registeredStudents,
+      attendanceRecords,
+    };
+    return JSON.stringify(backupData, null, 2);
+  }, [allBranches, rooms, seats, notices, registeredStudents, attendanceRecords]);
+
+  const importFullBackupJSON = useCallback((jsonStr: string) => {
+    try {
+      const data = JSON.parse(jsonStr);
+      if (data.branchesConfig) {
+        setAllBranches(data.branchesConfig);
+        localStorage.setItem(STORAGE_KEYS.BRANCHES_CONFIG, JSON.stringify(data.branchesConfig));
+      }
+      if (Array.isArray(data.rooms) && data.rooms.length > 0) {
+        setRooms(data.rooms);
+        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(data.rooms));
+      }
+      if (Array.isArray(data.seats) && data.seats.length > 0) {
+        setSeats(data.seats);
+        localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(data.seats));
+      }
+      if (Array.isArray(data.notices)) {
+        setNotices(data.notices);
+        localStorage.setItem(STORAGE_KEYS.NOTICES, JSON.stringify(data.notices));
+      }
+      if (Array.isArray(data.registeredStudents)) {
+        setRegisteredStudents(data.registeredStudents);
+        localStorage.setItem(STORAGE_KEYS.REGISTERED_STUDENTS, JSON.stringify(data.registeredStudents));
+      }
+      if (Array.isArray(data.attendanceRecords)) {
+        setAttendanceRecords(data.attendanceRecords);
+        localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(data.attendanceRecords));
+      }
+
+      broadcastSync({ rooms: data.rooms, seats: data.seats, notices: data.notices });
+      syncLibraryStateToCloud({
+        rooms: data.rooms,
+        seats: data.seats,
+        notices: data.notices,
+        branchesConfig: data.branchesConfig,
+      }).catch(() => {});
+
+      return { success: true, message: 'সম্পূর্ণ ডেটাবেজ সফলভাবে রিস্টোর করা হয়েছে!' };
+    } catch (err) {
+      return { success: false, message: 'অবৈধ ব্যাকআপ ফাইল অথবা JSON ফরম্যাট সঠিক নয়।' };
+    }
+  }, [broadcastSync]);
+
+  const syncStateToCloudManual = useCallback(async () => {
+    const res = await syncLibraryStateToCloud({
+      rooms,
+      seats,
+      notices,
+      branchesConfig: allBranches,
+    });
+    if (res.success) {
+      const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      setCloudLastSyncedAt(timeStr);
+      return { success: true, message: `সফলভাবে ক্লাউডে সিঙ্ক করা হয়েছে (${timeStr})` };
+    }
+    return { success: false, message: 'ক্লাউড সিঙ্ক করতে সমস্যা হয়েছে। তবে লোকাল স্টোরেজে ডেটা নিরাপদ আছে।' };
+  }, [rooms, seats, notices, allBranches]);
 
   // Notices
   const addNotice = useCallback((noticeData: Omit<LibraryNotice, 'id'>) => {
@@ -1007,19 +1247,29 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       ...noticeData,
       id: `notice_${Date.now()}`,
     };
-    setNotices((prev) => [newNotice, ...prev]);
-  }, []);
+    setNotices((prev) => {
+      const next = [newNotice, ...prev];
+      broadcastSync({ notices: next });
+      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, allBranches, broadcastSync]);
 
   const deleteNotice = useCallback((noticeId: string) => {
-    setNotices((prev) => prev.filter((n) => n.id !== noticeId));
-  }, []);
+    setNotices((prev) => {
+      const next = prev.filter((n) => n.id !== noticeId);
+      broadcastSync({ notices: next });
+      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, allBranches, broadcastSync]);
 
   // Daily auto reset
   const triggerDailyAutoReset = useCallback(() => {
-    setSeats((prev) =>
-      prev.map((s) => ({
+    setSeats((prev) => {
+      const next = prev.map((s) => ({
         ...s,
-        status: s.status === 'maintenance' ? 'maintenance' : 'available',
+        status: s.status === 'maintenance' ? ('maintenance' as const) : ('available' as const),
         occupantName: undefined,
         occupantPhone: undefined,
         occupantEmail: undefined,
@@ -1033,20 +1283,31 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         awayReason: undefined,
         awayCustomReason: undefined,
         passCode: undefined,
-      }))
-    );
-  }, []);
+      }));
+      broadcastSync({ seats: next });
+      syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches }).catch(() => {});
+      return next;
+    });
+  }, [rooms, notices, allBranches, broadcastSync]);
 
   const resetToDefaultData = useCallback(() => {
     localStorage.clear();
     setAllBranches(BRANCHES_DATA);
     setRooms(INITIAL_ROOMS);
-    setSeats(generateInitialSeats());
+    const initSeats = generateInitialSeats();
+    setSeats(initSeats);
     setNotices(INITIAL_NOTICES);
     setRegisteredStudents(DEMO_STUDENTS);
     setCurrentStudent(DEMO_STUDENTS[0]);
     setAdminUser(null);
-  }, []);
+    broadcastSync({ rooms: INITIAL_ROOMS, seats: initSeats, notices: INITIAL_NOTICES });
+    syncLibraryStateToCloud({
+      rooms: INITIAL_ROOMS,
+      seats: initSeats,
+      notices: INITIAL_NOTICES,
+      branchesConfig: BRANCHES_DATA,
+    }).catch(() => {});
+  }, [broadcastSync]);
 
   // Stats calculation
   const calculateStats = useCallback(
@@ -1121,6 +1382,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminForceReleaseSeat,
       adminToggleMaintenance,
       adminManuallyAssignSeat,
+      adminResetStudentPin,
+      adminToggleBlockStudent,
+      adminAddCustomSeat,
+      adminDeleteSeat,
+      adminToggleSeatFemaleReserved,
+
+      exportFullBackupJSON,
+      importFullBackupJSON,
+      syncStateToCloudManual,
+      cloudLastSyncedAt,
 
       currentStudent,
       registeredStudents,
@@ -1176,6 +1447,15 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminForceReleaseSeat,
       adminToggleMaintenance,
       adminManuallyAssignSeat,
+      adminResetStudentPin,
+      adminToggleBlockStudent,
+      adminAddCustomSeat,
+      adminDeleteSeat,
+      adminToggleSeatFemaleReserved,
+      exportFullBackupJSON,
+      importFullBackupJSON,
+      syncStateToCloudManual,
+      cloudLastSyncedAt,
       currentStudent,
       registeredStudents,
       loginStudent,

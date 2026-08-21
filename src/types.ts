@@ -77,6 +77,8 @@ export interface StudentProfile {
   avatar?: string;
   institution?: string;
   targetExam?: string; // e.g., 47th BCS, Bank PO, Primary, Medical
+  pin?: string; // 4-6 digit security PIN for phone login
+  isBlocked?: boolean;
   registeredAt?: string;
   lastActive?: string;
 }
@@ -92,13 +94,17 @@ export interface AdminUser {
 export interface LibraryNotice {
   id: string;
   title: string;
-  bengaliTitle: string;
+  bengaliTitle?: string;
   content: string;
-  bengaliContent: string;
-  date: string;
-  priority: 'urgent' | 'info' | 'guideline';
-  targetBranch: 'all' | BranchId;
-  author: string;
+  bengaliContent?: string;
+  date?: string;
+  postedAt?: string;
+  type?: 'urgent' | 'event' | 'maintenance' | 'announcement';
+  priority?: 'urgent' | 'info' | 'guideline';
+  targetBranch?: 'all' | BranchId;
+  branchId?: 'all' | BranchId;
+  active?: boolean;
+  author?: string;
 }
 
 export interface AttendanceRecord {

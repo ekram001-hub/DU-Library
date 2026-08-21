@@ -17,10 +17,14 @@ import {
   HelpCircle,
   ChevronDown,
   ChevronUp,
+  Lock,
+  Eye,
+  EyeOff,
+  ShieldAlert,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { Gender } from '../types';
-import { fetchStudentByPhone, signInWithGoogle, getSupabase } from '../lib/supabase';
+import { fetchStudentByPhone, signInWithGoogle } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
@@ -39,7 +43,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     registeredStudents,
   } = useLibrary();
 
-  // Mode: standard clean single-page login or admin manual login
+  // Mode: standard single-page student/member login or admin manual login
   const [isAdminMode, setIsAdminMode] = useState(false);
 
   // Form Fields
@@ -50,10 +54,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   const [targetExam, setTargetExam] = useState(
     currentStudent?.targetExam || 'General Study / BCS'
   );
+  const [pin, setPin] = useState(currentStudent?.pin || '');
+  const [showPin, setShowPin] = useState(false);
 
   // Status indicators
   const [isSearchingPhone, setIsSearchingPhone] = useState(false);
   const [phoneFound, setPhoneFound] = useState<boolean | null>(null);
+  const [existingHasPin, setExistingHasPin] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [submitSuccess, setSubmitSuccess] = useState(false);
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
@@ -72,6 +80,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       setStudentId(currentStudent.studentId || '');
       setGender(currentStudent.gender || 'male');
       setTargetExam(currentStudent.targetExam || 'General Study / BCS');
+      setPin(currentStudent.pin || '');
     }
   }, [currentStudent, isOpen]);
 
@@ -83,6 +92,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
   // Auto search phone when user types number
   const handlePhoneChange = async (newPhone: string) => {
     setPhone(newPhone);
+    setAuthError(null);
     const cleaned = newPhone.trim().replace(/\D/g, '');
 
     // Check local registered students first for fast responsiveness
@@ -96,6 +106,15 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       if (localMatch.studentId) setStudentId(localMatch.studentId);
       if (localMatch.gender) setGender(localMatch.gender as Gender);
       if (localMatch.targetExam) setTargetExam(localMatch.targetExam);
+      if (localMatch.pin) {
+        setExistingHasPin(true);
+      } else {
+        setExistingHasPin(false);
+      }
+
+      if (localMatch.isBlocked) {
+        setAuthError('আপনার একাউন্টটি সাময়িকভাবে স্থগিত রাখা হয়েছে। এডমিনের সাথে যোগাযোগ করুন।');
+      }
       return;
     }
 
@@ -111,25 +130,66 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
         if (existing.studentId) setStudentId(existing.studentId);
         if (existing.gender) setGender(existing.gender as Gender);
         if (existing.targetExam) setTargetExam(existing.targetExam);
+        if (existing.pin) {
+          setExistingHasPin(true);
+        } else {
+          setExistingHasPin(false);
+        }
+        if (existing.isBlocked) {
+          setAuthError('আপনার একাউন্টটি সাময়িকভাবে স্থগিত রাখা হয়েছে। এডমিনের সাথে যোগাযোগ করুন।');
+        }
       } else {
         setPhoneFound(false);
+        setExistingHasPin(false);
       }
     } else {
       setPhoneFound(null);
+      setExistingHasPin(false);
     }
   };
 
   const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!name.trim() || !phone.trim()) return;
+    setAuthError(null);
 
+    const cleaned = phone.trim().replace(/\D/g, '');
+    if (!name.trim()) {
+      setAuthError('অনুগ্রহ করে আপনার নাম দিন।');
+      return;
+    }
+    if (cleaned.length < 11) {
+      setAuthError('অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)।');
+      return;
+    }
+
+    // Check if student exists locally and verify PIN if set
+    const localMatch = registeredStudents.find(
+      (s) => s.phone.replace(/\D/g, '') === cleaned
+    );
+
+    if (localMatch) {
+      if (localMatch.isBlocked) {
+        setAuthError('আপনার একাউন্টটি অ্যাডমিন দ্বারা ব্লক রাখা হয়েছে। অনুগ্রহ করে লাইব্রেরি কর্তৃপক্ষের সাথে যোগাযোগ করুন।');
+        return;
+      }
+
+      if (localMatch.pin && localMatch.pin.trim() !== '') {
+        if (!pin || pin.trim() !== localMatch.pin.trim()) {
+          setAuthError('ভুল পিন নম্বর! আপনার একাউন্টে সংরক্ষিত সঠিক ৪-ডিজিট পিন দিন। পিন ভুলে গেলে এডমিনকে জানান।');
+          return;
+        }
+      }
+    }
+
+    // Save or register
     registerOrUpdateStudent({
       name: name.trim(),
       phone: phone.trim(),
-      email: `${phone.trim()}@studycenter.com`,
-      studentId: studentId.trim() || `ID-${phone.trim().slice(-4)}`,
+      email: `${cleaned}@studycenter.com`,
+      studentId: studentId.trim() || `ID-${cleaned.slice(-4)}`,
       gender,
       targetExam: targetExam.trim() || 'General Study',
+      pin: pin.trim() || undefined,
     });
 
     setSubmitSuccess(true);
@@ -172,7 +232,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200/90 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
+      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
         
         {/* Header */}
         <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
@@ -191,7 +251,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900 leading-tight">
-                  {isAdminMode ? 'এডমিন পোর্টাল লগইন' : 'লগইন ও প্রোফাইল'}
+                  {isAdminMode ? 'এডমিন পোর্টাল লগইন' : 'লগইন ও স্টুডেন্ট প্রোফাইল'}
                 </h3>
                 {isSuperAdminPhone && (
                   <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
@@ -201,8 +261,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </div>
               <p className="text-[11px] text-slate-500">
                 {isAdminMode
-                  ? 'লাইব্রেরি ম্যানেজমেন্ট সিস্টেম'
-                  : 'নাম, মোবাইল নাম্বার ও আইডি দিয়ে সহজে এক পেজে লগইন'}
+                  ? 'লাইব্রেরি সুপার এডমিন ম্যানেজমেন্ট'
+                  : 'মোবাইল নাম্বার ও ৪-ডিজিট পিন দিয়ে নিরাপদ লগইন'}
               </p>
             </div>
           </div>
@@ -225,7 +285,14 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               </div>
               <div>
                 <div className="font-semibold text-slate-900">{currentStudent.name}</div>
-                <div className="text-[11px] text-slate-500 font-mono">{currentStudent.phone}</div>
+                <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
+                  <span>{currentStudent.phone}</span>
+                  {currentStudent.pin && (
+                    <span className="px-1 py-0.2 rounded text-[9px] bg-blue-100 text-blue-700 font-bold">
+                      PIN Protected
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -236,6 +303,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
                 setName('');
                 setPhone('');
                 setStudentId('');
+                setPin('');
                 setPhoneFound(null);
               }}
               className="px-2.5 py-1 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-semibold text-[11px] transition-colors"
@@ -250,8 +318,16 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           <div className="mx-4 mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0" />
             <span>
-              <strong>সুপার এডমিন নাম্বার সনাক্ত:</strong> এই নাম্বার দিয়ে লগইন করলে এডমিন প্যানেল এবং সব কন্ট্রোল চালু হবে।
+              <strong>সুপার এডমিন নাম্বার সনাক্ত:</strong> এই নাম্বার দিয়ে লগইন করলে এডমিন প্যানেল এবং সব লাইব্রেরি কন্ট্রোল অটোমেটিক এক্টিভ হবে।
             </span>
+          </div>
+        )}
+
+        {/* Error Alert */}
+        {authError && (
+          <div className="mx-4 mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
+            <span>{authError}</span>
           </div>
         )}
 
@@ -352,7 +428,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               <div className="relative flex items-center py-1">
                 <div className="flex-grow border-t border-slate-200"></div>
                 <span className="flex-shrink mx-3 text-[11px] font-semibold text-slate-400">
-                  অথবা মোবাইল নম্বর দিয়ে লগইন
+                  অথবা মোবাইল নম্বর ও পিন দিয়ে লগইন
                 </span>
                 <div className="flex-grow border-t border-slate-200"></div>
               </div>
@@ -360,146 +436,181 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
               {/* Student Phone Form */}
               <form onSubmit={handleStudentSubmit} className="space-y-3.5 text-xs">
                 {/* Phone Number Field with Auto-Lookup */}
-              <div>
-                <div className="flex items-center justify-between mb-1">
-                  <label className="font-semibold text-slate-800 flex items-center gap-1.5">
-                    <Phone className="w-3.5 h-3.5 text-blue-600" />
-                    <span>মোবাইল নম্বর *</span>
-                  </label>
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Phone className="w-3.5 h-3.5 text-blue-600" />
+                      <span>মোবাইল নম্বর *</span>
+                    </label>
 
-                  {isSearchingPhone && (
-                    <span className="flex items-center gap-1 text-[11px] text-blue-600">
-                      <Loader2 className="w-3 h-3 animate-spin" /> প্রোফাইল খোঁজা হচ্ছে...
-                    </span>
-                  )}
-                  {phoneFound === true && (
-                    <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold">
-                      <CheckCircle2 className="w-3.5 h-3.5" /> আগের তথ্য লোড হয়েছে!
-                    </span>
-                  )}
+                    {isSearchingPhone && (
+                      <span className="flex items-center gap-1 text-[11px] text-blue-600">
+                        <Loader2 className="w-3 h-3 animate-spin" /> প্রোফাইল খোঁজা হচ্ছে...
+                      </span>
+                    )}
+                    {phoneFound === true && (
+                      <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold">
+                        <CheckCircle2 className="w-3.5 h-3.5" /> প্রোফাইল পাওয়া গেছে!
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type="tel"
+                      required
+                      value={phone}
+                      onChange={(e) => handlePhoneChange(e.target.value)}
+                      placeholder="01581624202 বা 017xxxxxxxx"
+                      className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-sm tracking-wide"
+                    />
+                    {phoneFound && (
+                      <Zap className="w-4 h-4 text-amber-500 absolute right-3 top-1/2 -translate-y-1/2" />
+                    )}
+                  </div>
                 </div>
 
-                <div className="relative">
-                  <input
-                    type="tel"
-                    required
-                    value={phone}
-                    onChange={(e) => handlePhoneChange(e.target.value)}
-                    placeholder="01581624202 বা 017xxxxxxxx"
-                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-sm tracking-wide"
-                  />
-                  {phoneFound && (
-                    <Zap className="w-4 h-4 text-amber-500 absolute right-3 top-1/2 -translate-y-1/2" />
-                  )}
+                {/* Password / Security PIN Field */}
+                <div>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="font-semibold text-slate-800 flex items-center gap-1.5">
+                      <Lock className="w-3.5 h-3.5 text-blue-600" />
+                      <span>
+                        {existingHasPin
+                          ? 'আপনার ৪-ডিজিট পিন / পাসওয়ার্ড *'
+                          : 'পাসওয়ার্ড / ৪-ডিজিট পিন (ঐচ্ছিক/নিরাপত্তার জন্য)'}
+                      </span>
+                    </label>
+                    {existingHasPin && (
+                      <span className="text-[10px] text-rose-600 font-semibold">পিন আবশ্যক</span>
+                    )}
+                  </div>
+
+                  <div className="relative">
+                    <input
+                      type={showPin ? 'text' : 'password'}
+                      value={pin}
+                      onChange={(e) => setPin(e.target.value)}
+                      placeholder="যেমন: 1234 বা গোপন পিন"
+                      maxLength={8}
+                      className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-sm tracking-widest"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
+                    >
+                      {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">
+                    💡 পিন সেট করলে অন্য কেউ আপনার মোবাইল নাম্বার দিয়ে সিট বুক করতে পারবে না।
+                  </p>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">
-                  💡 পরবর্তীতে শুধু নাম্বার টাইপ করলেই অটোমেটিক নাম ও আইডি কার্ড নাম্বার পূরণ হয়ে যাবে।
-                </p>
-              </div>
 
-              {/* Student Full Name */}
-              <div>
-                <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                  <User className="w-3.5 h-3.5 text-slate-500" />
-                  <span>শিক্ষার্থীর নাম *</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="যেমন: একরাম ভুঁইয়া"
-                  className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
-                />
-              </div>
-
-              {/* Student ID / Roll & Gender */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                {/* Student Full Name */}
                 <div>
                   <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                    <CreditCard className="w-3.5 h-3.5 text-slate-500" />
-                    <span>আইডি কার্ড নাম্বার / রোল</span>
+                    <User className="w-3.5 h-3.5 text-slate-500" />
+                    <span>শিক্ষার্থীর নাম *</span>
                   </label>
                   <input
                     type="text"
-                    value={studentId}
-                    onChange={(e) => setStudentId(e.target.value)}
-                    placeholder="যেমন: ID-2026 / DU-890"
-                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-xs"
+                    required
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
+                    placeholder="যেমন: একরাম ভুঁইয়া"
+                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
                   />
                 </div>
 
-                <div>
-                  <label className="font-semibold text-slate-800 block mb-1">
-                    লিঙ্গ (Gender) *
-                  </label>
-                  <div className="grid grid-cols-2 gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
-                    <button
-                      type="button"
-                      onClick={() => setGender('male')}
-                      className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
-                        gender === 'male'
-                          ? 'bg-white text-blue-700 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      ছাত্র (Male)
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setGender('female')}
-                      className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
-                        gender === 'female'
-                          ? 'bg-white text-pink-700 shadow-2xs'
-                          : 'text-slate-600 hover:text-slate-900'
-                      }`}
-                    >
-                      ছাত্রী (Female)
-                    </button>
+                {/* Student ID / Roll & Gender */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  <div>
+                    <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                      <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                      <span>আইডি কার্ড নাম্বার / রোল</span>
+                    </label>
+                    <input
+                      type="text"
+                      value={studentId}
+                      onChange={(e) => setStudentId(e.target.value)}
+                      placeholder="যেমন: ID-2026 / DU-890"
+                      className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-xs"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="font-semibold text-slate-800 block mb-1">
+                      লিঙ্গ (Gender) *
+                    </label>
+                    <div className="grid grid-cols-2 gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                      <button
+                        type="button"
+                        onClick={() => setGender('male')}
+                        className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
+                          gender === 'male'
+                            ? 'bg-white text-blue-700 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        ছাত্র (Male)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setGender('female')}
+                        className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
+                          gender === 'female'
+                            ? 'bg-white text-pink-700 shadow-2xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        ছাত্রী (Female)
+                      </button>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              {/* Target / Prep */}
-              <div>
-                <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                  <Target className="w-3.5 h-3.5 text-slate-500" />
-                  <span>টার্গেট / পড়াশোনার লক্ষ্য</span>
-                </label>
-                <input
-                  type="text"
-                  value={targetExam}
-                  onChange={(e) => setTargetExam(e.target.value)}
-                  placeholder="যেমন: বিসিএস / ব্যাংক / বিশ্ববিদ্যালয় ভর্তি / মেডিকেল"
-                  className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
-                />
-              </div>
+                {/* Target / Prep */}
+                <div>
+                  <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
+                    <Target className="w-3.5 h-3.5 text-slate-500" />
+                    <span>টার্গেট / পড়াশোনার লক্ষ্য</span>
+                  </label>
+                  <input
+                    type="text"
+                    value={targetExam}
+                    onChange={(e) => setTargetExam(e.target.value)}
+                    placeholder="যেমন: বিসিএস / ব্যাংক / বিশ্ববিদ্যালয় ভর্তি / মেডিকেল"
+                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
+                  />
+                </div>
 
-              {/* Submit Button */}
-              <div className="pt-2">
-                <button
-                  type="submit"
-                  id="submit-student-login-btn"
-                  className={`w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] ${
-                    isSuperAdminPhone
-                      ? 'bg-rose-600 hover:bg-rose-700'
-                      : 'bg-blue-600 hover:bg-blue-700'
-                  }`}
-                >
-                  <span>
-                    {submitSuccess
-                      ? 'সংরক্ষিত হচ্ছে...'
-                      : isSuperAdminPhone
-                      ? 'এডমিন হিসেবে প্রবেশ করুন'
-                      : 'লগইন ও প্রোফাইল সংরক্ষণ'}
-                  </span>
-                  <ArrowRight className="w-4 h-4" />
-                </button>
-              </div>
-            </form>
-          </div>
-        ) : (
-          /* ADMIN PORTAL FORM */
+                {/* Submit Button */}
+                <div className="pt-2">
+                  <button
+                    type="submit"
+                    id="submit-student-login-btn"
+                    className={`w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] ${
+                      isSuperAdminPhone
+                        ? 'bg-rose-600 hover:bg-rose-700'
+                        : 'bg-blue-600 hover:bg-blue-700'
+                    }`}
+                  >
+                    <span>
+                      {submitSuccess
+                        ? 'সংরক্ষিত হচ্ছে...'
+                        : isSuperAdminPhone
+                        ? 'এডমিন হিসেবে প্রবেশ করুন'
+                        : 'লগইন ও প্রোফাইল সংরক্ষণ'}
+                    </span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+              </form>
+            </div>
+          ) : (
+            /* ADMIN PORTAL FORM */
             <div className="space-y-3.5 text-xs">
               {isAdminLoggedIn && adminUser ? (
                 <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
@@ -606,3 +717,4 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     </div>
   );
 };
+

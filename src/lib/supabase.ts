@@ -38,16 +38,19 @@ export async function fetchStudentByPhone(phone: string): Promise<{
   studentId?: string;
   gender?: string;
   targetExam?: string;
+  pin?: string;
+  isBlocked?: boolean;
 } | null> {
   try {
     const client = getSupabase();
     if (!client || !phone.trim()) return null;
 
+    const cleanPhone = phone.trim().replace(/\D/g, '');
     const { data, error } = await client
       .from('students')
       .select('*')
-      .eq('phone', phone.trim())
-      .single();
+      .or(`phone.eq.${phone.trim()},phone.eq.${cleanPhone}`)
+      .maybeSingle();
 
     if (error || !data) return null;
 
@@ -58,6 +61,8 @@ export async function fetchStudentByPhone(phone: string): Promise<{
       studentId: data.student_id || undefined,
       gender: data.gender || 'male',
       targetExam: data.target_exam || undefined,
+      pin: data.pin || undefined,
+      isBlocked: Boolean(data.is_blocked),
     };
   } catch (err) {
     console.warn('Supabase fetch student by phone error:', err);
@@ -75,6 +80,8 @@ export async function syncStudentToCloud(student: {
   studentId?: string;
   gender?: string;
   targetExam?: string;
+  pin?: string;
+  isBlocked?: boolean;
 }): Promise<{ success: boolean; error?: unknown }> {
   try {
     const client = getSupabase();
@@ -88,13 +95,15 @@ export async function syncStudentToCloud(student: {
         student_id: student.studentId || null,
         gender: student.gender || 'male',
         target_exam: student.targetExam || null,
+        pin: student.pin || null,
+        is_blocked: Boolean(student.isBlocked),
         last_active: new Date().toISOString(),
       },
       { onConflict: 'phone' }
     );
 
     if (error) {
-      console.warn('Supabase students table sync notice (table may need creation):', error.message);
+      console.warn('Supabase students table sync notice:', error.message);
       return { success: false, error };
     }
 
@@ -115,6 +124,8 @@ export async function fetchAllStudentsFromCloud(): Promise<Array<{
   student_id?: string;
   gender?: string;
   target_exam?: string;
+  pin?: string;
+  is_blocked?: boolean;
   created_at?: string;
   last_active?: string;
 }>> {
@@ -134,6 +145,65 @@ export async function fetchAllStudentsFromCloud(): Promise<Array<{
   } catch (err) {
     console.warn('Supabase fetchAllStudents error:', err);
     return [];
+  }
+}
+
+/**
+ * Sync / Backup full library configuration (Rooms, Seats, Notices) to cloud storage
+ */
+export async function syncLibraryStateToCloud(payload: {
+  rooms?: unknown[];
+  seats?: unknown[];
+  notices?: unknown[];
+  branchesConfig?: unknown;
+}): Promise<{ success: boolean; error?: unknown }> {
+  try {
+    const client = getSupabase();
+    if (!client) return { success: false };
+
+    // Store in a library_state key-value or system_config table
+    const { error } = await client.from('system_config').upsert(
+      {
+        key: 'library_live_state',
+        value: payload,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
+
+    if (error) {
+      // Non-fatal if table not yet created
+      return { success: false, error };
+    }
+    return { success: true };
+  } catch (err) {
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Fetch library configuration (Rooms, Seats, Notices) from cloud
+ */
+export async function fetchLibraryStateFromCloud(): Promise<{
+  rooms?: unknown[];
+  seats?: unknown[];
+  notices?: unknown[];
+  branchesConfig?: unknown;
+} | null> {
+  try {
+    const client = getSupabase();
+    if (!client) return null;
+
+    const { data, error } = await client
+      .from('system_config')
+      .select('value')
+      .eq('key', 'library_live_state')
+      .single();
+
+    if (error || !data) return null;
+    return data.value;
+  } catch (err) {
+    return null;
   }
 }
 
