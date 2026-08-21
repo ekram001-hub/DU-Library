@@ -9,6 +9,7 @@ import {
   Clock,
   Calendar,
   LogIn,
+  LogOut,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { BranchId } from '../types';
@@ -29,13 +30,12 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
   onOpenMyPass,
 }) => {
   const {
-  currentStudent,
-  currentStudentSeat,
-  currentTime,
-  branchStats,
-  overallStats,
-  isAdminLoggedIn,
-} = useLibrary();
+    currentStudent,
+    currentStudentSeat,
+    currentTime,
+    isAdminLoggedIn,
+    logoutStudent,
+  } = useLibrary();
 
   // Format 12-hour clock (HH:MM:SS AM/PM)
   const formatTime = (date: Date) => {
@@ -78,51 +78,90 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
           </div>
         </div>
 
-        {/* 1. Logged In User Pill / Login Card */}
+        {/* 1. Logged In User Profile Card / Login Trigger Card */}
         {currentStudent ? (
           <div
-            id="portal-user-status-card"
-            onClick={onOpenAuth}
-            className="w-full bg-white hover:bg-emerald-50/40 border border-slate-200/90 hover:border-emerald-300 rounded-2xl p-3.5 shadow-xs flex items-center justify-between transition-all cursor-pointer group"
+            id="portal-user-profile-section"
+            className="w-full bg-white border border-emerald-200/80 rounded-2xl p-4 shadow-xs transition-all space-y-3"
           >
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center text-emerald-700 font-bold text-base shadow-2xs group-hover:scale-105 transition-transform">
-                <User className="w-5 h-5" />
-              </div>
-              <div>
-                <div className="flex items-center gap-2">
-                  <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
-                    {currentStudent.name}
-                  </h3>
-                  {isAdminLoggedIn && (
-                    <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
-                      Admin
-                    </span>
-                  )}
+            <div className="flex items-center justify-between gap-3">
+              {/* User Avatar & Info */}
+              <div
+                onClick={onOpenAuth}
+                className="flex items-center gap-3 cursor-pointer group flex-1 min-w-0"
+                title="প্রোফাইল দেখতে বা এডিট করতে ক্লিক করুন"
+              >
+                {currentStudent.avatar ? (
+                  <img
+                    src={currentStudent.avatar}
+                    alt={currentStudent.name}
+                    referrerPolicy="no-referrer"
+                    className="w-12 h-12 rounded-xl object-cover border-2 border-emerald-500 shadow-2xs group-hover:scale-105 transition-transform shrink-0"
+                  />
+                ) : (
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-600 to-teal-700 text-white font-bold text-lg flex items-center justify-center shadow-2xs group-hover:scale-105 transition-transform shrink-0">
+                    {currentStudent.name ? currentStudent.name.charAt(0).toUpperCase() : <User className="w-6 h-6" />}
+                  </div>
+                )}
+
+                <div className="min-w-0">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <h3 className="font-bold text-slate-900 text-base sm:text-lg leading-snug truncate group-hover:text-emerald-800 transition-colors">
+                      {currentStudent.name}
+                    </h3>
+                    {isAdminLoggedIn && (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200 shrink-0">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-xs text-slate-500 truncate mt-0.5">
+                    {currentStudent.email || currentStudent.phone || 'Google Authenticated Student'}
+                  </p>
                 </div>
-                <p className="text-xs text-emerald-700 font-medium">
-                  {currentStudent.phone} • লগইন করা আছে
-                </p>
               </div>
+
+              {/* Status Badge */}
+              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shrink-0">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                <span>লগইন করা আছে</span>
+              </span>
             </div>
 
-            <div className="flex items-center gap-2">
-              {currentStudentSeat && (
-                <button
-                  type="button"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onOpenMyPass();
-                  }}
-                  className="px-2.5 py-1 rounded-lg bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold"
-                >
-                  সিট #{currentStudentSeat.seatNumber}
-                </button>
-              )}
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold tracking-wide">
-                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                Active
-              </span>
+            {/* Quick Actions for Logged-in User: Seat details + Profile Modal + Logout Button */}
+            <div className="flex items-center justify-between pt-2.5 border-t border-slate-100 gap-2">
+              <div className="flex items-center gap-2">
+                {currentStudentSeat ? (
+                  <button
+                    type="button"
+                    onClick={onOpenMyPass}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
+                  >
+                    <span>ডিজিটাল পাস (সিট #{currentStudentSeat.seatNumber})</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={onOpenAuth}
+                    className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-all cursor-pointer"
+                  >
+                    <User className="w-3.5 h-3.5 text-slate-500" />
+                    <span>প্রোফাইল তথ্য</span>
+                  </button>
+                )}
+              </div>
+
+              {/* Logout Button */}
+              <button
+                id="btn-portal-logout"
+                type="button"
+                onClick={logoutStudent}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-slate-200 text-slate-700 text-xs font-medium transition-all shadow-2xs cursor-pointer active:scale-95"
+                title="সাইন আউট বা লগআউট করুন"
+              >
+                <LogOut className="w-3.5 h-3.5" />
+                <span>লগআউট</span>
+              </button>
             </div>
           </div>
         ) : (
@@ -140,7 +179,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
                   লগ ইন করুন
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  মোবাইল নম্বর ও তথ্য দিয়ে প্রবেশ বা প্রোফাইল তৈরি করুন
+                  Google বা মোবাইল নম্বর দিয়ে প্রবেশ করুন
                 </p>
               </div>
             </div>

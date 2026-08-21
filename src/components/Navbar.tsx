@@ -31,6 +31,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     setCurrentBranchId,
     branchConfig,
     currentStudent,
+    logoutStudent,
     adminUser,
     logoutAdmin,
     currentStudentSeat,
@@ -210,18 +211,27 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   id="btn-current-user-profile"
                   onClick={onOpenAuth}
-                  className="flex items-center gap-2 pl-1.5 pr-2.5 py-1 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-left text-xs transition-all shadow-2xs group"
+                  className="flex items-center gap-2 pl-1 pr-2.5 py-1 rounded-xl bg-white hover:bg-slate-50 border border-slate-200 text-left text-xs transition-all shadow-2xs group cursor-pointer"
                   title="View / Edit Profile"
                 >
-                  <div className="w-6 h-6 rounded-full bg-blue-600 flex items-center justify-center text-white font-bold text-[11px]">
-                    {currentStudent.name.charAt(0)}
-                  </div>
+                  {currentStudent.avatar ? (
+                    <img
+                      src={currentStudent.avatar}
+                      alt={currentStudent.name}
+                      referrerPolicy="no-referrer"
+                      className="w-6 h-6 rounded-full object-cover border border-emerald-500 shadow-2xs shrink-0"
+                    />
+                  ) : (
+                    <div className="w-6 h-6 rounded-full bg-emerald-700 flex items-center justify-center text-white font-bold text-[11px] shrink-0">
+                      {currentStudent.name ? currentStudent.name.charAt(0).toUpperCase() : 'U'}
+                    </div>
+                  )}
 
                   <div className="hidden sm:block">
-                    <div className="font-semibold text-slate-800 group-hover:text-slate-900 line-clamp-1">
+                    <div className="font-semibold text-slate-800 group-hover:text-emerald-800 line-clamp-1">
                       {currentStudent.name}
                     </div>
-                    <div className="text-[10px] text-emerald-600 font-medium">
+                    <div className="text-[10px] text-emerald-700 font-medium">
                       {currentStudentSeat ? `Seat: ${currentStudentSeat.seatNumber}` : 'Logged In'}
                     </div>
                   </div>
@@ -231,18 +241,28 @@ export const Navbar: React.FC<NavbarProps> = ({
                   <button
                     id="btn-view-pass-header"
                     onClick={onOpenMyPass}
-                    className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold transition-all"
+                    className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-700 text-xs font-semibold transition-all cursor-pointer"
                     title="View Digital Library Pass"
                   >
                     <span className="text-[11px]">Pass</span>
                   </button>
                 )}
+
+                {/* Direct Logout Button */}
+                <button
+                  id="btn-student-logout-navbar"
+                  onClick={logoutStudent}
+                  className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 transition-all cursor-pointer"
+                  title="লগআউট / Logout"
+                >
+                  <LogOut className="w-3.5 h-3.5" />
+                </button>
               </div>
             ) : (
               <button
                 id="btn-login-student"
                 onClick={onOpenAuth}
-                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all shadow-2xs"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-medium transition-all shadow-2xs cursor-pointer"
               >
                 <User className="w-3.5 h-3.5" />
                 <span>Sign In</span>
