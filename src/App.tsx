@@ -75,9 +75,9 @@ function MainApp() {
   );
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Hind_Siliguri',_'Poppins',_sans-serif] selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Poppins',_sans-serif] selection:bg-indigo-500 selection:text-white">
       {currentView === 'portal' ? (
-        /* Screen 1: Portal Hub View (Matching Screenshot 1) */
+        /* Screen 1: Portal Hub View */
         <PortalHome
           onSelectBranch={handleSelectBranch}
           onOpenGuidelines={() => setIsGuidelinesModalOpen(true)}
@@ -86,7 +86,7 @@ function MainApp() {
           onOpenMyPass={handleOpenMyPass}
         />
       ) : (
-        /* Screen 2: Live Seat Grid View (Matching Screenshot 2) */
+        /* Screen 2: Live Seat Grid View */
         <div className="min-h-screen flex flex-col justify-between">
           <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6">
             <SeatGrid
@@ -110,7 +110,7 @@ function MainApp() {
                   onClick={() => setCurrentView('portal')}
                   className="hover:text-slate-800 font-medium transition-colors"
                 >
-                  হোম পেজ
+                  Home Portal
                 </button>
                 <span>•</span>
                 <button
@@ -118,7 +118,7 @@ function MainApp() {
                   onClick={() => setIsGuidelinesModalOpen(true)}
                   className="hover:text-slate-800 transition-colors"
                 >
-                  নির্দেশনা
+                  Rules & Guidelines
                 </button>
                 {isAdminLoggedIn && (
                   <>
@@ -128,7 +128,7 @@ function MainApp() {
                       onClick={() => setIsAdminModalOpen(true)}
                       className="text-rose-600 font-semibold hover:text-rose-700 transition-colors"
                     >
-                      এডমিন প্যানেল
+                      Admin Dashboard
                     </button>
                   </>
                 )}

@@ -208,7 +208,7 @@ export async function fetchLibraryStateFromCloud(): Promise<{
 }
 
 /**
- * Sign In with Google OAuth via Supabase
+ * Sign In with Google OAuth via Supabase using popup window flow for iframe compatibility
  */
 export async function signInWithGoogle(): Promise<{ error: Error | null; data?: unknown }> {
   const client = getSupabase();
@@ -222,6 +222,7 @@ export async function signInWithGoogle(): Promise<{ error: Error | null; data?: 
     const { data, error } = await client.auth.signInWithOAuth({
       provider: 'google',
       options: {
+        skipBrowserRedirect: true,
         redirectTo: window.location.origin,
         queryParams: {
           access_type: 'offline',
@@ -231,6 +232,19 @@ export async function signInWithGoogle(): Promise<{ error: Error | null; data?: 
     });
 
     if (error) throw error;
+
+    if (data?.url) {
+      const popup = window.open(
+        data.url,
+        'google_oauth_popup',
+        'width=500,height=600,menubar=no,toolbar=no,location=no,status=no'
+      );
+      if (!popup || popup.closed || typeof popup.closed === 'undefined') {
+        // If popup blocked, attempt direct location assignment
+        window.location.href = data.url;
+      }
+    }
+
     return { data, error: null };
   } catch (err: unknown) {
     const error = err instanceof Error ? err : new Error(String(err));

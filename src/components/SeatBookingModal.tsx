@@ -77,23 +77,23 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
         onClose();
         onRequireAuth();
       } else {
-        setErrorMsg('সিট বুকিং করার পূর্বে গুগল সাইন-ইন ও তথ্য সাবমিট করা আবশ্যক।');
+        setErrorMsg('You must sign in with Google and complete your profile before booking a seat.');
       }
       return;
     }
 
     if (!name.trim()) {
-      setErrorMsg('অনুগ্রহ করে আপনার নাম দিন।');
+      setErrorMsg('Please enter your name.');
       return;
     }
     if (!phone.trim()) {
-      setErrorMsg('অনুগ্রহ করে আপনার মোবাইল নম্বর দিন।');
+      setErrorMsg('Please enter your contact phone number.');
       return;
     }
 
     // Gender check for female zone
     if (seat.isFemaleReserved && gender !== 'female') {
-      setErrorMsg('এই সিটটি শুধুমাত্র নারী শিক্ষার্থীদের জন্য সংরক্ষিত।');
+      setErrorMsg('This seat is reserved exclusively for female students.');
       return;
     }
 
@@ -112,7 +112,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
         registerOrUpdateStudent({
           name: name.trim(),
           phone: phone.trim(),
-          email: `${name.toLowerCase().replace(/\s+/g, '')}@student.bd`,
+          email: `${name.toLowerCase().replace(/\s+/g, '')}@student.edu`,
           studentId: studentId.trim() || `STU-${Math.floor(1000 + Math.random() * 9000)}`,
           gender,
           isProfileComplete: true,
@@ -147,17 +147,17 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
   };
 
   const durationOptions = [
-    { hours: 2, label: '২ ঘণ্টা', sub: 'Short' },
-    { hours: 4, label: '৪ ঘণ্টা', sub: 'Standard' },
-    { hours: 6, label: '৬ ঘণ্টা', sub: 'Deep Focus' },
-    { hours: 8, label: '৮ ঘণ্টা', sub: 'Full Day' },
-    { hours: 12, label: '১২ ঘণ্টা', sub: 'Marathon' },
+    { hours: 2, label: '2 Hours', sub: 'Short' },
+    { hours: 4, label: '4 Hours', sub: 'Standard' },
+    { hours: 6, label: '6 Hours', sub: 'Deep Focus' },
+    { hours: 8, label: '8 Hours', sub: 'Full Day' },
+    { hours: 12, label: '12 Hours', sub: 'Marathon' },
   ];
 
   return (
     <div
       id="seat-booking-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn font-['Poppins',_sans-serif]"
     >
       <div
         id="seat-booking-modal-card"
@@ -171,9 +171,9 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-base font-bold text-slate-900">সিট বুকিং</h3>
+                <h3 className="text-base font-bold text-slate-900">Seat Booking</h3>
                 <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-emerald-100 text-emerald-800">
-                  {seat.seatNumber}
+                  Seat #{seat.seatNumber}
                 </span>
               </div>
               <p className="text-xs text-slate-500">
@@ -197,7 +197,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
           <div className="bg-pink-50 border-b border-pink-200 px-5 py-2.5 flex items-center gap-2 text-xs text-pink-800">
             <Heart className="w-4 h-4 text-pink-600 shrink-0" />
             <span>
-              <strong>মহিলা সংরক্ষিত কর্নার:</strong> এই সিটটি শুধুমাত্র নারী শিক্ষার্থীদের জন্য সংরক্ষিত।
+              <strong>Female Reserved Section:</strong> This seat is reserved exclusively for female students.
             </span>
           </div>
         )}
@@ -207,10 +207,10 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
           <div className="bg-amber-50 border-b border-amber-200 p-4 space-y-2 text-xs text-amber-900">
             <div className="flex items-center gap-2 font-bold text-amber-800">
               <Lock className="w-4 h-4 text-amber-600 shrink-0" />
-              <span>লগইন ও তথ্য সাবমিট আবশ্যক</span>
+              <span>Login & Profile Completion Required</span>
             </div>
             <p className="text-[11px] text-amber-700 leading-relaxed">
-              সিট বুকিং করতে প্রথমে গুগল দিয়ে লগইন করে আপনার প্রয়োজনীয় তথ্য সাবমিট করতে হবে।
+              To book a seat, you must first sign in with Google and submit your student details.
             </p>
             <button
               type="button"
@@ -221,7 +221,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
               }}
               className="w-full mt-1 py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-700 text-white font-semibold text-xs transition-colors shadow-2xs flex items-center justify-center gap-2 cursor-pointer"
             >
-              <span>লগইন ও তথ্য পূরণ করুন</span>
+              <span>Sign In & Complete Profile</span>
             </button>
           </div>
         )}
@@ -240,7 +240,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
           <div>
             <label className="block text-xs font-semibold text-slate-700 mb-2 flex items-center gap-1.5">
               <Clock className="w-3.5 h-3.5 text-blue-600" />
-              <span>পড়ার সময়সীমা নির্ধারণ করুন:</span>
+              <span>Select Study Duration:</span>
             </label>
             <div className="grid grid-cols-5 gap-1.5">
               {durationOptions.map((opt) => (
@@ -267,7 +267,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <User className="w-3.5 h-3.5 text-slate-400" />
-                <span>নাম *</span>
+                <span>Full Name *</span>
               </label>
               <input
                 id="booking-name"
@@ -284,7 +284,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <Phone className="w-3.5 h-3.5 text-slate-400" />
-                <span>মোবাইল নম্বর *</span>
+                <span>Phone Number *</span>
               </label>
               <input
                 id="booking-phone"
@@ -301,7 +301,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1 flex items-center gap-1">
                 <Hash className="w-3.5 h-3.5 text-slate-400" />
-                <span>আইডি নম্বর (ঐচ্ছিক)</span>
+                <span>Student ID (Optional)</span>
               </label>
               <input
                 id="booking-student-id"
@@ -316,7 +316,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
             {/* Gender Selection */}
             <div>
               <label className="block text-xs font-semibold text-slate-700 mb-1">
-                লিঙ্গ *
+                Gender *
               </label>
               <div className="grid grid-cols-2 gap-2">
                 <button
@@ -329,7 +329,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   } ${seat.isFemaleReserved ? 'opacity-40 cursor-not-allowed' : ''}`}
                 >
-                  ছাত্র (Male)
+                  Male
                 </button>
                 <button
                   type="button"
@@ -340,7 +340,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
                       : 'bg-slate-50 border-slate-200 text-slate-600 hover:bg-slate-100'
                   }`}
                 >
-                  ছাত্রী (Female)
+                  Female
                 </button>
               </div>
             </div>
@@ -350,10 +350,10 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
           <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 text-[11px] text-slate-600 space-y-1">
             <div className="flex items-center gap-1.5 font-semibold text-slate-800">
               <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-              <span>ডিজিটাল লাইব্রেরি পাস ও লাইভ ট্র্যাকিং</span>
+              <span>Digital Library Pass & Live Attendance</span>
             </div>
             <p>
-              সিট বুকিং নিশ্চিত হলে সাথে সাথে আপনার পাস কোড তৈরি হবে এবং প্রয়োজনে বিরতি নেওয়ার সময় অরেঞ্জ টাইমার এক্টিভ করতে পারবেন।
+              Your digital pass code will be issued instantly upon confirmation. You can take temporary breaks with the live away timer at any time.
             </p>
           </div>
 
@@ -364,7 +364,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-all cursor-pointer"
             >
-              বাতিল
+              Cancel
             </button>
 
             <button
@@ -374,7 +374,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
               className="px-5 py-2 rounded-xl bg-slate-900 hover:bg-slate-800 disabled:opacity-50 text-white text-xs sm:text-sm font-semibold transition-all shadow-xs flex items-center gap-2 cursor-pointer"
             >
               <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-              <span>বুকিং নিশ্চিত করুন ({targetHours}h)</span>
+              <span>Confirm Booking ({targetHours}h)</span>
             </button>
           </div>
         </form>

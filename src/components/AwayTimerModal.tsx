@@ -64,18 +64,18 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
   };
 
   const presetDurations = [
-    { mins: 15, label: '১৫ মিনিট', sub: 'চা / নাস্তা' },
-    { mins: 30, label: '৩০ মিনিট', sub: 'নামাজ / বিশ্রাম' },
-    { mins: 45, label: '৪৫ মিনিট', sub: 'খাবার / লাঞ্চ' },
-    { mins: 60, label: '৬০ মিনিট', sub: 'দীর্ঘ বিরতি' },
+    { mins: 15, label: '15 Mins', sub: 'Tea / Snack' },
+    { mins: 30, label: '30 Mins', sub: 'Prayer / Rest' },
+    { mins: 45, label: '45 Mins', sub: 'Meal / Lunch' },
+    { mins: 60, label: '60 Mins', sub: 'Long Break' },
   ];
 
   const reasonOptions: { id: AwayReason; label: string; icon: string; desc: string }[] = [
-    { id: 'Prayer', label: 'নামাজের বিরতি (Prayer Break)', icon: '🕌', desc: 'মসজিদে নামাজ আদায়' },
-    { id: 'Lunch', label: 'খাবারের বিরতি (Meal Break)', icon: '🍱', desc: 'লাঞ্চ / ডিনার / ক্যাফেটেরিয়া' },
-    { id: 'Tea', label: 'চা ও রিফ্রেশমেন্ট (Tea & Snack)', icon: '☕', desc: 'চা, কফি বা হালকা নাস্তা' },
-    { id: 'Rest', label: 'বিশ্রাম (Rest & Refresh)', icon: '🛋️', desc: 'চোখের ও শারীরিক বিশ্রাম' },
-    { id: 'Emergency', label: 'জরুরি কাজ / কল (Emergency)', icon: '⚡', desc: 'জরুরি ফোন কল বা কাজ' },
+    { id: 'Prayer', label: 'Prayer Break', icon: '🕌', desc: 'Attending prayer at mosque' },
+    { id: 'Lunch', label: 'Meal Break', icon: '🍱', desc: 'Lunch / Dinner / Cafeteria' },
+    { id: 'Tea', label: 'Tea & Refreshment', icon: '☕', desc: 'Tea, coffee or light snack' },
+    { id: 'Rest', label: 'Rest & Refresh', icon: '🛋️', desc: 'Eye strain & mental pause' },
+    { id: 'Emergency', label: 'Emergency / Call', icon: '⚡', desc: 'Urgent phone call or errand' },
   ];
 
   // Calculate expected return time
@@ -89,7 +89,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
   return (
     <div
       id="away-timer-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn font-['Poppins',_sans-serif]"
     >
       <div
         id="away-timer-modal-card"
@@ -103,13 +103,13 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900">সাময়িক বিরতি (Away Timer)</h3>
+                <h3 className="text-sm font-bold text-slate-900">Take Temporary Break</h3>
                 <span className="px-2 py-0.5 rounded text-xs font-mono font-bold bg-orange-100 text-orange-900 border border-orange-300">
-                  সিট {seat.seatNumber}
+                  Seat #{seat.seatNumber}
                 </span>
               </div>
               <p className="text-xs text-slate-600">
-                বিরতিকালীন সিটটি অরেঞ্জ কালারে ও বড় টাইমার সহ সংরক্ষিত থাকবে
+                Your seat will be highlighted in orange with a prominent live timer
               </p>
             </div>
           </div>
@@ -131,10 +131,10 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
             <label className="block text-xs font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-orange-600" />
-                <span>বিরতির সময়সীমা নির্বাচন করুন</span>
+                <span>Select Break Duration</span>
               </span>
               <span className="text-xs font-mono font-bold text-orange-700 bg-orange-50 px-2 py-0.5 rounded-lg border border-orange-200">
-                {durationMinutes} মিনিট
+                {durationMinutes} Minutes
               </span>
             </label>
 
@@ -166,12 +166,12 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
               ))}
             </div>
 
-            {/* Custom Minutes Input Section (Directive: Custom Time Option in Minutes) */}
+            {/* Custom Minutes Input Section */}
             <div className="p-3 rounded-xl bg-orange-50/50 border border-orange-200/80 space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                <span>কাস্টম সময় (মিনিট এককে):</span>
+                <span>Custom Duration (in minutes):</span>
                 <span className="text-[11px] text-slate-500 font-normal">
-                  ১ থেকে ১৮০ মিনিট পর্যন্ত
+                  1 to 180 minutes
                 </span>
               </div>
 
@@ -181,7 +181,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
                   id="btn-decrement-mins"
                   onClick={() => adjustMinutes(-5)}
                   className="p-2 rounded-xl bg-white hover:bg-orange-100 border border-orange-200 text-orange-800 transition-colors shadow-2xs cursor-pointer"
-                  title="5 মিনিট কমান"
+                  title="Decrease 5 minutes"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
@@ -197,7 +197,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
                     className="w-full text-center py-2 px-3 bg-white border border-orange-300 rounded-xl text-sm font-bold text-slate-900 font-mono focus:border-orange-500 focus:ring-2 focus:ring-orange-200 outline-hidden"
                   />
                   <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-slate-400 pointer-events-none">
-                    মিনিট
+                    mins
                   </span>
                 </div>
 
@@ -206,7 +206,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
                   id="btn-increment-mins"
                   onClick={() => adjustMinutes(5)}
                   className="p-2 rounded-xl bg-white hover:bg-orange-100 border border-orange-200 text-orange-800 transition-colors shadow-2xs cursor-pointer"
-                  title="5 মিনিট বাড়ান"
+                  title="Increase 5 minutes"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -238,7 +238,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
 
           {/* Reason Selector */}
           <div className="space-y-1.5">
-            <label className="block text-xs font-bold text-slate-800">বিরতির কারণ নির্বাচন করুন</label>
+            <label className="block text-xs font-bold text-slate-800">Select Break Purpose</label>
             <div className="space-y-1.5 max-h-48 overflow-y-auto pr-0.5">
               {reasonOptions.map((r) => (
                 <button
@@ -272,7 +272,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
             <div className="flex items-center gap-2">
               <Sparkles className="w-4 h-4 text-orange-200 animate-pulse" />
               <span>
-                বিরতি শুরু হলে শেষ হবে: <strong>{returnTimeStr}</strong>
+                Expected return time: <strong>{returnTimeStr}</strong>
               </span>
             </div>
             <span className="text-[11px] font-mono bg-white/20 px-2 py-0.5 rounded-md font-bold">
@@ -287,7 +287,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
               onClick={onClose}
               className="px-4 py-2 rounded-xl border border-slate-200 bg-white hover:bg-slate-50 text-slate-600 text-xs font-semibold transition-colors cursor-pointer"
             >
-              বাতিল
+              Cancel
             </button>
 
             <button
@@ -297,7 +297,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
               className="px-5 py-2 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-bold transition-all shadow-xs flex items-center gap-2 cursor-pointer active:scale-[0.99]"
             >
               <Timer className="w-4 h-4" />
-              <span>{durationMinutes} মিনিটের বিরতি শুরু করুন</span>
+              <span>Start {durationMinutes}-Minute Break</span>
             </button>
           </div>
         </div>

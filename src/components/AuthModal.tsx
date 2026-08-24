@@ -9,7 +9,6 @@ import {
   AlertCircle,
   Loader2,
   ShieldCheck,
-  LogOut,
   Building,
   CreditCard,
   Edit3,
@@ -39,8 +38,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     loginStudent,
     registerOrUpdateStudent,
     loginAdmin,
-    adminUser,
-    logoutAdmin,
     registeredStudents,
   } = useLibrary();
 
@@ -78,13 +75,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (initialMode === 'info') {
       setViewState('info_submit');
     } else if (currentStudent) {
-      if (!currentStudent.isProfileComplete || !currentStudent.phone) {
-        setViewState('info_submit');
-        setIsEditingExisting(false);
-      } else {
-        setViewState('info_submit');
-        setIsEditingExisting(false);
-      }
+      setViewState('info_submit');
+      setIsEditingExisting(false);
       setName(currentStudent.name || '');
       setPhone(currentStudent.phone || '');
       setGender(currentStudent.gender || 'male');
@@ -113,13 +105,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
         setGoogleError(
           error.message?.includes('provider is not enabled') ||
             error.message?.includes('Unsupported provider')
-            ? 'Supabase-এ Google Provider কনফিগার করা না থাকলে নিচের টেস্ট লগইন ব্যবহার করুন।'
-            : error.message || 'গুগল সাইন-ইন করতে সমস্যা হয়েছে।'
+            ? 'Supabase Google Provider is not configured yet. You can also use the one-click Google accounts below.'
+            : error.message || 'Failed to sign in with Google.'
         );
       }
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : String(err);
-      setGoogleError(msg || 'গুগল লগইন ব্যর্থ হয়েছে।');
+      setGoogleError(msg || 'Google sign-in failed.');
     } finally {
       setIsGoogleLoading(false);
     }
@@ -179,12 +171,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     const cleanPhone = phone.trim().replace(/\D/g, '');
 
     if (!trimmedName) {
-      setFormError('অনুগ্রহ করে আপনার পূর্ণ নাম লিখুন।');
+      setFormError('Please enter your full name.');
       return;
     }
 
-    if (cleanPhone.length < 11) {
-      setFormError('অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)।');
+    if (cleanPhone.length < 7) {
+      setFormError('Please provide a valid contact phone number.');
       return;
     }
 
@@ -193,7 +185,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
       (s) => s.phone.replace(/\D/g, '') === cleanPhone
     );
     if (existingMatch?.isBlocked) {
-      setFormError('আপনার একাউন্টটি অ্যাডমিন দ্বারা সাময়িকভাবে স্থগিত রাখা হয়েছে।');
+      setFormError('Your account has been temporarily suspended by the administrator.');
       return;
     }
 
@@ -226,7 +218,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (success) {
       onClose();
     } else {
-      setAdminError('ভুল ইমেইল বা পাসওয়ার্ড (সঠিক: admin@studycenter.com / admin123)');
+      setAdminError('Invalid email or password (Credentials: admin@studycenter.com / admin123)');
     }
   };
 
@@ -237,7 +229,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   return (
     <div
       id="auth-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn font-['Poppins',_sans-serif]"
     >
       <div
         id="auth-modal-card"
@@ -264,19 +256,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <div>
               <h3 className="text-sm font-bold text-slate-900 leading-tight">
                 {viewState === 'admin_login'
-                  ? 'এডমিন পোর্টাল লগইন'
+                  ? 'Admin Portal Login'
                   : viewState === 'google_login'
-                  ? 'Google সাইন-ইন'
+                  ? 'Google Sign-In'
                   : isProfileActuallyComplete && !isEditingExisting
-                  ? 'শিক্ষার্থী প্রোফাইল'
-                  : 'শিক্ষার্থীর তথ্য সাবমিট'}
+                  ? 'Student Profile'
+                  : 'Submit Student Information'}
               </h3>
               <p className="text-[11px] text-slate-500">
                 {viewState === 'admin_login'
-                  ? 'লাইব্রেরি সুপার এডমিন ম্যানেজমেন্ট'
+                  ? 'Library super-admin management'
                   : viewState === 'google_login'
-                  ? 'শুধুমাত্র গুগল একাউন্ট দিয়ে এক ক্লিকে সাইন-ইন করুন'
-                  : 'সিট বুকিং করার জন্য প্রয়োজনীয় তথ্য প্রদান করুন'}
+                  ? 'Sign in securely with your Google account'
+                  : 'Required details before booking any seat'}
               </p>
             </div>
           </div>
@@ -320,9 +312,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   </svg>
                 </div>
                 <div>
-                  <h4 className="text-base font-bold text-slate-900">গুগল একাউন্ট দিয়ে সাইন-ইন</h4>
+                  <h4 className="text-base font-bold text-slate-900">Sign in with Google</h4>
                   <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1">
-                    লাইব্রেরিতে সিট বুকিং করতে আপনার অফিসিয়াল গুগল একাউন্ট দিয়ে প্রবেশ করুন।
+                    Sign in with your Google account to access library seat bookings and live study features.
                   </p>
                 </div>
               </div>
@@ -365,13 +357,13 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     />
                   </svg>
                 )}
-                <span>Continue with Google (গুগল সাইন-ইন)</span>
+                <span>Continue with Google</span>
               </button>
 
               {/* Instant One-Click Google Sandbox Profiles (For preview & seamless evaluation) */}
               <div className="pt-2 border-t border-slate-100 space-y-2">
                 <div className="text-[11px] font-medium text-slate-500 text-center">
-                  অথবা ১-ক্লিকে গুগল একাউন্ট নির্বাচন করুন (Quick Test):
+                  Or select a Google account (Quick Test):
                 </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
@@ -379,8 +371,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     id="btn-google-quick-demo-1"
                     onClick={() =>
                       handleQuickGoogleSignIn({
-                        name: 'তানভীর আহমেদ',
-                        email: 'tanvir.bcs@gmail.com',
+                        name: 'Tanvir Ahmed',
+                        email: 'tanvir.student@gmail.com',
                         avatar:
                           'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
                       })
@@ -395,9 +387,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     />
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-slate-800 truncate">
-                        তানভীর আহমেদ
+                        Tanvir Ahmed
                       </div>
-                      <div className="text-[10px] text-slate-500 truncate">tanvir.bcs@gmail.com</div>
+                      <div className="text-[10px] text-slate-500 truncate">tanvir.student@gmail.com</div>
                     </div>
                   </button>
 
@@ -406,8 +398,8 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     id="btn-google-quick-demo-2"
                     onClick={() =>
                       handleQuickGoogleSignIn({
-                        name: 'ফারহানা আক্তার',
-                        email: 'farhana.akter@gmail.com',
+                        name: 'Farhana Akter',
+                        email: 'farhana.student@gmail.com',
                         avatar:
                           'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60',
                       })
@@ -422,9 +414,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     />
                     <div className="min-w-0">
                       <div className="text-xs font-semibold text-slate-800 truncate">
-                        ফারহানা আক্তার
+                        Farhana Akter
                       </div>
-                      <div className="text-[10px] text-slate-500 truncate">farhana.akter@gmail.com</div>
+                      <div className="text-[10px] text-slate-500 truncate">farhana.student@gmail.com</div>
                     </div>
                   </button>
                 </div>
@@ -439,7 +431,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   className="text-[11px] text-slate-500 hover:text-slate-800 font-medium hover:underline inline-flex items-center gap-1 cursor-pointer"
                 >
                   <Lock className="w-3 h-3" />
-                  <span>এডমিন লগইন (Admin Panel Access)</span>
+                  <span>Admin Panel Access</span>
                 </button>
               </div>
             </div>
@@ -473,7 +465,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       </div>
                       <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
                         <CheckCircle2 className="w-3 h-3 text-emerald-600 inline" />
-                        <span>Google একাউন্ট ভেরিফাইড</span>
+                        <span>Google Account Verified</span>
                       </div>
                     </div>
                   </div>
@@ -487,7 +479,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     }}
                     className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
                   >
-                    লগআউট
+                    Log Out
                   </button>
                 </div>
               )}
@@ -497,35 +489,35 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <div className="space-y-3">
                   <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
                     <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                    <span>আপনার তথ্য সম্পন্ন হয়েছে। আপনি এখন যে কোনো সিট বুক করতে পারবেন।</span>
+                    <span>Your profile is complete! You can now book any available seat.</span>
                   </div>
 
                   <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
                     <div className="flex justify-between py-1 border-b border-slate-100">
-                      <span className="text-slate-500">নাম:</span>
+                      <span className="text-slate-500">Name:</span>
                       <span className="font-semibold text-slate-800">{currentStudent?.name}</span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-100">
-                      <span className="text-slate-500">মোবাইল:</span>
+                      <span className="text-slate-500">Phone:</span>
                       <span className="font-semibold text-slate-800 font-mono">
                         {currentStudent?.phone}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-100">
-                      <span className="text-slate-500">লিঙ্গ:</span>
+                      <span className="text-slate-500">Gender:</span>
                       <span className="font-semibold text-slate-800">
-                        {currentStudent?.gender === 'female' ? 'ছাত্রী (Female)' : 'ছাত্র (Male)'}
+                        {currentStudent?.gender === 'female' ? 'Female' : 'Male'}
                       </span>
                     </div>
                     <div className="flex justify-between py-1 border-b border-slate-100">
-                      <span className="text-slate-500">পড়ার বিষয়:</span>
+                      <span className="text-slate-500">Target Study / Exam:</span>
                       <span className="font-semibold text-slate-800">
-                        {currentStudent?.targetExam || 'N/A'}
+                        {currentStudent?.targetExam || 'General Study'}
                       </span>
                     </div>
                     {currentStudent?.studentId && (
                       <div className="flex justify-between py-1 border-b border-slate-100">
-                        <span className="text-slate-500">স্টুডেন্ট আইডি:</span>
+                        <span className="text-slate-500">Student ID:</span>
                         <span className="font-semibold text-slate-800 font-mono">
                           {currentStudent.studentId}
                         </span>
@@ -533,7 +525,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     )}
                     {currentStudent?.institution && (
                       <div className="flex justify-between py-1">
-                        <span className="text-slate-500">প্রতিষ্ঠান:</span>
+                        <span className="text-slate-500">Institution:</span>
                         <span className="font-semibold text-slate-800">
                           {currentStudent.institution}
                         </span>
@@ -549,7 +541,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
                     >
                       <Edit3 className="w-3.5 h-3.5" />
-                      <span>তথ্য পরিবর্তন করুন</span>
+                      <span>Edit Information</span>
                     </button>
 
                     <button
@@ -561,7 +553,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                       }}
                       className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
                     >
-                      <span>সিট বুকিং এ যান</span>
+                      <span>Proceed to Booking</span>
                       <ArrowRight className="w-3.5 h-3.5" />
                     </button>
                   </div>
@@ -576,7 +568,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 text-xs flex items-center gap-2">
                     <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>
-                      সিট বুকিং সম্পন্ন করার জন্য অনুগ্রহ করে আপনার সঠিক তথ্য সাবমিট করুন।
+                      Please submit your details to complete registration before booking a seat.
                     </span>
                   </div>
 
@@ -590,7 +582,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {submitSuccess && (
                     <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
                       <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
-                      <span>তথ্য সফলভাবে সংরক্ষিত হয়েছে!</span>
+                      <span>Information successfully saved!</span>
                     </div>
                   )}
 
@@ -598,7 +590,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
                       <User className="w-3.5 h-3.5 text-slate-500" />
-                      <span>পূর্ণ নাম</span>
+                      <span>Full Name</span>
                       <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -616,7 +608,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
                       <Phone className="w-3.5 h-3.5 text-slate-500" />
-                      <span>মোবাইল নম্বর</span>
+                      <span>Phone Number</span>
                       <span className="text-rose-500">*</span>
                     </label>
                     <input
@@ -633,7 +625,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   {/* Field 3: Gender Selection (Male / Female) */}
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800">
-                      লিঙ্গ (মহিলা সংরক্ষিত কর্নার যাচাইয়ের জন্য)
+                      Gender (Required for female-reserved areas)
                     </label>
                     <div className="grid grid-cols-2 gap-2">
                       <button
@@ -646,7 +638,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        👨 ছাত্র (Male)
+                        Male
                       </button>
                       <button
                         type="button"
@@ -658,7 +650,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                             : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        👩 ছাত্রী (Female)
+                        Female
                       </button>
                     </div>
                   </div>
@@ -667,7 +659,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   <div className="space-y-1">
                     <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
                       <Target className="w-3.5 h-3.5 text-slate-500" />
-                      <span>পড়ার বিষয় / পরীক্ষার লক্ষ্য</span>
+                      <span>Study Target / Exam Goal</span>
                     </label>
                     <input
                       id="input-student-target-exam"
@@ -684,7 +676,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
                         <CreditCard className="w-3.5 h-3.5 text-slate-500" />
-                        <span>আইডি নম্বর (ঐচ্ছিক)</span>
+                        <span>Student ID (Optional)</span>
                       </label>
                       <input
                         id="input-student-id-number"
@@ -699,7 +691,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     <div className="space-y-1">
                       <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
                         <Building className="w-3.5 h-3.5 text-slate-500" />
-                        <span>প্রতিষ্ঠান (ঐচ্ছিক)</span>
+                        <span>Institution (Optional)</span>
                       </label>
                       <input
                         id="input-student-institution"
@@ -719,7 +711,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                     className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-2"
                   >
                     <CheckCircle2 className="w-4 h-4" />
-                    <span>তথ্য সংরক্ষণ ও নিশ্চিত করুন</span>
+                    <span>Save & Confirm Details</span>
                   </button>
                 </form>
               )}
@@ -733,7 +725,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
             <form id="admin-login-form" onSubmit={handleAdminSubmit} className="space-y-3.5 py-1">
               <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2">
                 <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0" />
-                <span>লাইব্রেরি সুপার এডমিন কন্ট্রোল প্যানেল লগইন</span>
+                <span>Library Super Admin Control Panel</span>
               </div>
 
               {adminError && (
@@ -744,7 +736,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               )}
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-800">এডমিন ইমেইল</label>
+                <label className="text-xs font-bold text-slate-800">Admin Email</label>
                 <input
                   id="admin-email-input"
                   type="email"
@@ -757,7 +749,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
               </div>
 
               <div className="space-y-1">
-                <label className="text-xs font-bold text-slate-800">পাসওয়ার্ড</label>
+                <label className="text-xs font-bold text-slate-800">Password</label>
                 <input
                   id="admin-pass-input"
                   type="password"
@@ -775,7 +767,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-1"
               >
                 <ShieldCheck className="w-4 h-4" />
-                <span>এডমিন লগইন করুন</span>
+                <span>Log In as Admin</span>
               </button>
 
               <div className="pt-2 text-center">
@@ -784,7 +776,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                   onClick={() => setViewState('google_login')}
                   className="text-xs text-slate-500 hover:text-slate-800 font-medium hover:underline cursor-pointer"
                 >
-                  ← শিক্ষার্থী Google লগইনে ফিরে যান
+                  ← Back to Student Google Login
                 </button>
               </div>
             </form>

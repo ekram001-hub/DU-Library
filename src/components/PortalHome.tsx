@@ -50,20 +50,20 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
   };
 
   const formatDate = (date: Date) => {
-    const daysEn = ['রবিবার', 'সোমবার', 'মঙ্গলবার', 'বুধবার', 'বৃহস্পতিবার', 'শুক্রবার', 'শনিবার'];
-    const monthsEn = ['জানুয়ারি', 'ফেব্রুয়ারি', 'মার্চ', 'এপ্রিল', 'মে', 'জুন', 'জুলাই', 'আগস্ট', 'সেপ্টেম্বর', 'অক্টোবর', 'নভেম্বর', 'ডিসেম্বর'];
+    const daysEn = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+    const monthsEn = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
     const dayName = daysEn[date.getDay()];
     const dayNum = date.getDate();
     const month = monthsEn[date.getMonth()];
     const year = date.getFullYear();
-    return `${dayName}, ${dayNum} ${month} ${year}`;
+    return `${dayName}, ${month} ${dayNum}, ${year}`;
   };
 
   const { timeStr, ampm } = formatTime(currentTime);
   const formattedDate = formatDate(currentTime);
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between py-6 px-4 sm:px-6">
+    <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col justify-between py-6 px-4 sm:px-6 font-['Poppins',_sans-serif]">
       {/* Top Header Bar */}
       <div className="max-w-xl mx-auto w-full mb-6">
         <div className="flex items-center justify-between text-xs text-slate-500 px-1 mb-2">
@@ -89,7 +89,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
               <div
                 onClick={onOpenAuth}
                 className="flex items-center gap-3 cursor-pointer group flex-1 min-w-0"
-                title="প্রোফাইল দেখতে বা এডিট করতে ক্লিক করুন"
+                title="Click to view or edit student profile"
               >
                 {currentStudent.avatar ? (
                   <img
@@ -124,7 +124,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
               {/* Status Badge */}
               <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs font-semibold shrink-0">
                 <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                <span>লগইন করা আছে</span>
+                <span>Logged In</span>
               </span>
             </div>
 
@@ -137,7 +137,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
                     onClick={onOpenMyPass}
                     className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-900 text-xs font-semibold shadow-2xs transition-all cursor-pointer"
                   >
-                    <span>ডিজিটাল পাস (সিট #{currentStudentSeat.seatNumber})</span>
+                    <span>Digital Pass (Seat #{currentStudentSeat.seatNumber})</span>
                   </button>
                 ) : (
                   <button
@@ -146,7 +146,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
                     className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-50 hover:bg-slate-100 border border-slate-200 text-slate-700 text-xs font-medium transition-all cursor-pointer"
                   >
                     <User className="w-3.5 h-3.5 text-slate-500" />
-                    <span>প্রোফাইল তথ্য</span>
+                    <span>Profile Info</span>
                   </button>
                 )}
               </div>
@@ -157,10 +157,10 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
                 type="button"
                 onClick={logoutStudent}
                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-rose-50 hover:text-rose-700 hover:border-rose-200 border border-slate-200 text-slate-700 text-xs font-medium transition-all shadow-2xs cursor-pointer active:scale-95"
-                title="সাইন আউট বা লগআউট করুন"
+                title="Sign out / Log out"
               >
                 <LogOut className="w-3.5 h-3.5" />
-                <span>লগআউট</span>
+                <span>Log Out</span>
               </button>
             </div>
           </div>
@@ -176,10 +176,10 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
               </div>
               <div>
                 <h3 className="font-bold text-slate-900 text-sm sm:text-base leading-snug">
-                  লগ ইন করুন
+                  Log In
                 </h3>
                 <p className="text-xs text-slate-500 font-medium">
-                  Google বা মোবাইল নম্বর দিয়ে প্রবেশ করুন
+                  Sign in with Google to book your seat
                 </p>
               </div>
             </div>
@@ -187,16 +187,16 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
             <div className="flex items-center gap-2">
               <span className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-800 text-white text-xs font-bold tracking-wide shadow-xs transition-all group-hover:shadow-sm">
                 <LogIn className="w-3.5 h-3.5" />
-                <span>লগ ইন করুন</span>
+                <span>Log In</span>
               </span>
             </div>
           </div>
         )}
       </div>
 
-      {/* Main Content Area: Branches & Ecosystem (Matching the Scientific Botanical Teal & Honey Amber Aesthetic) */}
+      {/* Main Content Area: Branches */}
       <main className="max-w-xl mx-auto w-full space-y-4">
-        {/* 2. Branch 1: সাইন্স লাইব্রেরি (Rich Botanical Emerald Teal Gradient) */}
+        {/* Branch 1: Science Library */}
         <button
           id="btn-portal-branch-science"
           type="button"
@@ -210,14 +210,14 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                  সাইন্স লাইব্রেরি
+                  Science Library
                 </h2>
                 <span className="px-2 py-0.5 rounded-full bg-emerald-400/20 text-emerald-200 text-[10px] font-semibold border border-emerald-300/30">
                   Science
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-emerald-100/90 font-normal mt-0.5">
-                সিট বুকিং • সকাল ৮:০০ — রাত ১০:০০
+                Seat Booking • 8:00 AM — 10:00 PM
               </p>
             </div>
           </div>
@@ -227,7 +227,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
           </div>
         </button>
 
-        {/* 3. Branch 2: সেন্ট্রাল লাইব্রেরি (Warm Honey Amber & Tangerine Gradient) */}
+        {/* Branch 2: Central Library */}
         <button
           id="btn-portal-branch-central"
           type="button"
@@ -241,14 +241,14 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h2 className="text-xl sm:text-2xl font-bold tracking-tight text-white flex items-center gap-2">
-                  সেন্ট্রাল লাইব্রেরি
+                  Central Library
                 </h2>
                 <span className="px-2 py-0.5 rounded-full bg-amber-300/20 text-amber-100 text-[10px] font-semibold border border-amber-300/30">
                   Central
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-amber-100/90 font-normal mt-0.5">
-                সিট বুকিং • সকাল ৮:০০ — রাত ১০:০০
+                Seat Booking • 8:00 AM — 10:00 PM
               </p>
             </div>
           </div>
@@ -258,7 +258,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
           </div>
         </button>
 
-        {/* 4. Action Buttons (Side-by-side: Guidelines & Follow Facebook) */}
+        {/* Action Buttons (Side-by-side: Guidelines & Follow Facebook) */}
         <div className="grid grid-cols-2 gap-3 pt-1">
           {/* Guidelines Button */}
           <button
@@ -268,7 +268,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
             className="flex items-center justify-center gap-2 py-3 px-4 rounded-xl bg-amber-50/90 hover:bg-amber-100/90 border border-amber-200 text-amber-900 font-semibold text-sm transition-all shadow-2xs cursor-pointer"
           >
             <FileText className="w-4 h-4 text-amber-700" />
-            <span>নির্দেশনা</span>
+            <span>Guidelines</span>
           </button>
 
           {/* Facebook Link Button */}
@@ -287,10 +287,10 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
         </div>
       </main>
 
-      {/* Bottom Footer & Admin Login */}
+      {/* Bottom Footer */}
       <footer className="max-w-xl mx-auto w-full mt-8 pt-4 border-t border-slate-200 text-center text-xs text-slate-500 flex flex-col sm:flex-row items-center justify-between gap-2">
         <div>
-          © {new Date().getFullYear()} স্মার্ট স্টাডি সেন্টার ও লাইব্রেরি
+          © {new Date().getFullYear()} Smart Study Center & Library
         </div>
 
         <div className="flex items-center gap-3">
@@ -299,7 +299,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
             onClick={onOpenGuidelines}
             className="hover:text-slate-800 underline transition-colors"
           >
-            নিয়মাবলী
+            Rules & Policies
           </button>
           {isAdminLoggedIn && (
             <>
@@ -311,7 +311,7 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
                 className="flex items-center gap-1 hover:text-rose-700 font-semibold transition-colors text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200"
               >
                 <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-                <span>এডমিন প্যানেল</span>
+                <span>Admin Dashboard</span>
               </button>
             </>
           )}

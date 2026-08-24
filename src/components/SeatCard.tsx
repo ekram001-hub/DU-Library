@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { Armchair, Clock, User, Timer, Check, AlertCircle } from 'lucide-react';
+import { Armchair } from 'lucide-react';
 import { Seat, Room } from '../types';
 import { useLibrary } from '../context/LibraryContext';
 
@@ -33,7 +33,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: '00:00', label: 'সময় শেষ' };
+      return { expired: true, text: '00:00', label: 'Time Expired' };
     }
 
     const totalSeconds = Math.floor(remainingMs / 1000);
@@ -100,15 +100,15 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       id={`seat-card-${seat.seatNumber}`}
       type="button"
       onClick={() => onSelectSeat(seat)}
-      className={`group relative aspect-square p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-between transition-all duration-150 cursor-pointer select-none active:scale-95 overflow-hidden ${statusTheme.cardBg}`}
-      title={`সিট ${seat.seatNumber} • ${
+      className={`group relative aspect-square p-1.5 sm:p-2 rounded-xl sm:rounded-2xl border flex flex-col items-center justify-between transition-all duration-150 cursor-pointer select-none active:scale-95 overflow-hidden font-['Poppins',_sans-serif] ${statusTheme.cardBg}`}
+      title={`Seat ${seat.seatNumber} • ${
         seat.status === 'available'
-          ? 'খালি (বুকিং করতে ক্লিক করুন)'
+          ? 'Available (Click to book)'
           : seat.status === 'occupied'
-          ? `বুকড (${seat.occupantName || 'ব্যবহারকারী'})`
+          ? `Booked (${seat.occupantName || 'Student'})`
           : seat.status === 'away'
-          ? `সাময়িক বিরতি • ${awayCountdown?.text || 'Away'} অবশিষ্ট`
-          : 'মেরামত'
+          ? `Temporary Break • ${awayCountdown?.text || 'Away'} remaining`
+          : 'Under Maintenance'
       }`}
     >
       {/* Top row: Female indicator, Seat Number, My Seat badge */}
@@ -121,7 +121,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
                   ? 'bg-pink-900/60 text-pink-100'
                   : 'text-pink-600'
               }`}
-              title="Female Reserved"
+              title="Female Reserved Seat"
             >
               🌸
             </span>
@@ -142,12 +142,12 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           {isMySeat ? (
             <span
               className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-300 ring-2 ring-emerald-600 shadow-2xs"
-              title="আপনার সিট (My Seat)"
+              title="Your Active Seat"
             />
           ) : seat.status === 'away' ? (
             <span
               className="inline-block w-2.5 h-2.5 rounded-full bg-white animate-ping"
-              title="বিরতি চলছে"
+              title="On Break"
             />
           ) : null}
         </div>
@@ -160,25 +160,25 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
         <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center">
           {/* Away Label Tag */}
           <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-orange-100/90 leading-tight">
-            বিরতি / AWAY
+            ON BREAK
           </span>
 
           {/* LARGE TIMER COUNTDOWN taking center stage across the seat */}
-          <div className="text-sm sm:text-base md:text-lg font-mono font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
+          <div className="text-base sm:text-lg md:text-xl font-mono font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
             {awayCountdown ? awayCountdown.text : '30:00'}
           </div>
 
           {/* Reason icon/tag */}
-          <span className="text-[8px] sm:text-[9px] text-white/90 font-medium truncate max-w-full px-1 py-0.2 bg-black/20 rounded-full mt-0.5">
+          <span className="text-[8px] sm:text-[9px] text-white/90 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/25 rounded-full mt-0.5">
             {seat.awayReason === 'Prayer'
-              ? '🕌 নামাজ'
+              ? '🕌 Prayer'
               : seat.awayReason === 'Lunch'
-              ? '🍱 খাবার'
+              ? '🍱 Lunch'
               : seat.awayReason === 'Tea'
-              ? '☕ চা'
+              ? '☕ Tea Break'
               : seat.awayReason === 'Rest'
-              ? '🛋️ রেস্ট'
-              : '⏳ সাময়িক'}
+              ? '🛋️ Rest'
+              : '⏳ Break'}
           </span>
         </div>
       ) : (
@@ -194,18 +194,18 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       <div className="w-full flex items-center justify-center shrink-0">
         {seat.status === 'away' ? (
           <span className="text-[8px] sm:text-[9px] text-white/80 font-mono font-semibold truncate">
-            {seat.occupantName ? seat.occupantName.split(' ')[0] : 'অপেক্ষমাণ'}
+            {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Away'}
           </span>
         ) : seat.status === 'occupied' ? (
           <span className="text-[9px] text-rose-700 font-medium truncate max-w-full">
-            {seat.occupantName ? seat.occupantName.split(' ')[0] : 'বুকড'}
+            {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Booked'}
           </span>
         ) : seat.status === 'available' ? (
           <span className="text-[9px] text-emerald-700 group-hover:text-emerald-800 font-medium">
-            খালি
+            Available
           </span>
         ) : (
-          <span className="text-[9px] text-slate-400">মেরামত</span>
+          <span className="text-[9px] text-slate-400">Maintenance</span>
         )}
       </div>
     </button>

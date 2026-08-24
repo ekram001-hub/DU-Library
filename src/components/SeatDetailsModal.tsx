@@ -66,7 +66,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: 'সময় শেষ' };
+      return { expired: true, text: 'Time Up' };
     }
 
     const totalSeconds = Math.floor(remainingMs / 1000);
@@ -96,14 +96,14 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     : 'N/A';
 
   const handleRelease = () => {
-    if (window.confirm('আপনি কি এই সিটটি ছেড়ে দিতে চান?')) {
+    if (window.confirm('Are you sure you want to release this seat?')) {
       releaseSeat(seat.id);
       onClose();
     }
   };
 
   const handleAdminForceRelease = () => {
-    if (window.confirm('এডমিন একশন: এই সিটটি খালি করতে চান?')) {
+    if (window.confirm('Admin Action: Force release this seat?')) {
       adminForceReleaseSeat(seat.id);
       onClose();
     }
@@ -117,7 +117,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
   return (
     <div
       id="seat-details-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn font-['Poppins',_sans-serif]"
     >
       <div
         id="seat-details-modal-card"
@@ -144,7 +144,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold leading-tight">
-                  {seat.status === 'away' ? 'সাময়িক বিরতি (Away)' : 'সিটের বিবরণ'}
+                  {seat.status === 'away' ? 'Temporary Break (Away)' : 'Seat Details'}
                 </h3>
                 {isMySeat && (
                   <span
@@ -154,7 +154,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         : 'bg-emerald-100 text-emerald-800'
                     }`}
                   >
-                    আমার সিট
+                    My Seat
                   </span>
                 )}
               </div>
@@ -189,13 +189,13 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             <div className="p-4 rounded-xl bg-orange-50 border-2 border-orange-400 text-center space-y-1 shadow-2xs">
               <div className="text-xs font-bold text-orange-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
                 <Timer className="w-4 h-4 text-orange-600" />
-                <span>বিরতির অবশিষ্ট সময় (Live Countdown)</span>
+                <span>Away Remaining Time (Live Countdown)</span>
               </div>
               <div className="text-3xl font-mono font-black text-orange-600 tracking-wider animate-pulse">
                 {awayCountdown ? awayCountdown.text : '30:00'}
               </div>
               <div className="text-xs text-orange-700 font-medium">
-                কারণ: {seat.awayReason === 'Prayer' ? 'নামাজের বিরতি 🕌' : seat.awayReason === 'Lunch' ? 'খাবারের বিরতি 🍱' : seat.awayReason === 'Tea' ? 'চা-নাস্তা ☕' : seat.awayReason === 'Rest' ? 'বিশ্রাম 🛋️' : 'জরুরি বিরতি ⚡'}
+                Reason: {seat.awayReason === 'Prayer' ? 'Prayer Break 🕌' : seat.awayReason === 'Lunch' ? 'Meal Break 🍱' : seat.awayReason === 'Tea' ? 'Tea & Snack ☕' : seat.awayReason === 'Rest' ? 'Rest & Refresh 🛋️' : 'Emergency Break ⚡'}
               </div>
             </div>
           ) : (
@@ -213,16 +213,16 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                 <span className="w-2.5 h-2.5 rounded-full bg-current"></span>
                 <span className="font-semibold">
                   {seat.status === 'available'
-                    ? 'সিট খালি রয়েছে'
+                    ? 'Seat Available'
                     : seat.status === 'occupied'
-                    ? 'সিট বুকড রয়েছে'
-                    : 'মেরামত চলছে'}
+                    ? 'Seat Booked'
+                    : 'Under Maintenance'}
                 </span>
               </div>
 
               {seat.isFemaleReserved && (
                 <span className="px-2 py-0.5 rounded-md bg-pink-100 text-pink-700 border border-pink-200 text-[10px] font-bold">
-                  🌸 মহিলা সংরক্ষিত
+                  🌸 Female Reserved
                 </span>
               )}
             </div>
@@ -232,17 +232,17 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
           {seat.status !== 'available' && seat.status !== 'maintenance' && (
             <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs">
               <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">বুক করেছেন:</span>
+                <span className="text-slate-500">Booked By:</span>
                 <span className="font-semibold text-slate-800">{seat.occupantName}</span>
               </div>
 
               <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">আইডি নম্বর:</span>
+                <span className="text-slate-500">Student ID:</span>
                 <span className="font-mono text-slate-700">{seat.studentId || 'N/A'}</span>
               </div>
 
               <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">যোগাযোগ:</span>
+                <span className="text-slate-500">Contact:</span>
                 <span className="font-mono text-slate-700">
                   {isAdminLoggedIn || isMySeat
                     ? seat.occupantPhone
@@ -251,12 +251,12 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               </div>
 
               <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">বুকিং সময়:</span>
+                <span className="text-slate-500">Booking Time:</span>
                 <span className="font-mono text-emerald-700 font-semibold">{bookedTimeFormatted}</span>
               </div>
 
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">বৈধতা পর্যন্ত:</span>
+                <span className="text-slate-500">Valid Until:</span>
                 <span className="font-mono text-slate-800 font-semibold">{expectedLeaveFormatted}</span>
               </div>
             </div>
@@ -276,7 +276,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
               >
                 <Armchair className="w-4 h-4 text-emerald-400" />
-                <span>সিট বুকিং করুন</span>
+                <span>Book This Seat</span>
               </button>
             )}
 
@@ -295,7 +295,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                       className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <RotateCcw className="w-4 h-4" />
-                      <span>আমি ফিরে এসেছি (I'm Back)</span>
+                      <span>I'm Back</span>
                     </button>
                   ) : (
                     <button
@@ -308,7 +308,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                       className="py-2.5 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Timer className="w-4 h-4" />
-                      <span>বিরতি নিন (Take Break)</span>
+                      <span>Take Break</span>
                     </button>
                   )}
 
@@ -322,7 +322,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                     className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <Ticket className="w-4 h-4 text-amber-400" />
-                    <span>পাস দেখুন</span>
+                    <span>View Pass</span>
                   </button>
                 </div>
 
@@ -333,7 +333,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                 >
                   <LogOut className="w-3.5 h-3.5" />
-                  <span>সিট ছেড়ে দিন (Release Seat)</span>
+                  <span>Release Seat</span>
                 </button>
               </div>
             )}
@@ -342,7 +342,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             {isAdminLoggedIn && (
               <div className="pt-2 border-t border-slate-100 space-y-1.5">
                 <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  এডমিন কন্ট্রোল
+                  Admin Controls
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
@@ -350,7 +350,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                     onClick={handleAdminForceRelease}
                     className="py-1.5 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-colors cursor-pointer"
                   >
-                    ফোর্স রিলিজ
+                    Force Release
                   </button>
 
                   <button
@@ -358,7 +358,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                     onClick={handleAdminMaintenance}
                     className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
                   >
-                    {seat.status === 'maintenance' ? 'এক্টিভ করুন' : 'মেরামত মোড'}
+                    {seat.status === 'maintenance' ? 'Activate Seat' : 'Set Maintenance'}
                   </button>
                 </div>
               </div>

@@ -1312,8 +1312,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const initSeats = generateInitialSeats();
     setSeats(initSeats);
     setNotices(INITIAL_NOTICES);
-    setRegisteredStudents(DEMO_STUDENTS);
-    setCurrentStudent(DEMO_STUDENTS[0]);
+    setRegisteredStudents([]);
+    setCurrentStudent(null);
     setAdminUser(null);
     broadcastSync({ rooms: INITIAL_ROOMS, seats: initSeats, notices: INITIAL_NOTICES });
     syncLibraryStateToCloud({
