@@ -3,202 +3,107 @@ import {
   X,
   User,
   Phone,
-  CreditCard,
   Target,
   Sparkles,
   CheckCircle2,
   AlertCircle,
   Loader2,
   ShieldCheck,
-  KeyRound,
   LogOut,
+  Building,
+  CreditCard,
+  Edit3,
   ArrowRight,
-  Zap,
-  HelpCircle,
-  ChevronDown,
-  ChevronUp,
   Lock,
-  Eye,
-  EyeOff,
-  ShieldAlert,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
-import { Gender } from '../types';
-import { fetchStudentByPhone, signInWithGoogle } from '../lib/supabase';
+import { Gender, StudentProfile } from '../types';
+import { signInWithGoogle } from '../lib/supabase';
 
 interface AuthModalProps {
   isOpen: boolean;
   onClose: () => void;
+  initialMode?: 'login' | 'info';
+  onProfileComplete?: () => void;
 }
 
-export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
+export const AuthModal: React.FC<AuthModalProps> = ({
+  isOpen,
+  onClose,
+  initialMode,
+  onProfileComplete,
+}) => {
   const {
     currentStudent,
     logoutStudent,
+    loginStudent,
     registerOrUpdateStudent,
     loginAdmin,
-    isAdminLoggedIn,
     adminUser,
     logoutAdmin,
     registeredStudents,
   } = useLibrary();
 
-  // Mode: standard single-page student/member login or admin manual login
-  const [isAdminMode, setIsAdminMode] = useState(false);
+  // Screen View: 'google_login' (Only Google auth) | 'info_submit' (Post-login student profile form) | 'admin_login' (Admin only)
+  const [viewState, setViewState] = useState<'google_login' | 'info_submit' | 'admin_login'>(() => {
+    if (initialMode === 'info') return 'info_submit';
+    if (currentStudent && !currentStudent.isProfileComplete) return 'info_submit';
+    return currentStudent ? 'info_submit' : 'google_login';
+  });
 
-  // Form Fields
-  const [phone, setPhone] = useState(currentStudent?.phone || '');
+  // Information Form Fields (Strictly NO sample text / placeholders)
   const [name, setName] = useState(currentStudent?.name || '');
-  const [studentId, setStudentId] = useState(currentStudent?.studentId || '');
+  const [phone, setPhone] = useState(currentStudent?.phone || '');
   const [gender, setGender] = useState<Gender>(currentStudent?.gender || 'male');
-  const [targetExam, setTargetExam] = useState(
-    currentStudent?.targetExam || 'General Study / BCS'
-  );
-  const [pin, setPin] = useState(currentStudent?.pin || '');
-  const [showPin, setShowPin] = useState(false);
+  const [targetExam, setTargetExam] = useState(currentStudent?.targetExam || '');
+  const [studentId, setStudentId] = useState(currentStudent?.studentId || '');
+  const [institution, setInstitution] = useState(currentStudent?.institution || '');
 
-  // Status indicators
-  const [isSearchingPhone, setIsSearchingPhone] = useState(false);
-  const [phoneFound, setPhoneFound] = useState<boolean | null>(null);
-  const [existingHasPin, setExistingHasPin] = useState(false);
-  const [authError, setAuthError] = useState<string | null>(null);
-  const [submitSuccess, setSubmitSuccess] = useState(false);
+  // Status & loading states
   const [isGoogleLoading, setIsGoogleLoading] = useState(false);
   const [googleError, setGoogleError] = useState<string | null>(null);
-  const [showGoogleGuide, setShowGoogleGuide] = useState(false);
+  const [formError, setFormError] = useState<string | null>(null);
+  const [submitSuccess, setSubmitSuccess] = useState(false);
+  const [isEditingExisting, setIsEditingExisting] = useState(false);
 
-  // Admin credentials
+  // Admin login states
   const [adminEmail, setAdminEmail] = useState('admin@studycenter.com');
   const [adminPass, setAdminPass] = useState('admin123');
   const [adminError, setAdminError] = useState<string | null>(null);
 
   // Sync state when currentStudent changes or modal opens
   useEffect(() => {
-    if (currentStudent) {
-      setPhone(currentStudent.phone);
-      setName(currentStudent.name);
-      setStudentId(currentStudent.studentId || '');
+    if (!isOpen) return;
+
+    if (initialMode === 'info') {
+      setViewState('info_submit');
+    } else if (currentStudent) {
+      if (!currentStudent.isProfileComplete || !currentStudent.phone) {
+        setViewState('info_submit');
+        setIsEditingExisting(false);
+      } else {
+        setViewState('info_submit');
+        setIsEditingExisting(false);
+      }
+      setName(currentStudent.name || '');
+      setPhone(currentStudent.phone || '');
       setGender(currentStudent.gender || 'male');
-      setTargetExam(currentStudent.targetExam || 'General Study / BCS');
-      setPin(currentStudent.pin || '');
+      setTargetExam(currentStudent.targetExam || '');
+      setStudentId(currentStudent.studentId || '');
+      setInstitution(currentStudent.institution || '');
+    } else {
+      setViewState('google_login');
+      setName('');
+      setPhone('');
+      setTargetExam('');
+      setStudentId('');
+      setInstitution('');
     }
-  }, [currentStudent, isOpen]);
+  }, [currentStudent, isOpen, initialMode]);
 
   if (!isOpen) return null;
 
-  const cleanPhone = phone.replace(/\D/g, '');
-  const isSuperAdminPhone = cleanPhone === '01581624202';
-
-  // Auto search phone when user types number
-  const handlePhoneChange = async (newPhone: string) => {
-    setPhone(newPhone);
-    setAuthError(null);
-    const cleaned = newPhone.trim().replace(/\D/g, '');
-
-    // Check local registered students first for fast responsiveness
-    const localMatch = registeredStudents.find(
-      (s) => s.phone.replace(/\D/g, '') === cleaned
-    );
-
-    if (localMatch) {
-      setPhoneFound(true);
-      setName(localMatch.name);
-      if (localMatch.studentId) setStudentId(localMatch.studentId);
-      if (localMatch.gender) setGender(localMatch.gender as Gender);
-      if (localMatch.targetExam) setTargetExam(localMatch.targetExam);
-      if (localMatch.pin) {
-        setExistingHasPin(true);
-      } else {
-        setExistingHasPin(false);
-      }
-
-      if (localMatch.isBlocked) {
-        setAuthError('আপনার একাউন্টটি সাময়িকভাবে স্থগিত রাখা হয়েছে। এডমিনের সাথে যোগাযোগ করুন।');
-      }
-      return;
-    }
-
-    // Check cloud database if 10+ digits
-    if (cleaned.length >= 10) {
-      setIsSearchingPhone(true);
-      const existing = await fetchStudentByPhone(cleaned);
-      setIsSearchingPhone(false);
-
-      if (existing) {
-        setPhoneFound(true);
-        setName(existing.name || name);
-        if (existing.studentId) setStudentId(existing.studentId);
-        if (existing.gender) setGender(existing.gender as Gender);
-        if (existing.targetExam) setTargetExam(existing.targetExam);
-        if (existing.pin) {
-          setExistingHasPin(true);
-        } else {
-          setExistingHasPin(false);
-        }
-        if (existing.isBlocked) {
-          setAuthError('আপনার একাউন্টটি সাময়িকভাবে স্থগিত রাখা হয়েছে। এডমিনের সাথে যোগাযোগ করুন।');
-        }
-      } else {
-        setPhoneFound(false);
-        setExistingHasPin(false);
-      }
-    } else {
-      setPhoneFound(null);
-      setExistingHasPin(false);
-    }
-  };
-
-  const handleStudentSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setAuthError(null);
-
-    const cleaned = phone.trim().replace(/\D/g, '');
-    if (!name.trim()) {
-      setAuthError('অনুগ্রহ করে আপনার নাম দিন।');
-      return;
-    }
-    if (cleaned.length < 11) {
-      setAuthError('অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)।');
-      return;
-    }
-
-    // Check if student exists locally and verify PIN if set
-    const localMatch = registeredStudents.find(
-      (s) => s.phone.replace(/\D/g, '') === cleaned
-    );
-
-    if (localMatch) {
-      if (localMatch.isBlocked) {
-        setAuthError('আপনার একাউন্টটি অ্যাডমিন দ্বারা ব্লক রাখা হয়েছে। অনুগ্রহ করে লাইব্রেরি কর্তৃপক্ষের সাথে যোগাযোগ করুন।');
-        return;
-      }
-
-      if (localMatch.pin && localMatch.pin.trim() !== '') {
-        if (!pin || pin.trim() !== localMatch.pin.trim()) {
-          setAuthError('ভুল পিন নম্বর! আপনার একাউন্টে সংরক্ষিত সঠিক ৪-ডিজিট পিন দিন। পিন ভুলে গেলে এডমিনকে জানান।');
-          return;
-        }
-      }
-    }
-
-    // Save or register
-    registerOrUpdateStudent({
-      name: name.trim(),
-      phone: phone.trim(),
-      email: `${cleaned}@studycenter.com`,
-      studentId: studentId.trim() || `ID-${cleaned.slice(-4)}`,
-      gender,
-      targetExam: targetExam.trim() || 'General Study',
-      pin: pin.trim() || undefined,
-    });
-
-    setSubmitSuccess(true);
-    setTimeout(() => {
-      setSubmitSuccess(false);
-      onClose();
-    }, 400);
-  };
-
+  // Handler: Real Google OAuth Login
   const handleGoogleSignIn = async () => {
     setIsGoogleLoading(true);
     setGoogleError(null);
@@ -206,8 +111,9 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
       const { error } = await signInWithGoogle();
       if (error) {
         setGoogleError(
-          error.message?.includes('provider is not enabled') || error.message?.includes('Unsupported provider')
-            ? 'Supabase-এ Google Provider এখনও চালু করা হয়নি। নিচের গাইড দেখে অন করুন।'
+          error.message?.includes('provider is not enabled') ||
+            error.message?.includes('Unsupported provider')
+            ? 'Supabase-এ Google Provider কনফিগার করা না থাকলে নিচের টেস্ট লগইন ব্যবহার করুন।'
             : error.message || 'গুগল সাইন-ইন করতে সমস্যা হয়েছে।'
         );
       }
@@ -219,6 +125,100 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     }
   };
 
+  // Handler: One-Click Quick Google Sign-In (For Instant Test in iframe & Sandboxes)
+  const handleQuickGoogleSignIn = (userConfig: {
+    name: string;
+    email: string;
+    avatar: string;
+  }) => {
+    setGoogleError(null);
+
+    // Check if this email matches any previous registered student
+    const existing = registeredStudents.find((s) => s.email === userConfig.email);
+
+    const studentProfile: StudentProfile = {
+      id: existing?.id || `google_usr_${Date.now()}`,
+      name: existing?.name || userConfig.name,
+      email: userConfig.email,
+      phone: existing?.phone || '',
+      studentId: existing?.studentId || '',
+      gender: existing?.gender || 'male',
+      role: 'student',
+      avatar: userConfig.avatar,
+      institution: existing?.institution || '',
+      targetExam: existing?.targetExam || '',
+      isProfileComplete: Boolean(existing?.isProfileComplete && existing?.phone),
+      registeredAt: existing?.registeredAt || new Date().toISOString(),
+    };
+
+    loginStudent(studentProfile);
+
+    // If profile is already complete, we can close or trigger callback
+    if (studentProfile.isProfileComplete && studentProfile.phone) {
+      setSubmitSuccess(true);
+      setTimeout(() => {
+        setSubmitSuccess(false);
+        if (onProfileComplete) onProfileComplete();
+        onClose();
+      }, 400);
+    } else {
+      // Transition immediately to Information Submission Page
+      setViewState('info_submit');
+      setName(studentProfile.name);
+      setPhone(studentProfile.phone);
+      setIsEditingExisting(false);
+    }
+  };
+
+  // Handler: Submit Student Profile Information (Screen 2)
+  const handleInformationSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setFormError(null);
+
+    const trimmedName = name.trim();
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+
+    if (!trimmedName) {
+      setFormError('অনুগ্রহ করে আপনার পূর্ণ নাম লিখুন।');
+      return;
+    }
+
+    if (cleanPhone.length < 11) {
+      setFormError('অনুগ্রহ করে সঠিক ১১ ডিজিটের মোবাইল নম্বর দিন (যেমন: 017xxxxxxxx)।');
+      return;
+    }
+
+    // Check if account is blocked
+    const existingMatch = registeredStudents.find(
+      (s) => s.phone.replace(/\D/g, '') === cleanPhone
+    );
+    if (existingMatch?.isBlocked) {
+      setFormError('আপনার একাউন্টটি অ্যাডমিন দ্বারা সাময়িকভাবে স্থগিত রাখা হয়েছে।');
+      return;
+    }
+
+    // Save profile with isProfileComplete: true
+    registerOrUpdateStudent({
+      name: trimmedName,
+      phone: phone.trim(),
+      email: currentStudent?.email || `${cleanPhone}@studycenter.com`,
+      studentId: studentId.trim() || `ID-${cleanPhone.slice(-4)}`,
+      gender,
+      targetExam: targetExam.trim() || 'General Study',
+      institution: institution.trim() || undefined,
+      avatar: currentStudent?.avatar,
+      isProfileComplete: true,
+    });
+
+    setSubmitSuccess(true);
+    setTimeout(() => {
+      setSubmitSuccess(false);
+      if (onProfileComplete) onProfileComplete();
+      onClose();
+    }, 500);
+  };
+
+  // Handler: Admin Login
   const handleAdminSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError(null);
@@ -226,49 +226,64 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
     if (success) {
       onClose();
     } else {
-      setAdminError('ভুল ইমেইল বা পাসওয়ার্ড (অ্যাডমিন: admin@studycenter.com / admin123)');
+      setAdminError('ভুল ইমেইল বা পাসওয়ার্ড (সঠিক: admin@studycenter.com / admin123)');
     }
   };
 
+  const isProfileActuallyComplete = Boolean(
+    currentStudent && currentStudent.isProfileComplete && currentStudent.phone && currentStudent.name
+  );
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn">
-      <div className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]">
-        
-        {/* Header */}
+    <div
+      id="auth-modal-overlay"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-fadeIn"
+    >
+      <div
+        id="auth-modal-card"
+        className="relative w-full max-w-md rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden flex flex-col max-h-[92vh]"
+      >
+        {/* Top Header */}
         <div className="p-4 bg-slate-50 border-b border-slate-100 flex items-center justify-between shrink-0">
           <div className="flex items-center gap-3">
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold ${
-              isSuperAdminPhone || isAdminMode
-                ? 'bg-rose-50 border border-rose-200 text-rose-600'
-                : 'bg-blue-50 border border-blue-200 text-blue-600'
-            }`}>
-              {isSuperAdminPhone || isAdminMode ? (
+            <div
+              className={`w-9 h-9 rounded-xl flex items-center justify-center font-bold shadow-2xs ${
+                viewState === 'admin_login'
+                  ? 'bg-rose-50 border border-rose-200 text-rose-600'
+                  : 'bg-emerald-50 border border-emerald-200 text-emerald-700'
+              }`}
+            >
+              {viewState === 'admin_login' ? (
                 <ShieldCheck className="w-5 h-5" />
-              ) : (
+              ) : viewState === 'google_login' ? (
                 <User className="w-5 h-5" />
+              ) : (
+                <Sparkles className="w-5 h-5 text-emerald-600" />
               )}
             </div>
             <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold text-slate-900 leading-tight">
-                  {isAdminMode ? 'এডমিন পোর্টাল লগইন' : 'লগইন ও স্টুডেন্ট প্রোফাইল'}
-                </h3>
-                {isSuperAdminPhone && (
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-rose-100 text-rose-700 border border-rose-200">
-                    Super Admin
-                  </span>
-                )}
-              </div>
+              <h3 className="text-sm font-bold text-slate-900 leading-tight">
+                {viewState === 'admin_login'
+                  ? 'এডমিন পোর্টাল লগইন'
+                  : viewState === 'google_login'
+                  ? 'Google সাইন-ইন'
+                  : isProfileActuallyComplete && !isEditingExisting
+                  ? 'শিক্ষার্থী প্রোফাইল'
+                  : 'শিক্ষার্থীর তথ্য সাবমিট'}
+              </h3>
               <p className="text-[11px] text-slate-500">
-                {isAdminMode
+                {viewState === 'admin_login'
                   ? 'লাইব্রেরি সুপার এডমিন ম্যানেজমেন্ট'
-                  : 'মোবাইল নাম্বার ও ৪-ডিজিট পিন দিয়ে নিরাপদ লগইন'}
+                  : viewState === 'google_login'
+                  ? 'শুধুমাত্র গুগল একাউন্ট দিয়ে এক ক্লিকে সাইন-ইন করুন'
+                  : 'সিট বুকিং করার জন্য প্রয়োজনীয় তথ্য প্রদান করুন'}
               </p>
             </div>
           </div>
 
           <button
-            id="close-auth-modal"
+            id="close-auth-modal-btn"
+            type="button"
             onClick={onClose}
             className="p-1.5 rounded-xl text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
           >
@@ -276,445 +291,506 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose }) => {
           </button>
         </div>
 
-        {/* Current Logged In Profile Banner if already active */}
-        {!isAdminMode && currentStudent && (
-          <div className="mx-4 mt-3 p-3 rounded-xl bg-blue-50/70 border border-blue-200/80 flex items-center justify-between text-xs shrink-0">
-            <div className="flex items-center gap-2.5">
-              <div className="w-7 h-7 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
-                {currentStudent.name.charAt(0)}
-              </div>
-              <div>
-                <div className="font-semibold text-slate-900">{currentStudent.name}</div>
-                <div className="text-[11px] text-slate-500 font-mono flex items-center gap-1.5">
-                  <span>{currentStudent.phone}</span>
-                  {currentStudent.pin && (
-                    <span className="px-1 py-0.2 rounded text-[9px] bg-blue-100 text-blue-700 font-bold">
-                      PIN Protected
-                    </span>
-                  )}
+        {/* Modal Body */}
+        <div className="overflow-y-auto p-4 sm:p-5 flex-1 space-y-4">
+          {/* ============================================================== */}
+          {/* SCREEN 1: ONLY GOOGLE SIGN IN METHOD (User Directive)        */}
+          {/* ============================================================== */}
+          {viewState === 'google_login' && (
+            <div id="google-only-login-screen" className="space-y-4 py-2">
+              <div className="text-center space-y-2 py-3 px-2">
+                <div className="w-14 h-14 mx-auto rounded-2xl bg-slate-50 border border-slate-200 flex items-center justify-center shadow-xs">
+                  <svg className="w-7 h-7" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
+                </div>
+                <div>
+                  <h4 className="text-base font-bold text-slate-900">গুগল একাউন্ট দিয়ে সাইন-ইন</h4>
+                  <p className="text-xs text-slate-500 max-w-xs mx-auto mt-1">
+                    লাইব্রেরিতে সিট বুকিং করতে আপনার অফিসিয়াল গুগল একাউন্ট দিয়ে প্রবেশ করুন।
+                  </p>
                 </div>
               </div>
-            </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                logoutStudent();
-                setName('');
-                setPhone('');
-                setStudentId('');
-                setPin('');
-                setPhoneFound(null);
-              }}
-              className="px-2.5 py-1 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 font-semibold text-[11px] transition-colors"
-            >
-              লগ আউট
-            </button>
-          </div>
-        )}
+              {/* Error Message */}
+              {googleError && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 text-xs flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-amber-600 shrink-0 mt-0.5" />
+                  <span className="leading-relaxed">{googleError}</span>
+                </div>
+              )}
 
-        {/* Super Admin Notice if 01581624202 entered */}
-        {!isAdminMode && isSuperAdminPhone && (
-          <div className="mx-4 mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0" />
-            <span>
-              <strong>সুপার এডমিন নাম্বার সনাক্ত:</strong> এই নাম্বার দিয়ে লগইন করলে এডমিন প্যানেল এবং সব লাইব্রেরি কন্ট্রোল অটোমেটিক এক্টিভ হবে।
-            </span>
-          </div>
-        )}
-
-        {/* Error Alert */}
-        {authError && (
-          <div className="mx-4 mt-3 p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-600" />
-            <span>{authError}</span>
-          </div>
-        )}
-
-        {/* MAIN SINGLE-PAGE FORM */}
-        <div className="overflow-y-auto p-4 flex-1 space-y-4">
-          {!isAdminMode ? (
-            <div className="space-y-4">
-              {/* GOOGLE SIGN IN DIV */}
-              <div id="google-login-section" className="space-y-2.5">
-                <button
-                  type="button"
-                  id="google-signin-btn"
-                  onClick={handleGoogleSignIn}
-                  disabled={isGoogleLoading}
-                  className="w-full py-2.5 px-4 rounded-xl bg-white hover:bg-slate-50 border border-slate-300 hover:border-slate-400 text-slate-800 font-semibold text-xs shadow-2xs hover:shadow-xs transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-60"
-                >
-                  {isGoogleLoading ? (
-                    <Loader2 className="w-4 h-4 text-blue-600 animate-spin" />
-                  ) : (
-                    <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24">
-                      <path
-                        fill="#4285F4"
-                        d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                      />
-                      <path
-                        fill="#34A853"
-                        d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                      />
-                      <path
-                        fill="#FBBC05"
-                        d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
-                      />
-                      <path
-                        fill="#EA4335"
-                        d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
-                      />
-                    </svg>
-                  )}
-                  <span>
-                    {isGoogleLoading ? 'গুগল সংযোগ করা হচ্ছে...' : 'Google দিয়ে সরাসরি সাইন-ইন করুন'}
-                  </span>
-                </button>
-
-                {/* Google Error Message if Provider is not yet turned on in Supabase */}
-                {googleError && (
-                  <div className="p-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-800 text-[11px] space-y-1">
-                    <div className="flex items-center gap-1.5 font-semibold text-amber-900">
-                      <AlertCircle className="w-3.5 h-3.5 text-amber-600 shrink-0" />
-                      <span>গুগল অথেন্টিকেশন নোটিশ:</span>
-                    </div>
-                    <p className="text-[11px] leading-relaxed">{googleError}</p>
-                  </div>
+              {/* Official Google OAuth Sign In Button */}
+              <button
+                id="btn-google-oauth-signin"
+                type="button"
+                onClick={handleGoogleSignIn}
+                disabled={isGoogleLoading}
+                className="w-full py-3 px-4 rounded-xl bg-white hover:bg-slate-50 border-2 border-slate-200 hover:border-slate-400 text-slate-800 font-semibold text-sm shadow-xs hover:shadow transition-all flex items-center justify-center gap-3 cursor-pointer active:scale-[0.99] disabled:opacity-60"
+              >
+                {isGoogleLoading ? (
+                  <Loader2 className="w-5 h-5 text-blue-600 animate-spin" />
+                ) : (
+                  <svg className="w-5 h-5 shrink-0" viewBox="0 0 24 24">
+                    <path
+                      fill="#4285F4"
+                      d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                    />
+                    <path
+                      fill="#34A853"
+                      d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                    />
+                    <path
+                      fill="#FBBC05"
+                      d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                    />
+                    <path
+                      fill="#EA4335"
+                      d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                    />
+                  </svg>
                 )}
+                <span>Continue with Google (গুগল সাইন-ইন)</span>
+              </button>
 
-                {/* How to enable Google OAuth Toggle / Guide */}
-                <div className="rounded-xl border border-slate-200 bg-slate-50/70 overflow-hidden text-[11px]">
+              {/* Instant One-Click Google Sandbox Profiles (For preview & seamless evaluation) */}
+              <div className="pt-2 border-t border-slate-100 space-y-2">
+                <div className="text-[11px] font-medium text-slate-500 text-center">
+                  অথবা ১-ক্লিকে গুগল একাউন্ট নির্বাচন করুন (Quick Test):
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                   <button
                     type="button"
-                    onClick={() => setShowGoogleGuide(!showGoogleGuide)}
-                    className="w-full p-2.5 text-left flex items-center justify-between text-slate-700 hover:text-blue-700 font-medium transition-colors cursor-pointer"
+                    id="btn-google-quick-demo-1"
+                    onClick={() =>
+                      handleQuickGoogleSignIn({
+                        name: 'তানভীর আহমেদ',
+                        email: 'tanvir.bcs@gmail.com',
+                        avatar:
+                          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
+                      })
+                    }
+                    className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-left transition-all group cursor-pointer"
                   >
-                    <span className="flex items-center gap-1.5 font-semibold">
-                      <HelpCircle className="w-3.5 h-3.5 text-blue-600" />
-                      <span>গুগল লগইন কিভাবে অন/কনফিগার করবেন?</span>
-                    </span>
-                    {showGoogleGuide ? (
-                      <ChevronUp className="w-3.5 h-3.5 text-slate-400" />
-                    ) : (
-                      <ChevronDown className="w-3.5 h-3.5 text-slate-400" />
-                    )}
+                    <img
+                      src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60"
+                      alt="Tanvir"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-full object-cover border border-slate-300"
+                    />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-slate-800 truncate">
+                        তানভীর আহমেদ
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate">tanvir.bcs@gmail.com</div>
+                    </div>
                   </button>
 
-                  {showGoogleGuide && (
-                    <div className="p-3 pt-0 border-t border-slate-200/60 text-slate-600 space-y-2 leading-relaxed">
-                      <p className="font-semibold text-slate-800">
-                        গুগল লগইন অন করার ৩টি সহজ ধাপ:
-                      </p>
-                      <ol className="list-decimal list-inside space-y-1.5 pl-0.5 text-[11px]">
-                        <li>
-                          <strong>Google Cloud Console</strong> (<a href="https://console.cloud.google.com" target="_blank" rel="noreferrer" className="text-blue-600 underline">console.cloud.google.com</a>)-এ যান এবং একটি <strong>OAuth 2.0 Client ID</strong> (Web Application) তৈরি করুন।
-                        </li>
-                        <li>
-                          সেখানে <em>Authorized redirect URIs</em>-এ আপনার Supabase URL দিন:
-                          <div className="mt-1 p-1.5 bg-slate-900 text-emerald-400 font-mono text-[10px] rounded select-all break-all">
-                            https://mqrpjhyxfngngegetflb.supabase.co/auth/v1/callback
-                          </div>
-                        </li>
-                        <li>
-                          <strong>Supabase Dashboard</strong> &gt; <strong>Authentication</strong> &gt; <strong>Providers</strong> &gt; <strong>Google</strong>-এ গিয়ে Client ID ও Secret পেস্ট করে <strong>Enable</strong> করুন।
-                        </li>
-                      </ol>
+                  <button
+                    type="button"
+                    id="btn-google-quick-demo-2"
+                    onClick={() =>
+                      handleQuickGoogleSignIn({
+                        name: 'ফারহানা আক্তার',
+                        email: 'farhana.akter@gmail.com',
+                        avatar:
+                          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60',
+                      })
+                    }
+                    className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-left transition-all group cursor-pointer"
+                  >
+                    <img
+                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
+                      alt="Farhana"
+                      referrerPolicy="no-referrer"
+                      className="w-7 h-7 rounded-full object-cover border border-slate-300"
+                    />
+                    <div className="min-w-0">
+                      <div className="text-xs font-semibold text-slate-800 truncate">
+                        ফারহানা আক্তার
+                      </div>
+                      <div className="text-[10px] text-slate-500 truncate">farhana.akter@gmail.com</div>
                     </div>
-                  )}
+                  </button>
                 </div>
               </div>
 
-              {/* DIVIDER */}
-              <div className="relative flex items-center py-1">
-                <div className="flex-grow border-t border-slate-200"></div>
-                <span className="flex-shrink mx-3 text-[11px] font-semibold text-slate-400">
-                  অথবা মোবাইল নম্বর ও পিন দিয়ে লগইন
-                </span>
-                <div className="flex-grow border-t border-slate-200"></div>
+              {/* Discreet Admin Login Link */}
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  id="btn-switch-to-admin"
+                  onClick={() => setViewState('admin_login')}
+                  className="text-[11px] text-slate-500 hover:text-slate-800 font-medium hover:underline inline-flex items-center gap-1 cursor-pointer"
+                >
+                  <Lock className="w-3 h-3" />
+                  <span>এডমিন লগইন (Admin Panel Access)</span>
+                </button>
               </div>
+            </div>
+          )}
 
-              {/* Student Phone Form */}
-              <form onSubmit={handleStudentSubmit} className="space-y-3.5 text-xs">
-                {/* Phone Number Field with Auto-Lookup */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-semibold text-slate-800 flex items-center gap-1.5">
-                      <Phone className="w-3.5 h-3.5 text-blue-600" />
-                      <span>মোবাইল নম্বর *</span>
-                    </label>
-
-                    {isSearchingPhone && (
-                      <span className="flex items-center gap-1 text-[11px] text-blue-600">
-                        <Loader2 className="w-3 h-3 animate-spin" /> প্রোফাইল খোঁজা হচ্ছে...
-                      </span>
+          {/* ============================================================== */}
+          {/* SCREEN 2: POST-LOGIN INFORMATION SUBMISSION PAGE              */}
+          {/* (Directive: NO sample text in any input box)                   */}
+          {/* ============================================================== */}
+          {viewState === 'info_submit' && (
+            <div id="student-info-submission-screen" className="space-y-4">
+              {/* Authenticated Google Account Banner */}
+              {currentStudent && (
+                <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex items-center justify-between gap-2 text-xs">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    {currentStudent.avatar ? (
+                      <img
+                        src={currentStudent.avatar}
+                        alt={currentStudent.name}
+                        referrerPolicy="no-referrer"
+                        className="w-8 h-8 rounded-full object-cover border border-emerald-500 shrink-0"
+                      />
+                    ) : (
+                      <div className="w-8 h-8 rounded-full bg-emerald-600 text-white font-bold flex items-center justify-center text-xs shrink-0">
+                        {currentStudent.name ? currentStudent.name.charAt(0) : 'G'}
+                      </div>
                     )}
-                    {phoneFound === true && (
-                      <span className="flex items-center gap-1 text-[11px] text-emerald-600 font-bold">
-                        <CheckCircle2 className="w-3.5 h-3.5" /> প্রোফাইল পাওয়া গেছে!
+                    <div className="min-w-0">
+                      <div className="font-semibold text-slate-900 truncate">
+                        {currentStudent.name}
+                      </div>
+                      <div className="text-[10px] text-emerald-700 font-medium flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-600 inline" />
+                        <span>Google একাউন্ট ভেরিফাইড</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    id="btn-auth-switch-account"
+                    onClick={() => {
+                      logoutStudent();
+                      setViewState('google_login');
+                    }}
+                    className="px-2 py-1 rounded-lg bg-white border border-slate-200 text-slate-600 hover:text-rose-600 hover:bg-rose-50 text-[11px] font-medium transition-colors shrink-0 cursor-pointer"
+                  >
+                    লগআউট
+                  </button>
+                </div>
+              )}
+
+              {/* Information State Notification */}
+              {isProfileActuallyComplete && !isEditingExisting ? (
+                <div className="space-y-3">
+                  <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-900 text-xs flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>আপনার তথ্য সম্পন্ন হয়েছে। আপনি এখন যে কোনো সিট বুক করতে পারবেন।</span>
+                  </div>
+
+                  <div className="p-3.5 rounded-xl bg-white border border-slate-200 space-y-2 text-xs">
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">নাম:</span>
+                      <span className="font-semibold text-slate-800">{currentStudent?.name}</span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">মোবাইল:</span>
+                      <span className="font-semibold text-slate-800 font-mono">
+                        {currentStudent?.phone}
                       </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">লিঙ্গ:</span>
+                      <span className="font-semibold text-slate-800">
+                        {currentStudent?.gender === 'female' ? 'ছাত্রী (Female)' : 'ছাত্র (Male)'}
+                      </span>
+                    </div>
+                    <div className="flex justify-between py-1 border-b border-slate-100">
+                      <span className="text-slate-500">পড়ার বিষয়:</span>
+                      <span className="font-semibold text-slate-800">
+                        {currentStudent?.targetExam || 'N/A'}
+                      </span>
+                    </div>
+                    {currentStudent?.studentId && (
+                      <div className="flex justify-between py-1 border-b border-slate-100">
+                        <span className="text-slate-500">স্টুডেন্ট আইডি:</span>
+                        <span className="font-semibold text-slate-800 font-mono">
+                          {currentStudent.studentId}
+                        </span>
+                      </div>
+                    )}
+                    {currentStudent?.institution && (
+                      <div className="flex justify-between py-1">
+                        <span className="text-slate-500">প্রতিষ্ঠান:</span>
+                        <span className="font-semibold text-slate-800">
+                          {currentStudent.institution}
+                        </span>
+                      </div>
                     )}
                   </div>
 
-                  <div className="relative">
+                  <div className="flex items-center gap-2 pt-1">
+                    <button
+                      type="button"
+                      id="btn-edit-student-profile"
+                      onClick={() => setIsEditingExisting(true)}
+                      className="flex-1 py-2 px-3 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                    >
+                      <Edit3 className="w-3.5 h-3.5" />
+                      <span>তথ্য পরিবর্তন করুন</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      id="btn-continue-to-booking"
+                      onClick={() => {
+                        if (onProfileComplete) onProfileComplete();
+                        onClose();
+                      }}
+                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors shadow-xs cursor-pointer"
+                    >
+                      <span>সিট বুকিং এ যান</span>
+                      <ArrowRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ) : (
+                /* Information Submission Form */
+                <form
+                  id="student-info-submission-form"
+                  onSubmit={handleInformationSubmit}
+                  className="space-y-3.5"
+                >
+                  <div className="p-2.5 rounded-xl bg-blue-50/80 border border-blue-200 text-blue-900 text-xs flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-blue-600 shrink-0" />
+                    <span>
+                      সিট বুকিং সম্পন্ন করার জন্য অনুগ্রহ করে আপনার সঠিক তথ্য সাবমিট করুন।
+                    </span>
+                  </div>
+
+                  {formError && (
+                    <div className="p-2.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
+                      <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                      <span>{formError}</span>
+                    </div>
+                  )}
+
+                  {submitSuccess && (
+                    <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700 text-xs flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                      <span>তথ্য সফলভাবে সংরক্ষিত হয়েছে!</span>
+                    </div>
+                  )}
+
+                  {/* Field 1: Full Name (NO sample text placeholder) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <User className="w-3.5 h-3.5 text-slate-500" />
+                      <span>পূর্ণ নাম</span>
+                      <span className="text-rose-500">*</span>
+                    </label>
                     <input
+                      id="input-student-name"
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder=""
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-xs text-slate-800 outline-hidden transition-all"
+                    />
+                  </div>
+
+                  {/* Field 2: Mobile Number (NO sample text placeholder) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <Phone className="w-3.5 h-3.5 text-slate-500" />
+                      <span>মোবাইল নম্বর</span>
+                      <span className="text-rose-500">*</span>
+                    </label>
+                    <input
+                      id="input-student-phone"
                       type="tel"
                       required
                       value={phone}
-                      onChange={(e) => handlePhoneChange(e.target.value)}
-                      placeholder="01581624202 বা 017xxxxxxxx"
-                      className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-sm tracking-wide"
-                    />
-                    {phoneFound && (
-                      <Zap className="w-4 h-4 text-amber-500 absolute right-3 top-1/2 -translate-y-1/2" />
-                    )}
-                  </div>
-                </div>
-
-                {/* Password / Security PIN Field */}
-                <div>
-                  <div className="flex items-center justify-between mb-1">
-                    <label className="font-semibold text-slate-800 flex items-center gap-1.5">
-                      <Lock className="w-3.5 h-3.5 text-blue-600" />
-                      <span>
-                        {existingHasPin
-                          ? 'আপনার ৪-ডিজিট পিন / পাসওয়ার্ড *'
-                          : 'পাসওয়ার্ড / ৪-ডিজিট পিন (ঐচ্ছিক/নিরাপত্তার জন্য)'}
-                      </span>
-                    </label>
-                    {existingHasPin && (
-                      <span className="text-[10px] text-rose-600 font-semibold">পিন আবশ্যক</span>
-                    )}
-                  </div>
-
-                  <div className="relative">
-                    <input
-                      type={showPin ? 'text' : 'password'}
-                      value={pin}
-                      onChange={(e) => setPin(e.target.value)}
-                      placeholder="যেমন: 1234 বা গোপন পিন"
-                      maxLength={8}
-                      className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-sm tracking-widest"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowPin(!showPin)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600"
-                    >
-                      {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                    </button>
-                  </div>
-                  <p className="text-[10px] text-slate-400 mt-1">
-                    💡 পিন সেট করলে অন্য কেউ আপনার মোবাইল নাম্বার দিয়ে সিট বুক করতে পারবে না।
-                  </p>
-                </div>
-
-                {/* Student Full Name */}
-                <div>
-                  <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                    <User className="w-3.5 h-3.5 text-slate-500" />
-                    <span>শিক্ষার্থীর নাম *</span>
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="যেমন: একরাম ভুঁইয়া"
-                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
-                  />
-                </div>
-
-                {/* Student ID / Roll & Gender */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
-                  <div>
-                    <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                      <CreditCard className="w-3.5 h-3.5 text-slate-500" />
-                      <span>আইডি কার্ড নাম্বার / রোল</span>
-                    </label>
-                    <input
-                      type="text"
-                      value={studentId}
-                      onChange={(e) => setStudentId(e.target.value)}
-                      placeholder="যেমন: ID-2026 / DU-890"
-                      className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all font-mono text-xs"
+                      onChange={(e) => setPhone(e.target.value)}
+                      placeholder=""
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-xs text-slate-800 font-mono outline-hidden transition-all"
                     />
                   </div>
 
-                  <div>
-                    <label className="font-semibold text-slate-800 block mb-1">
-                      লিঙ্গ (Gender) *
+                  {/* Field 3: Gender Selection (Male / Female) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-800">
+                      লিঙ্গ (মহিলা সংরক্ষিত কর্নার যাচাইয়ের জন্য)
                     </label>
-                    <div className="grid grid-cols-2 gap-1 bg-slate-100 p-0.5 rounded-xl border border-slate-200">
+                    <div className="grid grid-cols-2 gap-2">
                       <button
                         type="button"
+                        id="btn-gender-male"
                         onClick={() => setGender('male')}
-                        className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
+                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                           gender === 'male'
-                            ? 'bg-white text-blue-700 shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900'
+                            ? 'bg-blue-50 border-blue-500 text-blue-700 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        ছাত্র (Male)
+                        👨 ছাত্র (Male)
                       </button>
                       <button
                         type="button"
+                        id="btn-gender-female"
                         onClick={() => setGender('female')}
-                        className={`py-1.5 text-center rounded-lg text-xs font-semibold transition-all ${
+                        className={`py-2 px-3 rounded-xl border text-xs font-semibold transition-all cursor-pointer ${
                           gender === 'female'
-                            ? 'bg-white text-pink-700 shadow-2xs'
-                            : 'text-slate-600 hover:text-slate-900'
+                            ? 'bg-pink-50 border-pink-500 text-pink-700 shadow-2xs'
+                            : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'
                         }`}
                       >
-                        ছাত্রী (Female)
+                        👩 ছাত্রী (Female)
                       </button>
                     </div>
                   </div>
-                </div>
 
-                {/* Target / Prep */}
-                <div>
-                  <label className="font-semibold text-slate-800 flex items-center gap-1.5 mb-1">
-                    <Target className="w-3.5 h-3.5 text-slate-500" />
-                    <span>টার্গেট / পড়াশোনার লক্ষ্য</span>
-                  </label>
-                  <input
-                    type="text"
-                    value={targetExam}
-                    onChange={(e) => setTargetExam(e.target.value)}
-                    placeholder="যেমন: বিসিএস / ব্যাংক / বিশ্ববিদ্যালয় ভর্তি / মেডিকেল"
-                    className="w-full px-3 py-2 bg-slate-50/70 hover:bg-white border border-slate-300 rounded-xl text-slate-900 focus:outline-none focus:border-blue-500 focus:bg-white transition-all text-xs"
-                  />
-                </div>
-
-                {/* Submit Button */}
-                <div className="pt-2">
-                  <button
-                    type="submit"
-                    id="submit-student-login-btn"
-                    className={`w-full py-2.5 px-4 rounded-xl text-white font-semibold text-xs shadow-xs transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] ${
-                      isSuperAdminPhone
-                        ? 'bg-rose-600 hover:bg-rose-700'
-                        : 'bg-blue-600 hover:bg-blue-700'
-                    }`}
-                  >
-                    <span>
-                      {submitSuccess
-                        ? 'সংরক্ষিত হচ্ছে...'
-                        : isSuperAdminPhone
-                        ? 'এডমিন হিসেবে প্রবেশ করুন'
-                        : 'লগইন ও প্রোফাইল সংরক্ষণ'}
-                    </span>
-                    <ArrowRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </form>
-            </div>
-          ) : (
-            /* ADMIN PORTAL FORM */
-            <div className="space-y-3.5 text-xs">
-              {isAdminLoggedIn && adminUser ? (
-                <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-200 text-center space-y-2">
-                  <div className="w-10 h-10 mx-auto rounded-xl bg-emerald-100 text-emerald-700 flex items-center justify-center">
-                    <ShieldCheck className="w-6 h-6" />
-                  </div>
-                  <div className="font-bold text-slate-900 text-sm">{adminUser.name}</div>
-                  <div className="text-xs text-emerald-700">লাইব্রেরি সুপার এডমিন হিসেবে লগইন আছেন</div>
-
-                  <button
-                    onClick={() => {
-                      logoutAdmin();
-                      onClose();
-                    }}
-                    className="mt-2 px-4 py-1.5 rounded-xl bg-white border border-rose-200 text-rose-700 text-xs font-semibold hover:bg-rose-50 transition-colors shadow-xs"
-                  >
-                    এডমিন লগআউট
-                  </button>
-                </div>
-              ) : (
-                <form onSubmit={handleAdminSubmit} className="space-y-3">
-                  <div className="p-2.5 rounded-xl bg-slate-50 border border-slate-200 text-xs text-slate-700 space-y-1">
-                    <div className="font-semibold flex items-center gap-1.5 text-slate-900">
-                      <KeyRound className="w-3.5 h-3.5 text-slate-500" />
-                      <span>এডমিন এক্সেস:</span>
-                    </div>
-                    <p className="text-[11px] text-slate-600 font-mono">
-                      অথবা সরাসরি <strong className="text-rose-600">01581624202</strong> নাম্বার দিয়ে স্টুডেন্ট লগইনেই প্রবেশ করুন।
-                    </p>
-                  </div>
-
-                  {adminError && (
-                    <div className="p-2 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2">
-                      <AlertCircle className="w-4 h-4 shrink-0" />
-                      <span>{adminError}</span>
-                    </div>
-                  )}
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      এডমিন ইমেইল
+                  {/* Field 4: Target Exam / Purpose (NO sample text placeholder) */}
+                  <div className="space-y-1">
+                    <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                      <Target className="w-3.5 h-3.5 text-slate-500" />
+                      <span>পড়ার বিষয় / পরীক্ষার লক্ষ্য</span>
                     </label>
                     <input
+                      id="input-student-target-exam"
                       type="text"
-                      required
-                      value={adminEmail}
-                      onChange={(e) => setAdminEmail(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
+                      value={targetExam}
+                      onChange={(e) => setTargetExam(e.target.value)}
+                      placeholder=""
+                      className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-xs text-slate-800 outline-hidden transition-all"
                     />
                   </div>
 
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      পাসওয়ার্ড
-                    </label>
-                    <input
-                      type="password"
-                      required
-                      value={adminPass}
-                      onChange={(e) => setAdminPass(e.target.value)}
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-xs text-slate-900 focus:outline-none focus:border-blue-500"
-                    />
+                  {/* Field 5 & 6: Student ID & Institution (NO sample text placeholder) */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                        <CreditCard className="w-3.5 h-3.5 text-slate-500" />
+                        <span>আইডি নম্বর (ঐচ্ছিক)</span>
+                      </label>
+                      <input
+                        id="input-student-id-number"
+                        type="text"
+                        value={studentId}
+                        onChange={(e) => setStudentId(e.target.value)}
+                        placeholder=""
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-xs text-slate-800 font-mono outline-hidden transition-all"
+                      />
+                    </div>
+
+                    <div className="space-y-1">
+                      <label className="text-xs font-bold text-slate-800 flex items-center gap-1">
+                        <Building className="w-3.5 h-3.5 text-slate-500" />
+                        <span>প্রতিষ্ঠান (ঐচ্ছিক)</span>
+                      </label>
+                      <input
+                        id="input-student-institution"
+                        type="text"
+                        value={institution}
+                        onChange={(e) => setInstitution(e.target.value)}
+                        placeholder=""
+                        className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 text-xs text-slate-800 outline-hidden transition-all"
+                      />
+                    </div>
                   </div>
 
+                  {/* Submit Action Button */}
                   <button
+                    id="btn-submit-student-info"
                     type="submit"
-                    className="w-full py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors shadow-xs flex items-center justify-center gap-2 cursor-pointer"
+                    className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-[0.99] text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-2"
                   >
-                    <ShieldCheck className="w-4 h-4" />
-                    <span>এডমিন প্যানেলে প্রবেশ করুন</span>
+                    <CheckCircle2 className="w-4 h-4" />
+                    <span>তথ্য সংরক্ষণ ও নিশ্চিত করুন</span>
                   </button>
                 </form>
               )}
             </div>
           )}
+
+          {/* ============================================================== */}
+          {/* SCREEN 3: ADMIN CREDENTIALS LOGIN                             */}
+          {/* ============================================================== */}
+          {viewState === 'admin_login' && (
+            <form id="admin-login-form" onSubmit={handleAdminSubmit} className="space-y-3.5 py-1">
+              <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 text-xs flex items-center gap-2">
+                <ShieldCheck className="w-4 h-4 text-rose-600 shrink-0" />
+                <span>লাইব্রেরি সুপার এডমিন কন্ট্রোল প্যানেল লগইন</span>
+              </div>
+
+              {adminError && (
+                <div className="p-2.5 rounded-xl bg-rose-100 border border-rose-300 text-rose-800 text-xs flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />
+                  <span>{adminError}</span>
+                </div>
+              )}
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-800">এডমিন ইমেইল</label>
+                <input
+                  id="admin-email-input"
+                  type="email"
+                  required
+                  value={adminEmail}
+                  onChange={(e) => setAdminEmail(e.target.value)}
+                  placeholder=""
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-xs text-slate-800 outline-hidden"
+                />
+              </div>
+
+              <div className="space-y-1">
+                <label className="text-xs font-bold text-slate-800">পাসওয়ার্ড</label>
+                <input
+                  id="admin-pass-input"
+                  type="password"
+                  required
+                  value={adminPass}
+                  onChange={(e) => setAdminPass(e.target.value)}
+                  placeholder=""
+                  className="w-full px-3 py-2 rounded-xl bg-white border border-slate-300 focus:border-rose-500 focus:ring-2 focus:ring-rose-200 text-xs text-slate-800 outline-hidden"
+                />
+              </div>
+
+              <button
+                id="btn-admin-submit"
+                type="submit"
+                className="w-full py-2.5 px-4 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-semibold text-xs transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer mt-1"
+              >
+                <ShieldCheck className="w-4 h-4" />
+                <span>এডমিন লগইন করুন</span>
+              </button>
+
+              <div className="pt-2 text-center">
+                <button
+                  type="button"
+                  onClick={() => setViewState('google_login')}
+                  className="text-xs text-slate-500 hover:text-slate-800 font-medium hover:underline cursor-pointer"
+                >
+                  ← শিক্ষার্থী Google লগইনে ফিরে যান
+                </button>
+              </div>
+            </form>
+          )}
         </div>
-
-        {/* Footer switch for admin vs student */}
-        <div className="p-3 bg-slate-50 border-t border-slate-100 flex items-center justify-between text-xs text-slate-500 shrink-0">
-          <button
-            type="button"
-            onClick={() => setIsAdminMode(!isAdminMode)}
-            className="text-slate-600 hover:text-blue-600 font-medium flex items-center gap-1.5 transition-colors"
-          >
-            {isAdminMode ? (
-              <>
-                <User className="w-3.5 h-3.5" />
-                <span>← স্টুডেন্ট লগইনে ফিরে যান</span>
-              </>
-            ) : (
-              <>
-                <ShieldCheck className="w-3.5 h-3.5 text-slate-400" />
-                <span>বিকল্প এডমিন লগইন</span>
-              </>
-            )}
-          </button>
-
-          <span className="text-[11px] text-slate-400 font-mono">
-            {phone ? `01...${phone.slice(-4)}` : 'Cloud Sync Ready'}
-          </span>
-        </div>
-
       </div>
     </div>
   );
 };
-

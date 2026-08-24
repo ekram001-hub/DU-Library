@@ -268,17 +268,24 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const userPhone = meta.phone || '';
         const isAdmin = isSuperAdminPhone(userPhone);
 
+        // Check if student profile exists locally in registered students
+        const existingLocal = registeredStudents.find(
+          (s) => (user.email && s.email === user.email) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
+        );
+
         const loadedStudent: StudentProfile = {
           id: user.id,
-          name: fullName,
-          email: user.email || '',
-          phone: userPhone,
-          studentId: `DU-${user.id.slice(0, 6).toUpperCase()}`,
-          gender: 'male',
+          name: existingLocal?.name || fullName,
+          email: user.email || existingLocal?.email || '',
+          phone: existingLocal?.phone || userPhone,
+          studentId: existingLocal?.studentId || `DU-${user.id.slice(0, 6).toUpperCase()}`,
+          gender: existingLocal?.gender || 'male',
           role: isAdmin ? 'superadmin' : 'student',
-          avatar: meta.avatar_url || meta.picture,
-          targetExam: 'Competitive Exam / BCS',
-          registeredAt: new Date().toISOString(),
+          avatar: meta.avatar_url || meta.picture || existingLocal?.avatar,
+          targetExam: existingLocal?.targetExam || 'Competitive Exam / BCS',
+          institution: existingLocal?.institution,
+          isProfileComplete: Boolean(existingLocal?.isProfileComplete || (existingLocal?.phone && existingLocal?.name)),
+          registeredAt: existingLocal?.registeredAt || new Date().toISOString(),
         };
 
         setCurrentStudent(loadedStudent);
@@ -303,17 +310,23 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const userPhone = meta.phone || '';
         const isAdmin = isSuperAdminPhone(userPhone);
 
+        const existingLocal = registeredStudents.find(
+          (s) => (user.email && s.email === user.email) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
+        );
+
         const loadedStudent: StudentProfile = {
           id: user.id,
-          name: fullName,
-          email: user.email || '',
-          phone: userPhone,
-          studentId: `DU-${user.id.slice(0, 6).toUpperCase()}`,
-          gender: 'male',
+          name: existingLocal?.name || fullName,
+          email: user.email || existingLocal?.email || '',
+          phone: existingLocal?.phone || userPhone,
+          studentId: existingLocal?.studentId || `DU-${user.id.slice(0, 6).toUpperCase()}`,
+          gender: existingLocal?.gender || 'male',
           role: isAdmin ? 'superadmin' : 'student',
-          avatar: meta.avatar_url || meta.picture,
-          targetExam: 'Competitive Exam / BCS',
-          registeredAt: new Date().toISOString(),
+          avatar: meta.avatar_url || meta.picture || existingLocal?.avatar,
+          targetExam: existingLocal?.targetExam || 'Competitive Exam / BCS',
+          institution: existingLocal?.institution,
+          isProfileComplete: Boolean(existingLocal?.isProfileComplete || (existingLocal?.phone && existingLocal?.name)),
+          registeredAt: existingLocal?.registeredAt || new Date().toISOString(),
         };
 
         setCurrentStudent(loadedStudent);
@@ -854,9 +867,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const isAdmin = isSuperAdminPhone(data.phone);
     const newStudent: StudentProfile = {
       ...data,
-      id: `stu_${Date.now()}`,
+      id: currentStudent?.id || `stu_${Date.now()}`,
       role: isAdmin ? 'superadmin' : 'student',
-      registeredAt: new Date().toISOString(),
+      avatar: currentStudent?.avatar || data.avatar,
+      isProfileComplete: true,
+      registeredAt: currentStudent?.registeredAt || new Date().toISOString(),
       lastActive: new Date().toISOString(),
     };
     setCurrentStudent(newStudent);
@@ -879,7 +894,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     // Automatically backup & sync to Supabase cloud
     syncStudentToCloud(data).catch(() => {});
-  }, []);
+  }, [currentStudent]);
 
   const deleteRegisteredStudent = useCallback((phone: string) => {
     const clean = phone.replace(/\D/g, '');

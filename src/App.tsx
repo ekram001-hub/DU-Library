@@ -158,6 +158,7 @@ function MainApp() {
         isOpen={isBookModalOpen}
         onClose={() => setIsBookModalOpen(false)}
         onBookingSuccess={handleBookingSuccess}
+        onRequireAuth={() => setIsAuthModalOpen(true)}
       />
 
       <StudentPassModal

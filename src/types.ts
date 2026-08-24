@@ -78,6 +78,7 @@ export interface StudentProfile {
   institution?: string;
   targetExam?: string; // e.g., 47th BCS, Bank PO, Primary, Medical
   pin?: string; // 4-6 digit security PIN for phone login
+  isProfileComplete?: boolean; // True once student completes dedicated information submission page
   isBlocked?: boolean;
   registeredAt?: string;
   lastActive?: string;
