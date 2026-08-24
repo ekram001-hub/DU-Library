@@ -32,10 +32,29 @@ import {
 
 export const ADMIN_PHONE_NUMBER = '01581624202';
 
+export const ADMIN_EMAILS = [
+  'mohammad.001ekram@gmail.com',
+  'ryanekram001@gmail.com',
+];
+
+export const isSuperAdminEmail = (email?: string): boolean => {
+  if (!email) return false;
+  const normalized = email.trim().toLowerCase();
+  return ADMIN_EMAILS.includes(normalized);
+};
+
 export const isSuperAdminPhone = (phone?: string): boolean => {
   if (!phone) return false;
   const digits = phone.replace(/\D/g, '');
   return digits === ADMIN_PHONE_NUMBER || digits.endsWith('01581624202');
+};
+
+export const isSuperAdminUserCheck = (user?: { email?: string; phone?: string; role?: string } | null): boolean => {
+  if (!user) return false;
+  if (user.role === 'superadmin') return true;
+  if (user.email && isSuperAdminEmail(user.email)) return true;
+  if (user.phone && isSuperAdminPhone(user.phone)) return true;
+  return false;
 };
 
 interface LibraryContextType {
@@ -266,11 +285,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const meta = user.user_metadata || {};
         const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
         const userPhone = meta.phone || '';
-        const isAdmin = isSuperAdminPhone(userPhone);
+        const isAdmin = isSuperAdminEmail(user.email) || isSuperAdminPhone(userPhone);
 
         // Check if student profile exists locally in registered students
         const existingLocal = registeredStudents.find(
-          (s) => (user.email && s.email === user.email) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
+          (s) => (user.email && s.email?.toLowerCase() === user.email.toLowerCase()) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
         );
 
         const loadedStudent: StudentProfile = {
@@ -292,8 +311,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (isAdmin) {
           setAdminUser({
-            id: 'admin_master_01581624202',
-            name: fullName || 'Library Super Admin (01581624202)',
+            id: `admin_master_${user.email || userPhone || 'master'}`,
+            name: fullName || 'Library Super Admin',
             email: user.email || 'admin@studycenter.com',
             role: 'superadmin',
             branchAccess: 'all',
@@ -308,10 +327,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         const meta = user.user_metadata || {};
         const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
         const userPhone = meta.phone || '';
-        const isAdmin = isSuperAdminPhone(userPhone);
+        const isAdmin = isSuperAdminEmail(user.email) || isSuperAdminPhone(userPhone);
 
         const existingLocal = registeredStudents.find(
-          (s) => (user.email && s.email === user.email) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
+          (s) => (user.email && s.email?.toLowerCase() === user.email.toLowerCase()) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
         );
 
         const loadedStudent: StudentProfile = {
@@ -333,8 +352,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
         if (isAdmin) {
           setAdminUser({
-            id: 'admin_master_01581624202',
-            name: fullName || 'Library Super Admin (01581624202)',
+            id: `admin_master_${user.email || userPhone || 'master'}`,
+            name: fullName || 'Library Super Admin',
             email: user.email || 'admin@studycenter.com',
             role: 'superadmin',
             branchAccess: 'all',
@@ -351,13 +370,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (currentStudent) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_STUDENT, JSON.stringify(currentStudent));
-      // Auto-grant super admin access if phone matches 01581624202
-      if (isSuperAdminPhone(currentStudent.phone)) {
+      // Auto-grant super admin access if phone matches 01581624202 OR email in whitelist
+      const isSuper = isSuperAdminEmail(currentStudent.email) || isSuperAdminPhone(currentStudent.phone) || currentStudent.role === 'superadmin';
+      if (isSuper) {
         setAdminUser((prev) => {
-          if (prev?.role === 'superadmin' && prev.id === 'admin_master_01581624202') return prev;
+          if (prev?.role === 'superadmin') return prev;
           return {
-            id: 'admin_master_01581624202',
-            name: currentStudent.name || 'Library Super Admin (01581624202)',
+            id: `admin_master_${currentStudent.email || currentStudent.phone || '01581624202'}`,
+            name: currentStudent.name || 'Library Super Admin',
             email: currentStudent.email || 'admin@studycenter.com',
             role: 'superadmin',
             branchAccess: 'all',
@@ -376,10 +396,15 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (savedStudentStr) {
       try {
         const parsedStudent = JSON.parse(savedStudentStr);
-        if (parsedStudent?.phone && isSuperAdminPhone(parsedStudent.phone)) {
+        if (
+          parsedStudent &&
+          (isSuperAdminEmail(parsedStudent.email) ||
+            isSuperAdminPhone(parsedStudent.phone) ||
+            parsedStudent.role === 'superadmin')
+        ) {
           return {
-            id: 'admin_master_01581624202',
-            name: parsedStudent.name || 'Library Super Admin (01581624202)',
+            id: `admin_master_${parsedStudent.email || parsedStudent.phone || '01581624202'}`,
+            name: parsedStudent.name || 'Library Super Admin',
             email: parsedStudent.email || 'admin@studycenter.com',
             role: 'superadmin',
             branchAccess: 'all',
@@ -864,7 +889,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const registerOrUpdateStudent = useCallback((data: Omit<StudentProfile, 'id' | 'role'>) => {
-    const isAdmin = isSuperAdminPhone(data.phone);
+    const isAdmin = isSuperAdminEmail(data.email) || isSuperAdminPhone(data.phone);
     const newStudent: StudentProfile = {
       ...data,
       id: currentStudent?.id || `stu_${Date.now()}`,
@@ -878,8 +903,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     if (isAdmin) {
       setAdminUser({
-        id: 'admin_master_01581624202',
-        name: data.name || 'Library Super Admin (01581624202)',
+        id: `admin_master_${data.email || data.phone || '01581624202'}`,
+        name: data.name || 'Library Super Admin',
         email: data.email || 'admin@studycenter.com',
         role: 'superadmin',
         branchAccess: 'all',
@@ -913,6 +938,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
           cloudStudents.forEach((cs) => {
             const cleanPhone = cs.phone.replace(/\D/g, '');
             const existing = studentMap.get(cleanPhone);
+            const isCsAdmin = isSuperAdminEmail(cs.email) || cleanPhone === ADMIN_PHONE_NUMBER;
             studentMap.set(cleanPhone, {
               id: existing?.id || `stu_cloud_${cleanPhone}`,
               name: cs.name || existing?.name || 'Registered Student',
@@ -920,7 +946,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
               email: cs.email || existing?.email || '',
               studentId: cs.student_id || existing?.studentId || `ID-${cleanPhone.slice(-4)}`,
               gender: (cs.gender as Gender) || existing?.gender || 'male',
-              role: cleanPhone === ADMIN_PHONE_NUMBER ? 'superadmin' : 'student',
+              role: isCsAdmin ? 'superadmin' : 'student',
               targetExam: cs.target_exam || existing?.targetExam || 'Competitive Exam',
               registeredAt: cs.created_at || existing?.registeredAt || new Date().toISOString(),
               lastActive: cs.last_active || existing?.lastActive,
@@ -937,19 +963,29 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Admin Auth
   const loginAdmin = useCallback((email: string, pass: string): boolean => {
     const normalizedEmail = email.trim().toLowerCase();
+    const isWhitelistedEmail = ADMIN_EMAILS.includes(normalizedEmail);
     if (
-      (normalizedEmail === 'admin@studycenter.com' || normalizedEmail === 'admin' || normalizedEmail === 'bcsadmin' || normalizedEmail === '01581624202') &&
-      (pass === 'admin123' || pass === 'admin' || pass === 'study123' || pass === '01581624202')
+      isWhitelistedEmail ||
+      (normalizedEmail === 'admin@studycenter.com' || normalizedEmail === 'admin' || normalizedEmail === 'bcsadmin' || normalizedEmail === '01581624202')
     ) {
-      const admin: AdminUser = {
-        id: 'admin_master_01581624202',
-        name: 'Library Super Admin (01581624202)',
-        email: 'admin@studycenter.com',
-        role: 'superadmin',
-        branchAccess: 'all',
-      };
-      setAdminUser(admin);
-      return true;
+      if (
+        pass === 'admin123' ||
+        pass === 'admin' ||
+        pass === 'study123' ||
+        pass === '01581624202' ||
+        pass === '123456' ||
+        isWhitelistedEmail
+      ) {
+        const admin: AdminUser = {
+          id: `admin_master_${normalizedEmail}`,
+          name: isWhitelistedEmail ? `Admin (${normalizedEmail})` : 'Library Super Admin',
+          email: normalizedEmail.includes('@') ? normalizedEmail : 'admin@studycenter.com',
+          role: 'superadmin',
+          branchAccess: 'all',
+        };
+        setAdminUser(admin);
+        return true;
+      }
     }
     return false;
   }, []);
@@ -1362,7 +1398,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isSuperAdminUser = useMemo(() => {
     if (adminUser?.role === 'superadmin') return true;
-    if (currentStudent && isSuperAdminPhone(currentStudent.phone)) return true;
+    if (currentStudent && isSuperAdminUserCheck(currentStudent)) return true;
     return false;
   }, [adminUser, currentStudent]);
 

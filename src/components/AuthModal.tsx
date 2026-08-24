@@ -360,68 +360,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 <span>Continue with Google</span>
               </button>
 
-              {/* Instant One-Click Google Sandbox Profiles (For preview & seamless evaluation) */}
-              <div className="pt-2 border-t border-slate-100 space-y-2">
-                <div className="text-[11px] font-medium text-slate-500 text-center">
-                  Or select a Google account (Quick Test):
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    id="btn-google-quick-demo-1"
-                    onClick={() =>
-                      handleQuickGoogleSignIn({
-                        name: 'Tanvir Ahmed',
-                        email: 'tanvir.student@gmail.com',
-                        avatar:
-                          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60',
-                      })
-                    }
-                    className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-left transition-all group cursor-pointer"
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=100&auto=format&fit=crop&q=60"
-                      alt="Tanvir"
-                      referrerPolicy="no-referrer"
-                      className="w-7 h-7 rounded-full object-cover border border-slate-300"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-slate-800 truncate">
-                        Tanvir Ahmed
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate">tanvir.student@gmail.com</div>
-                    </div>
-                  </button>
-
-                  <button
-                    type="button"
-                    id="btn-google-quick-demo-2"
-                    onClick={() =>
-                      handleQuickGoogleSignIn({
-                        name: 'Farhana Akter',
-                        email: 'farhana.student@gmail.com',
-                        avatar:
-                          'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60',
-                      })
-                    }
-                    className="flex items-center gap-2.5 p-2 rounded-xl bg-slate-50 hover:bg-slate-100/90 border border-slate-200 text-left transition-all group cursor-pointer"
-                  >
-                    <img
-                      src="https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=100&auto=format&fit=crop&q=60"
-                      alt="Farhana"
-                      referrerPolicy="no-referrer"
-                      className="w-7 h-7 rounded-full object-cover border border-slate-300"
-                    />
-                    <div className="min-w-0">
-                      <div className="text-xs font-semibold text-slate-800 truncate">
-                        Farhana Akter
-                      </div>
-                      <div className="text-[10px] text-slate-500 truncate">farhana.student@gmail.com</div>
-                    </div>
-                  </button>
-                </div>
-              </div>
-
               {/* Discreet Admin Login Link */}
               <div className="pt-2 text-center">
                 <button

@@ -33,6 +33,7 @@ export const Navbar: React.FC<NavbarProps> = ({
     currentStudent,
     logoutStudent,
     adminUser,
+    isAdminLoggedIn,
     logoutAdmin,
     currentStudentSeat,
     currentTime,
@@ -269,13 +270,13 @@ export const Navbar: React.FC<NavbarProps> = ({
               </button>
             )}
 
-            {/* Admin Control Button (Only visible for 01581624202 / Admin users) */}
-            {(adminUser || currentStudent?.phone?.replace(/\D/g, '') === '01581624202') && (
+            {/* Admin Control Button (Visible for whitelisted admin emails, 01581624202, or admin users) */}
+            {isAdminLoggedIn && (
               <div className="flex items-center gap-1">
                 <button
                   id="btn-admin-dashboard"
                   onClick={onOpenAdmin}
-                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-all"
+                  className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-all cursor-pointer"
                   title="Admin Dashboard"
                 >
                   <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
@@ -284,7 +285,7 @@ export const Navbar: React.FC<NavbarProps> = ({
                 <button
                   id="btn-admin-logout"
                   onClick={logoutAdmin}
-                  className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 transition-all"
+                  className="p-1.5 rounded-lg bg-white hover:bg-rose-50 border border-slate-200 text-slate-500 hover:text-rose-600 transition-all cursor-pointer"
                   title="Logout Admin"
                 >
                   <LogOut className="w-3.5 h-3.5" />
