@@ -162,6 +162,21 @@ export function getRealtimeChannel() {
         broadcast: { ack: false, self: false },
       },
     });
+
+    // Also listen to Postgres changes on system_config table
+    realtimeChannel.on(
+      'postgres_changes',
+      { event: '*', schema: 'public', table: 'system_config', filter: 'key=eq.library_live_state' },
+      (payload) => {
+        if (payload.new && (payload.new as { value?: unknown }).value) {
+          const val = (payload.new as { value: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown } }).value;
+          if (realtimeStateCallback) {
+            realtimeStateCallback(val);
+          }
+        }
+      }
+    );
+
     realtimeChannel.subscribe((status) => {
       if (status === 'SUBSCRIBED') {
         console.log('[Supabase Realtime] Connected and listening for live seat & room updates.');
@@ -170,6 +185,8 @@ export function getRealtimeChannel() {
   }
   return realtimeChannel;
 }
+
+let realtimeStateCallback: ((payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown }) => void) | null = null;
 
 /**
  * Broadcast live state change to all clients via Supabase Realtime WebSocket
@@ -206,6 +223,7 @@ export function subscribeToSupabaseRealtime(
   }) => void
 ): () => void {
   try {
+    realtimeStateCallback = callback;
     const channel = getRealtimeChannel();
     if (!channel) return () => {};
 
@@ -218,9 +236,7 @@ export function subscribeToSupabaseRealtime(
     channel.on('broadcast', { event: 'STATE_CHANGED' }, handler);
 
     return () => {
-      // Unsubscribe listener
-      channel.unsubscribe();
-      realtimeChannel = null;
+      realtimeStateCallback = null;
     };
   } catch (err) {
     console.warn('[Supabase Realtime] Subscribe error:', err);

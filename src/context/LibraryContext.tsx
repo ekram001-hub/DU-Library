@@ -28,6 +28,8 @@ import {
   fetchAllStudentsFromCloud,
   syncLibraryStateToCloud,
   fetchLibraryStateFromCloud,
+  subscribeToSupabaseRealtime,
+  broadcastStateViaSupabase,
 } from '../lib/supabase';
 
 export const ADMIN_PHONE_NUMBER = '01581624202';
@@ -516,8 +518,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Cloud Sync & Backup State
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<string | null>(null);
 
-  // Cross-Tab Realtime Broadcast Channel
-  const broadcastSync = useCallback((payload: { rooms?: Room[]; seats?: Seat[]; notices?: LibraryNotice[] }) => {
+  // Cross-Tab & Supabase Realtime Broadcast
+  const broadcastSync = useCallback((payload: { rooms?: Room[]; seats?: Seat[]; notices?: LibraryNotice[]; branchesConfig?: unknown }) => {
+    // 1. Cross-tab within same browser
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
         const channel = new BroadcastChannel('smart_library_sync_channel');
@@ -527,9 +530,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         // ignore
       }
     }
+    // 2. Supabase Realtime across all browsers & devices
+    broadcastStateViaSupabase(payload);
   }, []);
 
-  // Listen for Cross-Tab broadcast
+  // Listen for Cross-Tab broadcast (same browser)
   useEffect(() => {
     if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
     const channel = new BroadcastChannel('smart_library_sync_channel');
@@ -548,7 +553,33 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
-  // Fetch initial global library configuration from Supabase Cloud
+  // Listen for Supabase Realtime Broadcast (all external users & devices live)
+  useEffect(() => {
+    const unsubscribe = subscribeToSupabaseRealtime((payload) => {
+      if (payload) {
+        if (Array.isArray(payload.rooms) && payload.rooms.length > 0) {
+          setRooms(payload.rooms as Room[]);
+        }
+        if (Array.isArray(payload.seats) && payload.seats.length > 0) {
+          setSeats(payload.seats as Seat[]);
+        }
+        if (Array.isArray(payload.notices) && payload.notices.length > 0) {
+          setNotices(payload.notices as LibraryNotice[]);
+        }
+        const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        setCloudLastSyncedAt(timeStr);
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
+
+  // Supabase initial cloud load tracker
+  const isCloudLoadedRef = React.useRef(false);
+
+  // Fetch initial global library configuration from Supabase Cloud on mount
   useEffect(() => {
     fetchLibraryStateFromCloud().then((cloudState) => {
       if (cloudState) {
@@ -561,10 +592,26 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (Array.isArray(cloudState.notices) && cloudState.notices.length > 0) {
           setNotices(cloudState.notices as LibraryNotice[]);
         }
-        setCloudLastSyncedAt(new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit' }));
+        setCloudLastSyncedAt(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
-    }).catch(() => {});
+      isCloudLoadedRef.current = true;
+    }).catch(() => {
+      isCloudLoadedRef.current = true;
+    });
   }, []);
+
+  // Automatically broadcast and sync state changes to Supabase Cloud (debounced)
+  useEffect(() => {
+    // Prevent pushing local blank/initial state before fetching latest from cloud
+    if (!isCloudLoadedRef.current) return;
+
+    const timer = setTimeout(() => {
+      broadcastSync({ rooms, seats, notices, branchesConfig: allBranches });
+      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches }).catch(() => {});
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [rooms, seats, notices, allBranches, broadcastSync]);
 
   // 9. Live Digital Clock (1s tick)
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
