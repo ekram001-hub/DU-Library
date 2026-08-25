@@ -585,25 +585,25 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             <div className="flex items-center p-0.5 bg-slate-800 rounded-xl border border-slate-700">
               <button
                 type="button"
-                onClick={() => setCurrentBranchId('bcs_study')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  currentBranchId === 'bcs_study'
-                    ? 'bg-blue-600 text-white shadow-xs'
+                onClick={() => setCurrentBranchId('science_library')}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  currentBranchId === 'science_library'
+                    ? 'bg-orange-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                BCS Study
+                Science Library
               </button>
               <button
                 type="button"
-                onClick={() => setCurrentBranchId('career_study')}
-                className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
-                  currentBranchId === 'career_study'
-                    ? 'bg-emerald-600 text-white shadow-xs'
+                onClick={() => setCurrentBranchId('central_library')}
+                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  currentBranchId === 'central_library'
+                    ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Career Study
+                Central Library
               </button>
             </div>
           </div>

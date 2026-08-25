@@ -202,7 +202,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-medium">Wi-Fi Network (SSID)</span>
                     <span className="font-semibold text-slate-900 font-mono text-xs">
-                      {currentBranchId === 'bcs_study' ? 'BCS_STUDY_5G_FAST' : 'FRESH_STUDY_5G_PLUS'}
+                      {currentBranchId === 'science_library' ? 'SCIENCE_LIB_5G_FAST' : 'CENTRAL_LIB_5G_PLUS'}
                     </span>
                   </div>
                   <div>

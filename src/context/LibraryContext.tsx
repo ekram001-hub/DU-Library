@@ -179,8 +179,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   });
 
   const setCurrentBranchId = useCallback((id: BranchId) => {
-    setCurrentBranchIdState(id);
-    localStorage.setItem(STORAGE_KEYS.BRANCH, id);
+    const validId: BranchId = id === 'central_library' ? 'central_library' : 'science_library';
+    setCurrentBranchIdState(validId);
+    localStorage.setItem(STORAGE_KEYS.BRANCH, validId);
   }, []);
 
   // 2. Branches config
@@ -188,7 +189,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const saved = localStorage.getItem(STORAGE_KEYS.BRANCHES_CONFIG);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        if (parsed.science_library && parsed.central_library) {
+          return parsed;
+        }
       } catch (e) {
         console.error('Failed to parse saved branches config', e);
       }
@@ -215,7 +219,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const saved = localStorage.getItem(STORAGE_KEYS.ROOMS);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: Room[] = JSON.parse(saved);
+        // Ensure both science_library and central_library rooms exist
+        const hasSciRooms = parsed.some((r) => r.branchId === 'science_library');
+        const hasCenRooms = parsed.some((r) => r.branchId === 'central_library');
+        if (hasSciRooms && hasCenRooms && parsed.length >= 8) {
+          return parsed;
+        }
       } catch (e) {
         console.error('Failed to parse saved rooms', e);
       }
@@ -232,7 +242,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const saved = localStorage.getItem(STORAGE_KEYS.SEATS);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed: Seat[] = JSON.parse(saved);
+        const hasSciSeats = parsed.some((s) => s.branchId === 'science_library');
+        const hasCenSeats = parsed.some((s) => s.branchId === 'central_library');
+        if (hasSciSeats && hasCenSeats && parsed.length >= 100) {
+          return parsed;
+        }
       } catch (e) {
         console.error('Failed to parse saved seats', e);
       }
@@ -465,31 +480,31 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return [
       {
         id: 'att_sample_1',
-        branchId: 'bcs_study',
-        branchName: 'BCS Study Center',
+        branchId: 'science_library',
+        branchName: 'Science Library',
         studentName: 'Saiful Islam',
         studentPhone: '01715000000',
-        studentId: 'BCS-47-101',
+        studentId: 'SCI-47-101',
         gender: 'male',
-        seatNumber: 'A-01',
-        roomName: 'Main Silent Hall (Room 1)',
+        seatNumber: 'R1-01',
+        roomName: 'Room 1 (Silent Zone)',
         checkInTime: Date.now() - 2.5 * 3600 * 1000,
         dateStr: todayStr,
-        passCode: 'PASS-BCS-08191',
+        passCode: 'PASS-SCI-08191',
       },
       {
         id: 'att_sample_2',
-        branchId: 'bcs_study',
-        branchName: 'BCS Study Center',
+        branchId: 'central_library',
+        branchName: 'Central Library',
         studentName: 'Farhana Akter',
         studentPhone: '01877000000',
-        studentId: 'BCS-47-301',
+        studentId: 'CEN-47-301',
         gender: 'female',
-        seatNumber: 'FC-01',
-        roomName: 'Female Study Lounge',
+        seatNumber: 'C3-01',
+        roomName: 'Room 3 (Female Only)',
         checkInTime: Date.now() - 1.2 * 3600 * 1000,
         dateStr: todayStr,
-        passCode: 'PASS-BCS-94812',
+        passCode: 'PASS-CEN-94812',
       },
     ];
   });
@@ -644,7 +659,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const now = Date.now();
       const durationMs = studentDetails.targetHours * 3600 * 1000;
       const expectedLeave = now + durationMs;
-      const passCode = `PASS-${seat.branchId === 'bcs_study' ? 'BCS' : 'FSL'}-${Math.floor(
+      const passCode = `PASS-${seat.branchId === 'science_library' ? 'SCI' : 'CEN'}-${Math.floor(
         10000 + Math.random() * 90000
       )}`;
 

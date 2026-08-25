@@ -133,10 +133,10 @@ export const Navbar: React.FC<NavbarProps> = ({
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2.5">
               <div className="w-9 h-9 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-xs">
-                {currentBranchId === 'bcs_study' ? (
-                  <GraduationCap className="w-5 h-5 text-blue-400" />
+                {currentBranchId === 'science_library' ? (
+                  <GraduationCap className="w-5 h-5 text-orange-400" />
                 ) : (
-                  <BookOpen className="w-5 h-5 text-emerald-400" />
+                  <BookOpen className="w-5 h-5 text-rose-400" />
                 )}
               </div>
               <div>
@@ -157,28 +157,30 @@ export const Navbar: React.FC<NavbarProps> = ({
             {/* Branch Switcher Segmented Control */}
             <div className="hidden lg:flex items-center p-0.5 bg-slate-100 rounded-xl border border-slate-200/80 ml-2">
               <button
-                id="btn-branch-bcs"
-                onClick={() => setCurrentBranchId('bcs_study')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  currentBranchId === 'bcs_study'
-                    ? 'bg-white text-blue-700 shadow-xs border border-slate-200/60'
+                id="btn-branch-science"
+                type="button"
+                onClick={() => setCurrentBranchId('science_library')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  currentBranchId === 'science_library'
+                    ? 'bg-white text-orange-700 shadow-xs border border-slate-200/60'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
-                <GraduationCap className="w-3.5 h-3.5 text-blue-600" />
-                <span>BCS Study Center</span>
+                <GraduationCap className="w-3.5 h-3.5 text-orange-600" />
+                <span>Science Library</span>
               </button>
               <button
-                id="btn-branch-fresh"
-                onClick={() => setCurrentBranchId('fresh_study')}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                  currentBranchId === 'fresh_study'
-                    ? 'bg-white text-emerald-700 shadow-xs border border-slate-200/60'
+                id="btn-branch-central"
+                type="button"
+                onClick={() => setCurrentBranchId('central_library')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                  currentBranchId === 'central_library'
+                    ? 'bg-white text-rose-700 shadow-xs border border-slate-200/60'
                     : 'text-slate-600 hover:text-slate-900 hover:bg-slate-200/50'
                 }`}
               >
-                <BookOpen className="w-3.5 h-3.5 text-emerald-600" />
-                <span>Fresh Study Library</span>
+                <BookOpen className="w-3.5 h-3.5 text-rose-600" />
+                <span>Central Library</span>
               </button>
             </div>
           </div>
@@ -299,25 +301,27 @@ export const Navbar: React.FC<NavbarProps> = ({
         <div className="flex lg:hidden items-center justify-between gap-2 mt-2 pt-2 border-t border-slate-200">
           <div className="flex items-center w-full p-0.5 bg-slate-100 rounded-lg border border-slate-200">
             <button
-              onClick={() => setCurrentBranchId('bcs_study')}
-              className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all text-center ${
-                currentBranchId === 'bcs_study'
-                  ? 'bg-white text-blue-700 shadow-xs'
+              type="button"
+              onClick={() => setCurrentBranchId('science_library')}
+              className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all text-center cursor-pointer ${
+                currentBranchId === 'science_library'
+                  ? 'bg-white text-orange-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              BCS Study Center
+              Science Library
             </button>
 
             <button
-              onClick={() => setCurrentBranchId('fresh_study')}
-              className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all text-center ${
-                currentBranchId === 'fresh_study'
-                  ? 'bg-white text-emerald-700 shadow-xs'
+              type="button"
+              onClick={() => setCurrentBranchId('central_library')}
+              className={`flex-1 py-1 px-2 rounded-md text-xs font-semibold transition-all text-center cursor-pointer ${
+                currentBranchId === 'central_library'
+                  ? 'bg-white text-rose-700 shadow-xs'
                   : 'text-slate-600 hover:text-slate-900'
               }`}
             >
-              Fresh Study Library
+              Central Library
             </button>
           </div>
         </div>

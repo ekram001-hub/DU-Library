@@ -1,4 +1,4 @@
-export type BranchId = 'science_library' | 'central_library' | 'bcs_study' | 'fresh_study';
+export type BranchId = 'science_library' | 'central_library';
 
 export type RoomCategory = 'general' | 'female_only' | 'ac_hall' | 'silent_zone' | 'discussion';
 

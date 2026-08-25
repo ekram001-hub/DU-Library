@@ -35,44 +35,10 @@ export const BRANCHES_DATA: Record<string, BranchConfig> = {
     themeColor: '#e11d48', // Vibrant Red-Orange
     memorizerAppUrl: 'https://ais-dev-xeniqwh76n7spkxw2xk4sw-1047076485341.asia-southeast1.run.app',
   },
-  bcs_study: {
-    id: 'bcs_study',
-    name: 'Science Library',
-    bengaliName: 'Science Library',
-    tagline: 'Seat Booking • 8:00 AM — 10:00 PM',
-    bengaliTagline: 'Seat Booking • 8:00 AM — 10:00 PM',
-    address: 'Science Lab Crossing, Dhaka',
-    bengaliAddress: 'Science Lab Crossing, Dhaka',
-    phone: '+880 1711-234567',
-    email: 'contact@bcsstudycenter.bd',
-    facebookUrl: 'https://facebook.com',
-    facebookPageName: 'Follow Facebook',
-    facebookFollowers: '48.5K Followers',
-    badge: '🧪 Science Library',
-    themeColor: '#ea580c',
-    memorizerAppUrl: 'https://ais-dev-xeniqwh76n7spkxw2xk4sw-1047076485341.asia-southeast1.run.app',
-  },
-  fresh_study: {
-    id: 'fresh_study',
-    name: 'Central Library',
-    bengaliName: 'Central Library',
-    tagline: 'Seat Booking • 8:00 AM — 10:00 PM',
-    bengaliTagline: 'Seat Booking • 8:00 AM — 10:00 PM',
-    address: 'Nilkhet, Dhaka',
-    bengaliAddress: 'Nilkhet, Dhaka',
-    phone: '+880 1812-987654',
-    email: 'help@freshstudylibrary.com',
-    facebookUrl: 'https://facebook.com',
-    facebookPageName: 'Follow Facebook',
-    facebookFollowers: '32.1K Followers',
-    badge: '📚 Central Library',
-    themeColor: '#e11d48',
-    memorizerAppUrl: 'https://ais-dev-xeniqwh76n7spkxw2xk4sw-1047076485341.asia-southeast1.run.app',
-  },
 };
 
 export const INITIAL_ROOMS: Room[] = [
-  // Science Library Rooms
+  // Science Library Rooms (Total: 168 Seats)
   {
     id: 'sci_room_1',
     branchId: 'science_library',
@@ -126,7 +92,7 @@ export const INITIAL_ROOMS: Room[] = [
     isSilent: true,
   },
 
-  // Central Library Rooms
+  // Central Library Rooms (Total: 168 Seats)
   {
     id: 'cen_room_1',
     branchId: 'central_library',
@@ -178,34 +144,6 @@ export const INITIAL_ROOMS: Room[] = [
     bengaliDescription: 'Group discussion and collaborative practice room',
     hasAC: true,
     isSilent: false,
-  },
-
-  // Fallbacks for bcs_study & fresh_study
-  {
-    id: 'bcs_room_1',
-    branchId: 'bcs_study',
-    name: 'Room 1',
-    bengaliName: 'Room 1',
-    category: 'silent_zone',
-    seatPrefix: 'R1',
-    capacity: 48,
-    description: 'High-speed Wi-Fi and quiet study environment',
-    bengaliDescription: 'High-speed Wi-Fi and quiet study environment',
-    hasAC: true,
-    isSilent: true,
-  },
-  {
-    id: 'fresh_room_1',
-    branchId: 'fresh_study',
-    name: 'Room 1',
-    bengaliName: 'Room 1',
-    category: 'general',
-    seatPrefix: 'FS1',
-    capacity: 48,
-    description: 'Central study floor',
-    bengaliDescription: 'Central study floor',
-    hasAC: true,
-    isSilent: true,
   },
 ];
 
