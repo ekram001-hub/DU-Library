@@ -377,14 +377,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-sm font-bold text-slate-900">
-                  অ্যাডমিন সেন্ট্রাল কন্ট্রোল প্যানেল (Admin Master Panel)
+                  Admin Master Control Panel
                 </h3>
                 <span className="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-rose-100 text-rose-700 border border-rose-200">
-                  01581624202 Super Admin
+                  Super Admin
                 </span>
               </div>
               <p className="text-xs text-slate-500">
-                {branchConfig.name} • রুম যোগ, সিট কন্ট্রোল, ইউজার পিন রিসেট, নোটিশ ও ক্লাউড ব্যাকআপ
+                {branchConfig.name} • Manage Rooms, Seats, User PINs, Notices & Cloud Sync
               </p>
             </div>
           </div>
@@ -409,7 +409,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Layers className="w-3.5 h-3.5 text-blue-600" />
-            <span>রুম ব্যবস্থাপনা ({branchRooms.length})</span>
+            <span>Rooms ({branchRooms.length})</span>
           </button>
 
           <button
@@ -422,7 +422,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Armchair className="w-3.5 h-3.5 text-emerald-600" />
-            <span>সিট কন্ট্রোল ও কাস্টম সিট</span>
+            <span>Seat Control</span>
           </button>
 
           <button
@@ -435,7 +435,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Users className="w-3.5 h-3.5 text-indigo-600" />
-            <span>ইউজার ও পিন কন্ট্রোল ({registeredStudents.length})</span>
+            <span>Students & PINs ({registeredStudents.length})</span>
           </button>
 
           <button
@@ -448,7 +448,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Bell className="w-3.5 h-3.5 text-amber-600" />
-            <span>নোটিশ বোর্ড ({notices.length})</span>
+            <span>Notices ({notices.length})</span>
           </button>
 
           <button
@@ -461,7 +461,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Database className="w-3.5 h-3.5 text-cyan-600" />
-            <span>ডেটা ব্যাকআপ ও ক্লাউড</span>
+            <span>Cloud & Backup</span>
           </button>
 
           <button
@@ -474,7 +474,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <FileText className="w-3.5 h-3.5 text-rose-600" />
-            <span>লগ ({attendanceRecords.length})</span>
+            <span>Logs ({attendanceRecords.length})</span>
           </button>
 
           <button
@@ -487,7 +487,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             }`}
           >
             <Settings className="w-3.5 h-3.5 text-slate-600" />
-            <span>শাখা সেটিংস</span>
+            <span>Branch Settings</span>
           </button>
         </div>
 
@@ -500,10 +500,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                 <div>
                   <h4 className="text-xs font-bold text-slate-900">
-                    রুম তৈরি ও সিরিয়াল ব্যবস্থাপনা (Room & Serial Management)
+                    Room & Serial Order Management
                   </h4>
                   <p className="text-slate-400 text-[11px]">
-                    নতুন রুম যোগ করলে তা সাথে সাথে সকল ইউজারের ডিভাইসে ক্লাউড ও ব্রডকাস্টে আপডেট হবে
+                    Created and updated rooms sync automatically across all student devices in real-time
                   </p>
                 </div>
 
@@ -523,7 +523,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-xs"
                   >
                     <Plus className="w-3.5 h-3.5" />
-                    <span>নতুন রুম তৈরি করুন</span>
+                    <span>Create New Room</span>
                   </button>
                 )}
               </div>
@@ -536,7 +536,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 >
                   <div className="flex items-center justify-between border-b border-slate-200 pb-2">
                     <span className="font-bold text-slate-900 text-xs">
-                      {editingRoomId ? 'রুম তথ্য সম্পাদনা (Edit Room)' : 'নতুন রুম যোগ করুন (Create New Room)'}
+                      {editingRoomId ? 'Edit Room Details' : 'Create New Room'}
                     </span>
                     <button
                       type="button"
@@ -550,34 +550,34 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        রুমের নাম (Room Name) *
+                        Room Name *
                       </label>
                       <input
                         type="text"
                         required
                         value={roomName}
                         onChange={(e) => setRoomName(e.target.value)}
-                        placeholder="যেমন: Hall 3 - Silent Focus Hall"
+                        placeholder="e.g. Hall 3 - Silent Study"
                         className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        রুম নাম্বার (Room Number)
+                        Room Number / Code
                       </label>
                       <input
                         type="text"
                         value={roomNumber}
                         onChange={(e) => setRoomNumber(e.target.value)}
-                        placeholder="যেমন: Room 103 বা Hall C"
+                        placeholder="e.g. Room 103 or Hall C"
                         className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       />
                     </div>
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        সিরিয়াল নাম্বার (Order / Position)
+                        Display Order / Position
                       </label>
                       <input
                         type="number"
@@ -592,7 +592,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        ক্যাটাগরি (Category)
+                        Category
                       </label>
                       <select
                         value={roomCategory}
@@ -600,7 +600,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       >
                         <option value="general">General Study Hall</option>
-                        <option value="female_only">Female Reserved (মহিলা কর্নার)</option>
+                        <option value="female_only">Female Reserved</option>
                         <option value="ac_hall">AC Hall</option>
                         <option value="silent_zone">Silent Zone</option>
                         <option value="discussion">Group Discussion</option>
@@ -610,21 +610,21 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                          সিট প্রিফিক্স
+                          Seat Prefix
                         </label>
                         <input
                           type="text"
                           required
                           value={roomPrefix}
                           onChange={(e) => setRoomPrefix(e.target.value)}
-                          placeholder="A, B, C, FC"
+                          placeholder="A, B, C, R1"
                           className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono uppercase focus:outline-none focus:border-blue-500"
                         />
                       </div>
 
                       <div>
                         <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                          সিট সংখ্যা (Capacity)
+                          Seat Capacity
                         </label>
                         <input
                           type="number"
@@ -640,13 +640,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                     <div>
                       <label className="block text-[11px] font-semibold text-slate-700 mb-1">
-                        বিবরণ (Description)
+                        Description
                       </label>
                       <input
                         type="text"
                         value={roomDesc}
                         onChange={(e) => setRoomDesc(e.target.value)}
-                        placeholder="শান্ত ও সুশৃঙ্খল পড়ার পরিবেশ"
+                        placeholder="Quiet, focused study atmosphere"
                         className="w-full px-3 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       />
                     </div>
@@ -660,7 +660,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         onChange={(e) => setRoomHasAC(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-0"
                       />
-                      <span>এসি সুবিধা (Air Conditioned)</span>
+                      <span>Air Conditioned</span>
                     </label>
 
                     <label className="flex items-center gap-1.5 cursor-pointer text-slate-700">
@@ -670,7 +670,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         onChange={(e) => setRoomIsSilent(e.target.checked)}
                         className="rounded border-slate-300 text-blue-600 focus:ring-0"
                       />
-                      <span>নীরব জোন (Silent Zone)</span>
+                      <span>Silent Zone</span>
                     </label>
                   </div>
 
@@ -680,13 +680,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       onClick={() => setIsAddingRoom(false)}
                       className="px-3 py-1.5 rounded-lg border border-slate-200 bg-white text-slate-600 hover:bg-slate-50 text-xs font-medium"
                     >
-                      বাতিল
+                      Cancel
                     </button>
                     <button
                       type="submit"
                       className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs"
                     >
-                      {editingRoomId ? 'রুম আপডেট করুন' : 'রুম সংরক্ষণ করুন'}
+                      {editingRoomId ? 'Update Room' : 'Save Room'}
                     </button>
                   </div>
                 </form>
@@ -728,15 +728,15 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                           <div className="flex flex-wrap items-center gap-2 text-slate-500 text-[11px]">
                             <span>
-                              সিট প্রিফিক্স: <strong className="text-slate-800 font-mono">{room.seatPrefix}-XX</strong>
+                              Prefix: <strong className="text-slate-800 font-mono">{room.seatPrefix}-XX</strong>
                             </span>
                             <span>•</span>
                             <span>
-                              ক্যাপাসিটি: <strong className="text-slate-800 font-mono">{room.capacity}</strong>
+                              Capacity: <strong className="text-slate-800 font-mono">{room.capacity}</strong>
                             </span>
                             <span>•</span>
                             <span>
-                              বর্তমান বুকিং: <strong className="text-emerald-700 font-mono">{occCount}/{roomSeats.length}</strong>
+                              Occupancy: <strong className="text-emerald-700 font-mono">{occCount}/{roomSeats.length}</strong>
                             </span>
                           </div>
                         </div>
@@ -750,7 +750,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             disabled={index === 0}
                             onClick={() => moveRoomOrder(room.id, 'up')}
                             className="p-1.5 hover:bg-white text-slate-600 disabled:opacity-30 disabled:hover:bg-slate-50 transition-colors"
-                            title="সিরিয়ালে উপরে নিন (Move Up)"
+                            title="Move Up"
                           >
                             <ArrowUp className="w-3.5 h-3.5" />
                           </button>
@@ -760,7 +760,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                             disabled={index === branchRooms.length - 1}
                             onClick={() => moveRoomOrder(room.id, 'down')}
                             className="p-1.5 hover:bg-white text-slate-600 disabled:opacity-30 disabled:hover:bg-slate-50 transition-colors"
-                            title="সিরিয়ালে নিচে নিন (Move Down)"
+                            title="Move Down"
                           >
                             <ArrowDown className="w-3.5 h-3.5" />
                           </button>
@@ -769,19 +769,19 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         <button
                           onClick={() => startEditRoom(room)}
                           className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 text-slate-700 transition-colors"
-                          title="রুম এডিট করুন"
+                          title="Edit Room"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
                         </button>
 
                         <button
                           onClick={() => {
-                            if (window.confirm(`"${room.name}" এবং এর অন্তর্ভুক্ত সকল সিট ডিলিট করতে চান?`)) {
+                            if (window.confirm(`Delete "${room.name}" and all its seats?`)) {
                               deleteRoom(room.id);
                             }
                           }}
                           className="p-1.5 rounded-lg border border-rose-200 bg-white hover:bg-rose-50 text-rose-600 transition-colors"
-                          title="রুম ডিলিট করুন"
+                          title="Delete Room"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
                         </button>
@@ -801,13 +801,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 <div className="flex items-center justify-between">
                   <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                     <Plus className="w-3.5 h-3.5 text-blue-600" />
-                    <span>কাস্টম সিট যোগ করুন (Add Custom Seat):</span>
+                    <span>Add Custom Seat:</span>
                   </div>
                 </div>
 
                 <form onSubmit={handleAddCustomSeatSubmit} className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">রুম নির্বাচন করুন</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Select Room</label>
                     <select
                       value={customSeatRoomId}
                       onChange={(e) => setCustomSeatRoomId(e.target.value)}
@@ -822,11 +822,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">সিট কোড / নম্বর</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Seat Code / Number</label>
                     <input
                       type="text"
                       required
-                      placeholder="যেমন: A-17 বা VIP-01"
+                      placeholder="e.g. A-17 or VIP-01"
                       value={customSeatNumber}
                       onChange={(e) => setCustomSeatNumber(e.target.value)}
                       className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs font-mono uppercase focus:outline-none focus:border-blue-500"
@@ -841,7 +841,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                         onChange={(e) => setCustomSeatFemale(e.target.checked)}
                         className="rounded border-slate-300 text-pink-600 focus:ring-0"
                       />
-                      <span>মহিলা সংরক্ষিত (Female)</span>
+                      <span>Female Reserved</span>
                     </label>
                   </div>
 
@@ -850,7 +850,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       type="submit"
                       className="w-full py-1.5 px-3 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors"
                     >
-                      সিট যোগ করুন
+                      Add Seat
                     </button>
                   </div>
                 </form>
@@ -863,12 +863,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               >
                 <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                   <Armchair className="w-3.5 h-3.5 text-emerald-600" />
-                  <span>সরাসরি শিক্ষার্থীকে সিট বরাদ্দ করুন (Assign Seat):</span>
+                  <span>Manually Assign Seat to Student:</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-2">
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">খালি সিট নির্বাচন করুন</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Select Available Seat</label>
                     <select
                       value={assignSeatId}
                       onChange={(e) => setAssignSeatId(e.target.value)}
@@ -886,7 +886,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">শিক্ষার্থীর নাম</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Student Name</label>
                     <input
                       type="text"
                       required
@@ -898,7 +898,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">মোবাইল নাম্বার</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Mobile Phone</label>
                     <input
                       type="tel"
                       required
@@ -915,7 +915,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                       disabled={!assignSeatId}
                       className="w-full py-1.5 px-3 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs disabled:opacity-40 shadow-xs transition-colors"
                     >
-                      সিট বরাদ্দ করুন
+                      Assign Seat
                     </button>
                   </div>
                 </div>
@@ -924,9 +924,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               {/* All Seats Table with Live Admin Actions */}
               <div>
                 <h4 className="text-xs font-bold text-slate-900 mb-1.5 flex items-center justify-between">
-                  <span>শাখার সকল সিট তালিকা ({branchSeats.length} Seats)</span>
+                  <span>Branch Seats List ({branchSeats.length} Seats)</span>
                   <span className="text-[11px] font-normal text-slate-500">
-                    বুকড: {branchSeats.filter((s) => s.status === 'occupied' || s.status === 'away').length} | খালি: {branchSeats.filter((s) => s.status === 'available').length}
+                    Booked: {branchSeats.filter((s) => s.status === 'occupied' || s.status === 'away').length} | Available: {branchSeats.filter((s) => s.status === 'available').length}
                   </span>
                 </h4>
 
@@ -1012,7 +1012,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                             <button
                               onClick={() => {
-                                if (window.confirm(`সিট ${seat.seatNumber} মুছে ফেলতে চান?`)) {
+                                if (window.confirm(`Delete seat ${seat.seatNumber}?`)) {
                                   adminDeleteSeat(seat.id);
                                 }
                               }}
@@ -1037,10 +1037,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
                 <div>
                   <h4 className="text-xs font-bold text-slate-900">
-                    নিবন্ধিত শিক্ষার্থী ও পিন কন্ট্রোল (User & PIN Management)
+                    Registered Students & PIN Management
                   </h4>
                   <p className="text-slate-400 text-[11px]">
-                    ইউজারের পিন রিসেট করুন, বুকিং পারমিশন ব্লক/আনব্লক করুন ও ক্লাউড সিঙ্ক দেখুন
+                    Reset user PINs, manage block status, and refresh cloud directory
                   </p>
                 </div>
 
@@ -1052,7 +1052,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     className="flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-700 font-semibold text-xs transition-all disabled:opacity-50"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isRefreshingUsers ? 'animate-spin' : ''}`} />
-                    <span>ক্লাউড রিফ্রেশ</span>
+                    <span>Sync Users</span>
                   </button>
                 </div>
               </div>
@@ -1064,7 +1064,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   type="text"
                   value={userSearchQuery}
                   onChange={(e) => setUserSearchQuery(e.target.value)}
-                  placeholder="নাম, ফোন নাম্বার, স্টুডেন্ট আইডি বা টার্গেট এক্সাম দিয়ে খুঁজুন..."
+                  placeholder="Search by student name, phone, student ID or exam..."
                   className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                 />
               </div>
@@ -1074,12 +1074,12 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 <table className="w-full text-left text-xs">
                   <thead className="bg-slate-50 text-slate-600 border-b border-slate-200 text-[11px]">
                     <tr>
-                      <th className="p-2.5 font-semibold">শিক্ষার্থীর নাম</th>
-                      <th className="p-2.5 font-semibold">মোবাইল নাম্বার</th>
-                      <th className="p-2.5 font-semibold">স্টুডেন্ট আইডি</th>
-                      <th className="p-2.5 font-semibold">পিন স্ট্যাটাস</th>
-                      <th className="p-2.5 font-semibold">অ্যাকাউন্ট স্ট্যাটাস</th>
-                      <th className="p-2.5 font-semibold text-right">অ্যাকশন</th>
+                      <th className="p-2.5 font-semibold">Student Name</th>
+                      <th className="p-2.5 font-semibold">Phone Number</th>
+                      <th className="p-2.5 font-semibold">Student ID</th>
+                      <th className="p-2.5 font-semibold">PIN Status</th>
+                      <th className="p-2.5 font-semibold">Account Status</th>
+                      <th className="p-2.5 font-semibold text-right">Actions</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 bg-white">
@@ -1116,7 +1116,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                                   <input
                                     type="text"
                                     maxLength={6}
-                                    placeholder="নতুন পিন"
+                                    placeholder="New PIN"
                                     value={newPinValue}
                                     onChange={(e) => setNewPinValue(e.target.value)}
                                     className="w-16 px-1.5 py-0.5 border border-blue-400 rounded text-xs font-mono"
@@ -1151,9 +1151,9 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                                         setNewPinValue(student.pin || '1234');
                                       }}
                                       className="text-blue-600 hover:underline text-[10px]"
-                                      title="পিন পরিবর্তন করুন"
+                                      title="Reset PIN"
                                     >
-                                      রিসেট
+                                      Reset
                                     </button>
                                   )}
                                 </div>
@@ -1188,18 +1188,18 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                                         : 'bg-amber-50 border-amber-200 text-amber-800 hover:bg-amber-100'
                                     }`}
                                   >
-                                    {student.isBlocked ? 'আনব্লক করুন' : 'ব্লক করুন'}
+                                    {student.isBlocked ? 'Unblock' : 'Block'}
                                   </button>
 
                                   <button
                                     type="button"
                                     onClick={() => {
-                                      if (window.confirm(`"${student.name}" (${student.phone}) কে তালিকা থেকে মুছে ফেলতে চান?`)) {
+                                      if (window.confirm(`Delete "${student.name}" (${student.phone}) from registry?`)) {
                                         deleteRegisteredStudent(student.phone);
                                       }
                                     }}
                                     className="p-1 rounded-md text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors"
-                                    title="ইউজার মুছুন"
+                                    title="Delete User"
                                   >
                                     <Trash2 className="w-3.5 h-3.5" />
                                   </button>
@@ -1212,7 +1212,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     ) : (
                       <tr>
                         <td colSpan={6} className="p-6 text-center text-slate-400 text-xs">
-                          কোনো ইউজার খুঁজে পাওয়া যায়নি
+                          No users found
                         </td>
                       </tr>
                     )}
@@ -1228,16 +1228,16 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <form onSubmit={handlePostNotice} className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2.5">
                 <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                   <Bell className="w-3.5 h-3.5 text-amber-600" />
-                  <span>জরুরি নোটিশ / ঘোষণা পোস্ট করুন:</span>
+                  <span>Post Urgent Notice / Announcement:</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                   <div className="sm:col-span-2">
-                    <label className="block text-[10px] text-slate-500 mb-0.5">নোটিশ শিরোনাম</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Notice Title</label>
                     <input
                       type="text"
                       required
-                      placeholder="যেমন: আগামীকাল সাপ্তাহিক পরীক্ষা ও হল ২ বন্ধ থাকবে"
+                      placeholder="e.g. Weekly Exam Schedule & Hall Maintenance"
                       value={noticeTitle}
                       onChange={(e) => setNoticeTitle(e.target.value)}
                       className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
@@ -1245,26 +1245,26 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-[10px] text-slate-500 mb-0.5">নোটিশ ক্যাটাগরি</label>
+                    <label className="block text-[10px] text-slate-500 mb-0.5">Notice Category</label>
                     <select
                       value={noticeType}
                       onChange={(e) => setNoticeType(e.target.value as LibraryNotice['type'])}
                       className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                     >
-                      <option value="urgent">🔴 Urgent / জরুরি</option>
-                      <option value="event">🎉 Special Event / আয়োজন</option>
-                      <option value="maintenance">🔧 Maintenance / রক্ষণাবেক্ষণ</option>
+                      <option value="urgent">🔴 Urgent</option>
+                      <option value="event">🎉 Special Event</option>
+                      <option value="maintenance">🔧 Maintenance</option>
                       <option value="announcement">📢 General Announcement</option>
                     </select>
                   </div>
                 </div>
 
                 <div>
-                  <label className="block text-[10px] text-slate-500 mb-0.5">বিস্তারিত বিবরণ</label>
+                  <label className="block text-[10px] text-slate-500 mb-0.5">Detailed Notice Description</label>
                   <textarea
                     rows={2}
                     required
-                    placeholder="নোটিশের বিস্তারিত লিখুন..."
+                    placeholder="Write detailed notice contents here..."
                     value={noticeContent}
                     onChange={(e) => setNoticeContent(e.target.value)}
                     className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-lg text-slate-900 text-xs focus:outline-none focus:border-blue-500"
@@ -1276,13 +1276,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     type="submit"
                     className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs"
                   >
-                    নোটিশ প্রকাশ করুন
+                    Publish Notice
                   </button>
                 </div>
               </form>
 
               <div className="space-y-2">
-                <h4 className="text-xs font-bold text-slate-900">বর্তমান নোটিশসমূহ ({notices.length})</h4>
+                <h4 className="text-xs font-bold text-slate-900">Active Notices ({notices.length})</h4>
                 {notices.map((n) => (
                   <div key={n.id} className="p-3 rounded-xl bg-white border border-slate-200 flex items-start justify-between gap-3 shadow-2xs">
                     <div className="space-y-1">
@@ -1320,11 +1320,11 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   <div className="flex items-center gap-2">
                     <Cloud className="w-5 h-5 text-blue-600" />
                     <div>
-                      <h4 className="text-xs font-bold text-slate-900">Supabase ক্লাউড ডেটাবেজ সিঙ্ক</h4>
+                      <h4 className="text-xs font-bold text-slate-900">Cloud Real-time Sync & Storage</h4>
                       <p className="text-[11px] text-slate-500">
                         {cloudLastSyncedAt
-                          ? `সর্বশেষ ক্লাউড সিঙ্ক: ${new Date(cloudLastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${new Date(cloudLastSyncedAt).toLocaleDateString()})`
-                          : 'স্বয়ংক্রিয় ক্লাউড সিঙ্ক সক্রিয় রয়েছে'}
+                          ? `Last synced: ${new Date(cloudLastSyncedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })} (${new Date(cloudLastSyncedAt).toLocaleDateString()})`
+                          : 'Automatic real-time sync active'}
                       </p>
                     </div>
                   </div>
@@ -1336,7 +1336,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs disabled:opacity-60 transition-all cursor-pointer"
                   >
                     <RefreshCw className={`w-3.5 h-3.5 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-                    <span>{isSyncingCloud ? 'সিঙ্ক হচ্ছে...' : 'এখনই সিঙ্ক করুন'}</span>
+                    <span>{isSyncingCloud ? 'Syncing...' : 'Sync Cloud Now'}</span>
                   </button>
                 </div>
 
@@ -1353,10 +1353,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                   <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                     <Download className="w-4 h-4 text-emerald-600" />
-                    <span>JSON ব্যাকআপ ডাউনলোড (Export)</span>
+                    <span>Export JSON Backup</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    রুম, সিট, নোটিশ ও ইউজার ডেটার একটি সম্পূর্ণ ব্যাকআপ ফাইল আপনার কম্পিউটারে ডাউনলোড করুন।
+                    Download a full JSON snapshot of all rooms, seats, notices, and registered users to your device.
                   </p>
                   <button
                     type="button"
@@ -1364,17 +1364,17 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     className="w-full py-2 px-3 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                   >
                     <Download className="w-3.5 h-3.5" />
-                    <span>সম্পূর্ণ ডেটা JSON ডাউনলোড করুন</span>
+                    <span>Download Full Backup</span>
                   </button>
                 </div>
 
                 <div className="p-3.5 rounded-xl bg-slate-50 border border-slate-200 space-y-2">
                   <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                     <Upload className="w-4 h-4 text-indigo-600" />
-                    <span>ব্যাকআপ থেকে ডেটা রিস্টোর (Import)</span>
+                    <span>Restore from Backup (Import)</span>
                   </div>
                   <p className="text-[11px] text-slate-500">
-                    পূর্বে ডাউনলোড করা JSON ফাইল সিলেক্ট করে সমস্ত লাইব্রেরি স্টেট ফিরিয়ে আনুন।
+                    Restore previously downloaded backup JSON file to restore complete library state.
                   </p>
                   <input
                     type="file"
@@ -1389,7 +1389,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                     className="w-full py-2 px-3 rounded-lg bg-white hover:bg-slate-100 border border-slate-300 text-slate-800 font-semibold text-xs transition-colors flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
                   >
                     <Upload className="w-3.5 h-3.5" />
-                    <span>JSON ব্যাকআপ ফাইল সিলেক্ট করুন</span>
+                    <span>Select Backup JSON File</span>
                   </button>
                 </div>
               </div>
@@ -1398,43 +1398,43 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200 space-y-2.5">
                 <div className="font-bold text-slate-800 text-xs flex items-center gap-1.5">
                   <AlertTriangle className="w-3.5 h-3.5 text-amber-500" />
-                  <span>দৈনিক রিসেট ও রিসেট টুলস:</span>
+                  <span>Maintenance & Reset Tools:</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
                   <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1.5">
-                    <div className="font-bold text-slate-800 text-xs">নাইটলি অটো-রিসেট (Nightly Reset)</div>
+                    <div className="font-bold text-slate-800 text-xs">Nightly Auto-Reset</div>
                     <p className="text-[11px] text-slate-500">
-                      সকল সিট খালি করে পরবর্তী দিনের জন্য উন্মুক্ত করুন।
+                      Release all active seats to open them for the next study day.
                     </p>
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('সকল সিট খালি করে রিসেট করতে চান?')) {
+                        if (window.confirm('Release all occupied seats and reset for the day?')) {
                           triggerDailyAutoReset();
                         }
                       }}
                       className="w-full py-1.5 px-3 rounded-lg bg-white border border-amber-300 hover:bg-amber-50 text-amber-800 font-semibold text-xs transition-colors"
                     >
-                      অটো-রিসেট ট্রিগার করুন
+                      Trigger Auto-Reset
                     </button>
                   </div>
 
                   <div className="p-3 rounded-lg bg-white border border-slate-200 space-y-1.5">
-                    <div className="font-bold text-slate-800 text-xs">ডিফল্ট ডেমো ডেটা রিস্টোর</div>
+                    <div className="font-bold text-slate-800 text-xs">Restore Default Data</div>
                     <p className="text-[11px] text-slate-500">
-                      অ্যাপ্লিকেশনকে প্রাথমিক ডেমো অবস্থায় ফিরিয়ে নিয়ে যান।
+                      Reset database to default initial structure and rooms.
                     </p>
                     <button
                       type="button"
                       onClick={() => {
-                        if (window.confirm('সতর্কতা: এটি প্রাথমিক ডেটা লোড করবে। চালিয়ে যেতে চান?')) {
+                        if (window.confirm('Warning: This will restore default data. Continue?')) {
                           resetToDefaultData();
                         }
                       }}
                       className="w-full py-1.5 px-3 rounded-lg bg-white border border-rose-300 hover:bg-rose-50 text-rose-700 font-semibold text-xs transition-colors"
                     >
-                      রিস্টোর ডিফল্টস
+                      Restore Defaults
                     </button>
                   </div>
                 </div>
@@ -1448,10 +1448,10 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               <div className="flex items-center justify-between">
                 <div>
                   <h4 className="text-xs font-bold text-slate-900">
-                    উপস্থিতি লগ ও হিস্টোরি (Attendance Logs)
+                    Attendance Logs & History
                   </h4>
                   <p className="text-slate-400 text-[11px]">
-                    আজকের ভিজিট ও সম্পন্ন হওয়া সকল সেশন
+                    Today's check-ins and completed student sessions
                   </p>
                 </div>
 
@@ -1511,13 +1511,13 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
               >
                 <div className="font-bold text-slate-800 text-xs flex items-center gap-2">
                   <Facebook className="w-4 h-4 text-blue-600" />
-                  <span>শাখার সোশ্যাল ও এক্সটার্নাল লিংক সেটিংস:</span>
+                  <span>Branch Social & External Links:</span>
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 mb-1">
-                      অফিসিয়াল ফেসবুক পেজ URL
+                      Official Facebook Page URL
                     </label>
                     <input
                       type="url"
@@ -1530,7 +1530,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 mb-1">
-                      ফেসবুক পেজ নাম
+                      Facebook Page Name
                     </label>
                     <input
                       type="text"
@@ -1543,7 +1543,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 mb-1">
-                      ফলোয়ার ব্যাজ টেক্সট
+                      Follower Badge Text
                     </label>
                     <input
                       type="text"
@@ -1555,7 +1555,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
 
                   <div>
                     <label className="block text-[10px] font-semibold text-slate-600 mb-1">
-                      মেমোরাইজার লার্নিং অ্যাপ URL
+                      Memorizer App URL
                     </label>
                     <input
                       type="url"
@@ -1570,14 +1570,14 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
                   {settingsSaved && (
                     <span className="text-emerald-700 text-xs font-medium flex items-center gap-1">
                       <CheckCircle2 className="w-3.5 h-3.5" />
-                      লিংক সফলভাবে আপডেট হয়েছে!
+                      Links successfully updated!
                     </span>
                   )}
                   <button
                     type="submit"
                     className="ml-auto px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs transition-colors shadow-xs"
                   >
-                    লিংক আপডেট করুন
+                    Update Links
                   </button>
                 </div>
               </form>
@@ -1591,7 +1591,7 @@ export const AdminDashboardModal: React.FC<AdminDashboardModalProps> = ({
             onClick={onClose}
             className="px-4 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-50 text-slate-700 text-xs font-semibold transition-colors shadow-xs"
           >
-            বন্ধ করুন (Close)
+            Close
           </button>
         </div>
       </div>

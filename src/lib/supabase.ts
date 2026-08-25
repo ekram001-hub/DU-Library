@@ -148,6 +148,86 @@ export async function fetchAllStudentsFromCloud(): Promise<Array<{
   }
 }
 
+let realtimeChannel: ReturnType<SupabaseClient['channel']> | null = null;
+
+/**
+ * Initialize / Get shared Supabase Realtime Channel
+ */
+export function getRealtimeChannel() {
+  const client = getSupabase();
+  if (!client) return null;
+  if (!realtimeChannel) {
+    realtimeChannel = client.channel('smart_library_realtime_sync', {
+      config: {
+        broadcast: { ack: false, self: false },
+      },
+    });
+    realtimeChannel.subscribe((status) => {
+      if (status === 'SUBSCRIBED') {
+        console.log('[Supabase Realtime] Connected and listening for live seat & room updates.');
+      }
+    });
+  }
+  return realtimeChannel;
+}
+
+/**
+ * Broadcast live state change to all clients via Supabase Realtime WebSocket
+ */
+export function broadcastStateViaSupabase(payload: {
+  rooms?: unknown[];
+  seats?: unknown[];
+  notices?: unknown[];
+  branchesConfig?: unknown;
+}) {
+  try {
+    const channel = getRealtimeChannel();
+    if (channel) {
+      channel.send({
+        type: 'broadcast',
+        event: 'STATE_CHANGED',
+        payload,
+      });
+    }
+  } catch (err) {
+    console.warn('[Supabase Realtime] Broadcast error:', err);
+  }
+}
+
+/**
+ * Subscribe to Supabase Realtime state updates
+ */
+export function subscribeToSupabaseRealtime(
+  callback: (payload: {
+    rooms?: unknown[];
+    seats?: unknown[];
+    notices?: unknown[];
+    branchesConfig?: unknown;
+  }) => void
+): () => void {
+  try {
+    const channel = getRealtimeChannel();
+    if (!channel) return () => {};
+
+    const handler = (data: { payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown } }) => {
+      if (data?.payload) {
+        callback(data.payload);
+      }
+    };
+
+    channel.on('broadcast', { event: 'STATE_CHANGED' }, handler);
+
+    return () => {
+      // Unsubscribe listener
+      channel.unsubscribe();
+      realtimeChannel = null;
+    };
+  } catch (err) {
+    console.warn('[Supabase Realtime] Subscribe error:', err);
+    return () => {};
+  }
+}
+
 /**
  * Sync / Backup full library configuration (Rooms, Seats, Notices) to cloud storage
  */
@@ -158,10 +238,13 @@ export async function syncLibraryStateToCloud(payload: {
   branchesConfig?: unknown;
 }): Promise<{ success: boolean; error?: unknown }> {
   try {
+    // 1. Instantly broadcast to all connected clients in real-time
+    broadcastStateViaSupabase(payload);
+
     const client = getSupabase();
     if (!client) return { success: false };
 
-    // Store in a library_state key-value or system_config table
+    // 2. Persist in system_config table in Supabase
     const { error } = await client.from('system_config').upsert(
       {
         key: 'library_live_state',

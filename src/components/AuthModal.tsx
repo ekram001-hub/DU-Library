@@ -359,19 +359,6 @@ export const AuthModal: React.FC<AuthModalProps> = ({
                 )}
                 <span>Continue with Google</span>
               </button>
-
-              {/* Discreet Admin Login Link */}
-              <div className="pt-2 text-center">
-                <button
-                  type="button"
-                  id="btn-switch-to-admin"
-                  onClick={() => setViewState('admin_login')}
-                  className="text-[11px] text-slate-500 hover:text-slate-800 font-medium hover:underline inline-flex items-center gap-1 cursor-pointer"
-                >
-                  <Lock className="w-3 h-3" />
-                  <span>Admin Panel Access</span>
-                </button>
-              </div>
             </div>
           )}
 

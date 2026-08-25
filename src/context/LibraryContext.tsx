@@ -619,13 +619,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     ) => {
       const seat = seats.find((s) => s.id === seatId);
       if (!seat) {
-        return { success: false, message: 'Seat not found / সিট পাওয়া যায়নি' };
+        return { success: false, message: 'Seat not found' };
       }
 
       if (seat.status !== 'available') {
         return {
           success: false,
-          message: 'Seat is no longer available / এই সিটটি ইতোমধ্যে দখল হয়ে গেছে',
+          message: 'Seat is no longer available',
         };
       }
 
@@ -633,7 +633,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       if (seat.isFemaleReserved && studentDetails.gender !== 'female') {
         return {
           success: false,
-          message: 'This area is strictly reserved for female students / এটি মহিলা সংরক্ষিত কর্নার। শুধুমাত্র নারী শিক্ষার্থীরা বুক করতে পারবেন।',
+          message: 'This area is strictly reserved for female students.',
         };
       }
 
@@ -693,7 +693,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       return {
         success: true,
-        message: 'Seat successfully booked! / সিট বুকিং সফল হয়েছে!',
+        message: 'Seat successfully booked!',
         passCode,
       };
     },
@@ -798,7 +798,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
           return {
             ...s,
             status: nextStatus,
-            maintenanceNote: nextStatus === 'maintenance' ? note || 'Under maintenance / মেরামত চলছে' : undefined,
+            maintenanceNote: nextStatus === 'maintenance' ? note || 'Under maintenance' : undefined,
             occupantName: undefined,
             occupantPhone: undefined,
             studentId: undefined,
@@ -1271,9 +1271,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         branchesConfig: data.branchesConfig,
       }).catch(() => {});
 
-      return { success: true, message: 'সম্পূর্ণ ডেটাবেজ সফলভাবে রিস্টোর করা হয়েছে!' };
+      return { success: true, message: 'Entire database successfully restored!' };
     } catch (err) {
-      return { success: false, message: 'অবৈধ ব্যাকআপ ফাইল অথবা JSON ফরম্যাট সঠিক নয়।' };
+      return { success: false, message: 'Invalid backup file or incorrect JSON format.' };
     }
   }, [broadcastSync]);
 
@@ -1285,11 +1285,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       branchesConfig: allBranches,
     });
     if (res.success) {
-      const timeStr = new Date().toLocaleTimeString('bn-BD', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
+      const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
       setCloudLastSyncedAt(timeStr);
-      return { success: true, message: `সফলভাবে ক্লাউডে সিঙ্ক করা হয়েছে (${timeStr})` };
+      return { success: true, message: `Successfully synced to cloud (${timeStr})` };
     }
-    return { success: false, message: 'ক্লাউড সিঙ্ক করতে সমস্যা হয়েছে। তবে লোকাল স্টোরেজে ডেটা নিরাপদ আছে।' };
+    return { success: false, message: 'Cloud sync failed. However, local storage data is secure.' };
   }, [rooms, seats, notices, allBranches]);
 
   // Notices
