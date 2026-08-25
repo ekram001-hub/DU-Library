@@ -34,9 +34,12 @@ import {
   ExternalLink,
   GraduationCap,
   BookOpen,
+  Activity,
+  Terminal,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { Room, RoomCategory, Gender, BranchId, LibraryNotice } from '../types';
+import { SupabaseDiagnosticReport } from '../lib/supabase';
 
 interface AdminPageProps {
   onBackToPortal: () => void;
@@ -76,6 +79,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     exportFullBackupJSON,
     importFullBackupJSON,
     syncStateToCloudManual,
+    runDiagnostics,
     cloudLastSyncedAt,
     triggerDailyAutoReset,
     resetToDefaultData,
@@ -134,9 +138,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeType, setNoticeType] = useState<LibraryNotice['type']>('urgent');
 
-  // Backup state
+  // Backup & Diagnostic state
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
+  const [diagnosticReport, setDiagnosticReport] = useState<SupabaseDiagnosticReport | null>(null);
+  const [isRunningDiag, setIsRunningDiag] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Branch Settings State
@@ -323,6 +329,19 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setIsSyncingCloud(false);
     setSyncStatusMsg(res.message);
     setTimeout(() => setSyncStatusMsg(null), 5000);
+  };
+
+  // Run Real-time & Cloud Diagnostics
+  const handleRunLiveDiagnostics = async () => {
+    setIsRunningDiag(true);
+    try {
+      const report = await runDiagnostics();
+      setDiagnosticReport(report);
+    } catch (err: unknown) {
+      console.error('Diagnostic error:', err);
+    } finally {
+      setIsRunningDiag(false);
+    }
   };
 
   // Handle Export Backup
@@ -1681,6 +1700,149 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <div className="p-3 rounded-xl bg-white/90 border border-blue-200 text-blue-800 text-xs flex items-center gap-2 font-medium">
                     <CheckCircle2 className="w-4 h-4 text-blue-600 shrink-0" />
                     <span>{syncStatusMsg}</span>
+                  </div>
+                )}
+              </div>
+
+              {/* Supabase Realtime & State Diagnostic Inspector */}
+              <div className="p-5 rounded-2xl bg-slate-900 text-slate-100 border border-slate-800 space-y-4 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <Activity className="w-5 h-5 text-emerald-400" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Realtime & Database State Diagnostics</span>
+                        <span className="px-2 py-0.5 text-[10px] font-mono rounded bg-emerald-950 text-emerald-300 border border-emerald-800">
+                          LIVE INSPECTOR
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        Verify realtime WebSocket subscriptions, database table accessibility, and inspect discrepancies with currently rendered local state.
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleRunLiveDiagnostics}
+                    disabled={isRunningDiag}
+                    className="flex items-center gap-2 px-3.5 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-semibold text-xs shadow-xs disabled:opacity-50 transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    <Terminal className={`w-3.5 h-3.5 ${isRunningDiag ? 'animate-spin' : ''}`} />
+                    <span>{isRunningDiag ? 'Running Test...' : 'Run Diagnostics Now'}</span>
+                  </button>
+                </div>
+
+                {diagnosticReport ? (
+                  <div className="space-y-3 font-mono text-xs">
+                    {/* Status Overview Cards */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                      <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
+                        <div className="text-[11px] text-slate-400 uppercase">Realtime Channel</div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              diagnosticReport.realtimeChannelStatus === 'SUBSCRIBED'
+                                ? 'bg-emerald-400 animate-pulse'
+                                : 'bg-rose-400'
+                            }`}
+                          />
+                          <span className="font-bold text-white">
+                            {diagnosticReport.realtimeChannelStatus}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
+                        <div className="text-[11px] text-slate-400 uppercase">`system_config` Table</div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              diagnosticReport.tables.systemConfigAccessible
+                                ? 'bg-emerald-400'
+                                : 'bg-rose-400'
+                            }`}
+                          />
+                          <span className="font-bold text-white truncate">
+                            {diagnosticReport.tables.systemConfigAccessible ? 'Accessible & Ready' : 'Permission / Table Error'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
+                        <div className="text-[11px] text-slate-400 uppercase">State Match</div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              diagnosticReport.renderedStateComparison?.cloudMatchesLocal
+                                ? 'bg-emerald-400'
+                                : 'bg-amber-400'
+                            }`}
+                          />
+                          <span className="font-bold text-white">
+                            {diagnosticReport.renderedStateComparison?.cloudMatchesLocal
+                              ? '100% In Sync'
+                              : 'Mismatch Detected'}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Comparison Details */}
+                    <div className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 space-y-2">
+                      <div className="text-slate-300 font-semibold flex items-center justify-between">
+                        <span>Comparison: Cloud vs Currently Rendered Screen</span>
+                        <span className="text-[11px] text-slate-500 font-normal">
+                          Tested at {new Date(diagnosticReport.timestamp).toLocaleTimeString()}
+                        </span>
+                      </div>
+
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px] text-slate-300 pt-1 border-t border-slate-800">
+                        <div>
+                          <span className="text-slate-500 block">Rendered Rooms:</span>
+                          <span className="font-bold text-white">{diagnosticReport.renderedStateComparison?.localRoomsCount}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Cloud Rooms:</span>
+                          <span className="font-bold text-white">{diagnosticReport.tables.cloudRoomsCount}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Rendered Bookings:</span>
+                          <span className="font-bold text-amber-300">{diagnosticReport.renderedStateComparison?.localOccupiedCount}</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-500 block">Cloud Bookings:</span>
+                          <span className="font-bold text-amber-300">{diagnosticReport.tables.cloudOccupiedSeatsCount}</span>
+                        </div>
+                      </div>
+
+                      {/* Discrepancy Warnings */}
+                      {diagnosticReport.renderedStateComparison?.discrepancyReasons &&
+                        diagnosticReport.renderedStateComparison.discrepancyReasons.length > 0 && (
+                          <div className="mt-2 p-2.5 rounded-lg bg-amber-950/60 border border-amber-800 text-amber-200 text-xs space-y-1">
+                            <div className="font-bold text-amber-300">Potential Discrepancy Reasons:</div>
+                            <ul className="list-disc list-inside space-y-0.5 text-[11px]">
+                              {diagnosticReport.renderedStateComparison.discrepancyReasons.map((reason, idx) => (
+                                <li key={idx}>{reason}</li>
+                              ))}
+                            </ul>
+                          </div>
+                        )}
+
+                      {diagnosticReport.tables.systemConfigError && (
+                        <div className="mt-2 p-2.5 rounded-lg bg-rose-950/60 border border-rose-800 text-rose-200 text-xs">
+                          <div className="font-bold text-rose-300">Supabase Error Message:</div>
+                          <div className="text-[11px] font-mono mt-0.5">{diagnosticReport.tables.systemConfigError}</div>
+                          <div className="text-[11px] text-rose-400 mt-1 font-sans">
+                            Run the SQL table script in Supabase SQL editor to enable the `system_config` table and public RLS permissions.
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 text-center text-xs text-slate-400">
+                    Click &quot;Run Diagnostics Now&quot; to test your Supabase subscription, inspect cloud vs rendered seat counts, and detect synchronization issues.
                   </div>
                 )}
               </div>

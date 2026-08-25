@@ -177,9 +177,15 @@ export function getRealtimeChannel() {
       }
     );
 
-    realtimeChannel.subscribe((status) => {
+    realtimeChannel.subscribe((status, err) => {
+      realtimeChannelStatus = status;
+      if (err) {
+        lastRealtimeError = err.message || String(err);
+      }
       if (status === 'SUBSCRIBED') {
         console.log('[Supabase Realtime] Connected and listening for live seat & room updates.');
+      } else if (status === 'CHANNEL_ERROR') {
+        console.warn('[Supabase Realtime] Channel Error:', err);
       }
     });
   }
@@ -187,6 +193,149 @@ export function getRealtimeChannel() {
 }
 
 let realtimeStateCallback: ((payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown }) => void) | null = null;
+let realtimeChannelStatus: string = 'DISCONNECTED';
+let lastRealtimeEventAt: string | null = null;
+let lastRealtimeError: string | null = null;
+
+export interface SupabaseDiagnosticReport {
+  timestamp: string;
+  isConfigured: boolean;
+  supabaseUrl: string;
+  hasAnonKey: boolean;
+  realtimeChannelStatus: string;
+  lastRealtimeEventAt: string | null;
+  lastRealtimeError: string | null;
+  tables: {
+    systemConfigAccessible: boolean;
+    systemConfigStatus: string;
+    systemConfigError?: string;
+    cloudStateKeyPresent: boolean;
+    cloudRoomsCount: number;
+    cloudSeatsCount: number;
+    cloudOccupiedSeatsCount: number;
+    studentsTableAccessible: boolean;
+    studentsCount: number;
+  };
+  renderedStateComparison?: {
+    localSeatsCount: number;
+    localOccupiedCount: number;
+    localRoomsCount: number;
+    cloudMatchesLocal: boolean;
+    discrepancyReasons: string[];
+  };
+}
+
+/**
+ * Diagnostic tool to verify Supabase connections, tables, and realtime status
+ */
+export async function runSupabaseDiagnostics(localRooms?: unknown[], localSeats?: unknown[]): Promise<SupabaseDiagnosticReport> {
+  const client = getSupabase();
+  const report: SupabaseDiagnosticReport = {
+    timestamp: new Date().toISOString(),
+    isConfigured: isSupabaseConfigured(),
+    supabaseUrl: supabaseUrl,
+    hasAnonKey: Boolean(supabaseAnonKey && supabaseAnonKey.length > 20),
+    realtimeChannelStatus: realtimeChannelStatus,
+    lastRealtimeEventAt: lastRealtimeEventAt,
+    lastRealtimeError: lastRealtimeError,
+    tables: {
+      systemConfigAccessible: false,
+      systemConfigStatus: 'Testing...',
+      cloudStateKeyPresent: false,
+      cloudRoomsCount: 0,
+      cloudSeatsCount: 0,
+      cloudOccupiedSeatsCount: 0,
+      studentsTableAccessible: false,
+      studentsCount: 0,
+    },
+  };
+
+  if (!client) {
+    report.tables.systemConfigStatus = 'Client initialization failed';
+    return report;
+  }
+
+  // 1. Test system_config table
+  try {
+    const { data: configData, error: configError } = await client
+      .from('system_config')
+      .select('key, value, updated_at')
+      .eq('key', 'library_live_state')
+      .maybeSingle();
+
+    if (configError) {
+      report.tables.systemConfigAccessible = false;
+      report.tables.systemConfigStatus = `Error: ${configError.message} (Code: ${configError.code})`;
+      report.tables.systemConfigError = configError.message;
+    } else {
+      report.tables.systemConfigAccessible = true;
+      report.tables.systemConfigStatus = 'Connected & Queryable';
+      if (configData && configData.value) {
+        report.tables.cloudStateKeyPresent = true;
+        const val = configData.value as { rooms?: unknown[]; seats?: Array<{ status?: string }> };
+        report.tables.cloudRoomsCount = Array.isArray(val.rooms) ? val.rooms.length : 0;
+        report.tables.cloudSeatsCount = Array.isArray(val.seats) ? val.seats.length : 0;
+        report.tables.cloudOccupiedSeatsCount = Array.isArray(val.seats)
+          ? val.seats.filter((s) => s.status === 'occupied' || s.status === 'away').length
+          : 0;
+      }
+    }
+  } catch (err: unknown) {
+    report.tables.systemConfigStatus = `Exception: ${err instanceof Error ? err.message : String(err)}`;
+  }
+
+  // 2. Test students table
+  try {
+    const { data: studentsData, error: studentsError } = await client
+      .from('students')
+      .select('phone', { count: 'exact' });
+
+    if (!studentsError && studentsData) {
+      report.tables.studentsTableAccessible = true;
+      report.tables.studentsCount = studentsData.length;
+    }
+  } catch {
+    report.tables.studentsTableAccessible = false;
+  }
+
+  // 3. Compare with currently rendered local state
+  if (Array.isArray(localRooms) && Array.isArray(localSeats)) {
+    const localOccupied = (localSeats as Array<{ status?: string }>).filter(
+      (s) => s.status === 'occupied' || s.status === 'away'
+    ).length;
+
+    const discrepancies: string[] = [];
+    if (!report.tables.systemConfigAccessible) {
+      discrepancies.push('Supabase table `system_config` is not accessible or missing RLS policy.');
+    }
+    if (!report.tables.cloudStateKeyPresent) {
+      discrepancies.push('The cloud document `library_live_state` has not been synced to Supabase yet.');
+    }
+    if (report.tables.cloudSeatsCount !== localSeats.length) {
+      discrepancies.push(
+        `Seat count mismatch: Cloud has ${report.tables.cloudSeatsCount} seats, Local UI has ${localSeats.length} seats.`
+      );
+    }
+    if (report.tables.cloudOccupiedSeatsCount !== localOccupied) {
+      discrepancies.push(
+        `Active booking mismatch: Cloud has ${report.tables.cloudOccupiedSeatsCount} active bookings, Local UI has ${localOccupied}.`
+      );
+    }
+    if (realtimeChannelStatus !== 'SUBSCRIBED') {
+      discrepancies.push(`Realtime subscription is currently "${realtimeChannelStatus}" (Expected: "SUBSCRIBED").`);
+    }
+
+    report.renderedStateComparison = {
+      localSeatsCount: localSeats.length,
+      localOccupiedCount: localOccupied,
+      localRoomsCount: localRooms.length,
+      cloudMatchesLocal: discrepancies.length === 0,
+      discrepancyReasons: discrepancies,
+    };
+  }
+
+  return report;
+}
 
 /**
  * Broadcast live state change to all clients via Supabase Realtime WebSocket

@@ -30,6 +30,8 @@ import {
   fetchLibraryStateFromCloud,
   subscribeToSupabaseRealtime,
   broadcastStateViaSupabase,
+  runSupabaseDiagnostics,
+  SupabaseDiagnosticReport,
 } from '../lib/supabase';
 
 export const ADMIN_PHONE_NUMBER = '01581624202';
@@ -113,6 +115,7 @@ interface LibraryContextType {
   exportFullBackupJSON: () => string;
   importFullBackupJSON: (jsonStr: string) => { success: boolean; message: string };
   syncStateToCloudManual: () => Promise<{ success: boolean; message: string }>;
+  runDiagnostics: () => Promise<SupabaseDiagnosticReport>;
   cloudLastSyncedAt: string | null;
 
   // Student Auth & Directory
@@ -1354,6 +1357,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return { success: false, message: 'Cloud sync failed. However, local storage data is secure.' };
   }, [rooms, seats, notices, allBranches]);
 
+  const runDiagnostics = useCallback(async () => {
+    return await runSupabaseDiagnostics(rooms, seats);
+  }, [rooms, seats]);
+
   // Notices
   const addNotice = useCallback((noticeData: Omit<LibraryNotice, 'id'>) => {
     const newNotice: LibraryNotice = {
@@ -1504,6 +1511,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       exportFullBackupJSON,
       importFullBackupJSON,
       syncStateToCloudManual,
+      runDiagnostics,
       cloudLastSyncedAt,
 
       currentStudent,
@@ -1568,6 +1576,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       exportFullBackupJSON,
       importFullBackupJSON,
       syncStateToCloudManual,
+      runDiagnostics,
       cloudLastSyncedAt,
       currentStudent,
       registeredStudents,
