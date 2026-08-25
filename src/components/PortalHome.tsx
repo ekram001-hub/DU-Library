@@ -297,24 +297,24 @@ export const PortalHome: React.FC<PortalHomeProps> = ({
           <button
             type="button"
             onClick={onOpenGuidelines}
-            className="hover:text-slate-800 underline transition-colors"
+            className="hover:text-slate-800 transition-colors cursor-pointer"
           >
             Rules & Policies
           </button>
-          {isAdminLoggedIn && (
-            <>
-              <span>•</span>
-              <button
-                id="btn-portal-admin-panel"
-                type="button"
-                onClick={onOpenAdmin}
-                className="flex items-center gap-1 hover:text-rose-700 font-semibold transition-colors text-rose-600 bg-rose-50 px-2 py-0.5 rounded-md border border-rose-200"
-              >
-                <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
-                <span>Admin Dashboard</span>
-              </button>
-            </>
-          )}
+          <span>•</span>
+          <button
+            id="btn-portal-admin-panel"
+            type="button"
+            onClick={onOpenAdmin}
+            className={`flex items-center gap-1 transition-colors px-2 py-0.5 rounded-md cursor-pointer font-medium ${
+              isAdminLoggedIn
+                ? 'text-rose-700 bg-rose-50 border border-rose-200 font-semibold'
+                : 'text-slate-500 hover:text-slate-800'
+            }`}
+          >
+            <ShieldCheck className="w-3.5 h-3.5 text-rose-600" />
+            <span>Admin Portal</span>
+          </button>
         </div>
       </footer>
     </div>

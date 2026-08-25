@@ -1,14 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
 import { PortalHome } from './components/PortalHome';
 import { SeatGrid } from './components/SeatGrid';
+import { AdminPage } from './components/AdminPage';
 import { SeatBookingModal } from './components/SeatBookingModal';
 import { StudentPassModal } from './components/StudentPassModal';
 import { AwayTimerModal } from './components/AwayTimerModal';
 import { SeatDetailsModal } from './components/SeatDetailsModal';
 import { AuthModal } from './components/AuthModal';
 import { GuidelinesModal } from './components/GuidelinesModal';
-import { AdminDashboardModal } from './components/AdminDashboardModal';
 import { MySeatFloatingWidget } from './components/MySeatFloatingWidget';
 import { Seat, BranchId } from './types';
 
@@ -22,8 +22,8 @@ function MainApp() {
     isAdminLoggedIn,
   } = useLibrary();
 
-  // Navigation state: 'portal' (Landing Hub, Image 1) or 'seats' (Live Seat View, Image 2)
-  const [currentView, setCurrentView] = useState<'portal' | 'seats'>('portal');
+  // Navigation state: 'portal' (Landing Hub), 'seats' (Live Seat View), or 'admin' (Dedicated Admin Panel Page)
+  const [currentView, setCurrentView] = useState<'portal' | 'seats' | 'admin'>('portal');
 
   // Active Selected Seat for Details/Booking
   const [selectedSeat, setSelectedSeat] = useState<Seat | null>(null);
@@ -35,15 +35,32 @@ function MainApp() {
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
   const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
   const [isGuidelinesModalOpen, setIsGuidelinesModalOpen] = useState(false);
-  const [isAdminModalOpen, setIsAdminModalOpen] = useState(false);
 
   // Active pass seat (either current student seat or newly booked seat)
   const [passSeat, setPassSeat] = useState<Seat | null>(null);
+
+  // Hash URL listener for direct link navigation
+  useEffect(() => {
+    const handleHash = () => {
+      const hash = window.location.hash.toLowerCase();
+      if (hash === '#admin') {
+        setCurrentView('admin');
+      } else if (hash === '#seats') {
+        setCurrentView('seats');
+      } else if (hash === '#portal' || hash === '') {
+        // keep current view unless explicitly changing
+      }
+    };
+    handleHash();
+    window.addEventListener('hashchange', handleHash);
+    return () => window.removeEventListener('hashchange', handleHash);
+  }, []);
 
   // Branch Selection from Portal
   const handleSelectBranch = (branchId: BranchId) => {
     setCurrentBranchId(branchId);
     setCurrentView('seats');
+    window.location.hash = '#seats';
   };
 
   // Seat Click Handler
@@ -70,19 +87,40 @@ function MainApp() {
     }
   };
 
+  const handleOpenAdminPage = () => {
+    setCurrentView('admin');
+    window.location.hash = '#admin';
+  };
+
+  const handleBackToPortal = () => {
+    setCurrentView('portal');
+    window.location.hash = '#portal';
+  };
+
+  const handleOpenSeats = () => {
+    setCurrentView('seats');
+    window.location.hash = '#seats';
+  };
+
   const currentRoom = rooms.find(
     (r) => r.id === (selectedSeat?.roomId || currentStudentSeat?.roomId)
   );
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-800 flex flex-col font-['Poppins',_sans-serif] selection:bg-indigo-500 selection:text-white">
-      {currentView === 'portal' ? (
+      {currentView === 'admin' ? (
+        /* Screen 3: Dedicated Admin Dashboard Page */
+        <AdminPage
+          onBackToPortal={handleBackToPortal}
+          onOpenSeats={handleOpenSeats}
+        />
+      ) : currentView === 'portal' ? (
         /* Screen 1: Portal Hub View */
         <PortalHome
           onSelectBranch={handleSelectBranch}
           onOpenGuidelines={() => setIsGuidelinesModalOpen(true)}
           onOpenAuth={() => setIsAuthModalOpen(true)}
-          onOpenAdmin={() => setIsAdminModalOpen(true)}
+          onOpenAdmin={handleOpenAdminPage}
           onOpenMyPass={handleOpenMyPass}
         />
       ) : (
@@ -93,8 +131,8 @@ function MainApp() {
               onSelectSeat={handleSelectSeat}
               onOpenGuidelines={() => setIsGuidelinesModalOpen(true)}
               onOpenAuth={() => setIsAuthModalOpen(true)}
-              onOpenAdmin={() => setIsAdminModalOpen(true)}
-              onBackToHome={() => setCurrentView('portal')}
+              onOpenAdmin={handleOpenAdminPage}
+              onBackToHome={handleBackToPortal}
             />
           </main>
 
@@ -107,8 +145,8 @@ function MainApp() {
               <div className="flex items-center gap-3">
                 <button
                   type="button"
-                  onClick={() => setCurrentView('portal')}
-                  className="hover:text-slate-800 font-medium transition-colors"
+                  onClick={handleBackToPortal}
+                  className="hover:text-slate-800 font-medium transition-colors cursor-pointer"
                 >
                   Home Portal
                 </button>
@@ -116,7 +154,7 @@ function MainApp() {
                 <button
                   type="button"
                   onClick={() => setIsGuidelinesModalOpen(true)}
-                  className="hover:text-slate-800 transition-colors"
+                  className="hover:text-slate-800 transition-colors cursor-pointer"
                 >
                   Rules & Guidelines
                 </button>
@@ -125,8 +163,8 @@ function MainApp() {
                     <span>•</span>
                     <button
                       type="button"
-                      onClick={() => setIsAdminModalOpen(true)}
-                      className="text-rose-600 font-semibold hover:text-rose-700 transition-colors"
+                      onClick={handleOpenAdminPage}
+                      className="text-rose-600 font-semibold hover:text-rose-700 transition-colors cursor-pointer"
                     >
                       Admin Dashboard
                     </button>
@@ -138,18 +176,20 @@ function MainApp() {
         </div>
       )}
 
-      {/* Sticky Bottom Floating Widget for Active User Seat */}
-      <MySeatFloatingWidget
-        onOpenAwayModal={() => {
-          setSelectedSeat(currentStudentSeat);
-          setIsAwayModalOpen(true);
-        }}
-        onOpenPassModal={handleOpenMyPass}
-        onSelectSeat={(seat) => {
-          setSelectedSeat(seat);
-          setIsDetailsModalOpen(true);
-        }}
-      />
+      {/* Sticky Bottom Floating Widget for Active User Seat (only outside admin) */}
+      {currentView !== 'admin' && (
+        <MySeatFloatingWidget
+          onOpenAwayModal={() => {
+            setSelectedSeat(currentStudentSeat);
+            setIsAwayModalOpen(true);
+          }}
+          onOpenPassModal={handleOpenMyPass}
+          onSelectSeat={(seat) => {
+            setSelectedSeat(seat);
+            setIsDetailsModalOpen(true);
+          }}
+        />
+      )}
 
       {/* Modals */}
       <SeatBookingModal
@@ -195,11 +235,6 @@ function MainApp() {
       <GuidelinesModal
         isOpen={isGuidelinesModalOpen}
         onClose={() => setIsGuidelinesModalOpen(false)}
-      />
-
-      <AdminDashboardModal
-        isOpen={isAdminModalOpen}
-        onClose={() => setIsAdminModalOpen(false)}
       />
     </div>
   );
