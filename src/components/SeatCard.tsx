@@ -52,13 +52,23 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
   const statusTheme = useMemo(() => {
     if (seat.status === 'maintenance') {
       return {
-        cardBg: 'bg-slate-100/70 border-slate-200 text-slate-400 opacity-60',
+        cardBg: 'bg-slate-100/80 border-slate-300 text-slate-400 opacity-60',
         iconColor: 'text-slate-400',
         numColor: 'text-slate-500',
       };
     }
 
-    // DIRECTIVE: Away seat MUST show in prominent ORANGE with large timer taking over the seat
+    // DIRECTIVE 3: Secondary booked on an orange seat turns completely BLUE
+    if (seat.isSecondaryBooked) {
+      return {
+        cardBg:
+          'bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-600 text-white border-2 border-blue-700 shadow-md ring-2 ring-blue-300/60 hover:brightness-105 active:scale-95',
+        iconColor: 'text-white',
+        numColor: 'text-white font-bold',
+      };
+    }
+
+    // DIRECTIVE 2: Away seat MUST show in prominent complete ORANGE with large timer taking over the seat
     if (seat.status === 'away') {
       return {
         cardBg:
@@ -68,32 +78,34 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       };
     }
 
+    // My Seat: Glowing Emerald Green
     if (isMySeat) {
       return {
         cardBg:
-          'bg-emerald-50/95 border-emerald-500 ring-2 ring-emerald-500 text-emerald-950 shadow-xs hover:border-emerald-600',
-        iconColor: 'text-emerald-700',
-        numColor: 'text-emerald-950 font-bold',
+          'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-2 border-emerald-500 ring-2 ring-emerald-300 shadow-md hover:brightness-105',
+        iconColor: 'text-emerald-100',
+        numColor: 'text-white font-bold',
       };
     }
 
+    // DIRECTIVE 1: Occupied seat turns completely RED for other users
     if (seat.status === 'occupied') {
       return {
         cardBg:
-          'bg-rose-50/90 border-rose-200 text-rose-900 shadow-2xs hover:border-rose-300 hover:bg-rose-100/60',
-        iconColor: 'text-rose-600',
-        numColor: 'text-rose-900 font-bold',
+          'bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white border-2 border-red-700 shadow-md ring-2 ring-red-300/50 hover:brightness-105',
+        iconColor: 'text-white',
+        numColor: 'text-white font-bold',
       };
     }
 
     // Available
     return {
       cardBg:
-        'bg-white border-slate-200/90 hover:border-emerald-400 hover:bg-emerald-50/20 text-slate-700 shadow-2xs hover:shadow-xs',
+        'bg-white border-slate-200/90 hover:border-emerald-500 hover:bg-emerald-50/30 text-slate-700 shadow-2xs hover:shadow-xs',
       iconColor: 'text-slate-600 group-hover:text-emerald-700',
       numColor: 'text-slate-800 group-hover:text-emerald-950 font-semibold',
     };
-  }, [seat.status, isMySeat]);
+  }, [seat.status, seat.isSecondaryBooked, isMySeat]);
 
   return (
     <button
@@ -144,6 +156,11 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
               className="inline-block w-2.5 h-2.5 rounded-full bg-emerald-300 ring-2 ring-emerald-600 shadow-2xs"
               title="Your Active Seat"
             />
+          ) : seat.isSecondaryBooked ? (
+            <span
+              className="inline-block w-2.5 h-2.5 rounded-full bg-sky-200 ring-2 ring-blue-400 shadow-2xs"
+              title="Secondary Booked"
+            />
           ) : seat.status === 'away' ? (
             <span
               className="inline-block w-2.5 h-2.5 rounded-full bg-white animate-ping"
@@ -154,35 +171,44 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       </div>
 
       {/* ============================================================== */}
-      {/* CENTER BODY: IF AWAY -> BIG FULL-SEAT PROMINENT COUNTDOWN     */}
+      {/* CENTER BODY: SECONDARY BOOKED (BLUE) OR AWAY (ORANGE) OR OTHER */}
       {/* ============================================================== */}
-      {seat.status === 'away' ? (
+      {seat.isSecondaryBooked ? (
+        /* BLUE SECONDARY BOOKED DISPLAY */
         <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center">
-          {/* Away Label Tag */}
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-sky-100 leading-tight">
+            SEC. BOOKED
+          </span>
+          <div className="text-sm sm:text-base font-mono font-black text-white tracking-wide leading-tight my-0.5 drop-shadow-xs">
+            {awayCountdown ? awayCountdown.text : 'ACTIVE'}
+          </div>
+          <span className="text-[8px] sm:text-[9px] text-sky-100 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/25 rounded-full">
+            {seat.secondaryOccupantName ? seat.secondaryOccupantName.split(' ')[0] : '2nd User'}
+          </span>
+        </div>
+      ) : seat.status === 'away' ? (
+        /* ORANGE AWAY DISPLAY WITH COUNTDOWN TIMER */
+        <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center">
           <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-orange-100/90 leading-tight">
             ON BREAK
           </span>
-
-          {/* LARGE TIMER COUNTDOWN taking center stage across the seat */}
           <div className="text-base sm:text-lg md:text-xl font-mono font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
             {awayCountdown ? awayCountdown.text : '30:00'}
           </div>
-
-          {/* Reason icon/tag */}
           <span className="text-[8px] sm:text-[9px] text-white/90 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/25 rounded-full mt-0.5">
             {seat.awayReason === 'Prayer'
               ? '🕌 Prayer'
               : seat.awayReason === 'Lunch'
               ? '🍱 Lunch'
               : seat.awayReason === 'Tea'
-              ? '☕ Tea Break'
+              ? '☕ Tea'
               : seat.awayReason === 'Rest'
               ? '🛋️ Rest'
               : '⏳ Break'}
           </span>
         </div>
       ) : (
-        /* STANDARD BODY FOR OTHER STATUSES */
+        /* STANDARD BODY FOR OCCUPIED / AVAILABLE / MAINTENANCE */
         <div className="flex-1 flex flex-col items-center justify-center">
           <div className={`transition-colors ${statusTheme.iconColor}`}>
             <Armchair className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
@@ -192,12 +218,16 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
 
       {/* Bottom Status / Name Indicator */}
       <div className="w-full flex items-center justify-center shrink-0">
-        {seat.status === 'away' ? (
-          <span className="text-[8px] sm:text-[9px] text-white/80 font-mono font-semibold truncate">
+        {seat.isSecondaryBooked ? (
+          <span className="text-[8px] sm:text-[9px] text-sky-100 font-medium truncate max-w-full">
+            {seat.secondaryOccupantName ? `${seat.secondaryOccupantName.split(' ')[0]} (2nd)` : '2nd Booked'}
+          </span>
+        ) : seat.status === 'away' ? (
+          <span className="text-[8px] sm:text-[9px] text-white/90 font-mono font-semibold truncate">
             {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Away'}
           </span>
         ) : seat.status === 'occupied' ? (
-          <span className="text-[9px] text-rose-700 font-medium truncate max-w-full">
+          <span className="text-[8px] sm:text-[9px] text-white font-medium truncate max-w-full">
             {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Booked'}
           </span>
         ) : seat.status === 'available' ? (

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import {
   ShieldCheck,
   Plus,
@@ -36,9 +36,13 @@ import {
   BookOpen,
   Activity,
   Terminal,
+  Wifi,
+  VolumeX,
+  Heart,
+  Clock,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
-import { Room, RoomCategory, Gender, BranchId, LibraryNotice } from '../types';
+import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig } from '../types';
 import { SupabaseDiagnosticReport } from '../lib/supabase';
 
 interface AdminPageProps {
@@ -75,7 +79,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     adminToggleSeatFemaleReserved,
     notices,
     addNotice,
+    updateNotice,
     deleteNotice,
+    rules,
+    addRule,
+    updateRule,
+    deleteRule,
+    wifiFacilities,
+    updateWifiFacility,
     exportFullBackupJSON,
     importFullBackupJSON,
     syncStateToCloudManual,
@@ -93,7 +104,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   } = useLibrary();
 
   const [activeTab, setActiveTab] = useState<
-    'rooms' | 'seats' | 'users' | 'notices' | 'backup' | 'attendance' | 'settings'
+    'rooms' | 'seats' | 'users' | 'guidelines' | 'wifi' | 'notices' | 'backup' | 'attendance' | 'settings'
   >('rooms');
 
   // Admin Login State for unauthenticated state
@@ -133,10 +144,77 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [customSeatNumber, setCustomSeatNumber] = useState('');
   const [customSeatFemale, setCustomSeatFemale] = useState(false);
 
+  // Guidelines / Code of Conduct Form State
+  const [isAddingRule, setIsAddingRule] = useState(false);
+  const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
+  const [ruleTitle, setRuleTitle] = useState('');
+  const [ruleBengaliTitle, setRuleBengaliTitle] = useState('');
+  const [ruleDescription, setRuleDescription] = useState('');
+  const [ruleBengaliDesc, setRuleBengaliDesc] = useState('');
+  const [ruleCategory, setRuleCategory] = useState<LibraryRule['category']>('general');
+  const [ruleIcon, setRuleIcon] = useState('📌');
+  const [ruleBranchTarget, setRuleBranchTarget] = useState<'all' | BranchId>('all');
+  const [ruleOrder, setRuleOrder] = useState<number>(1);
+
+  // Wi-Fi & Facilities Form State
+  const currentBranchWifi = wifiFacilities?.[currentBranchId] || {
+    branchId: currentBranchId,
+    ssid: currentBranchId === 'science_library' ? 'SCIENCE_LIB_5G_FAST' : 'CENTRAL_LIB_5G_PLUS',
+    password: 'study@2026#pass',
+    speed: '100 Mbps Dedicated Fiber',
+    notes: 'Optimized for online video lectures and research. High-volume torrents and unapproved downloads are restricted.',
+    amenities: [
+      'Individual desk LED lamps and power sockets',
+      'Filtered hot, cold, and ambient drinking water',
+      'Quiet prayer room with ablution facility',
+      'Coffee and tea refreshment lounge',
+      '24/7 IPS and generator power backup',
+    ],
+    helpdeskPhone: branchConfig.phone || '01581624202',
+  };
+
+  const [wifiSsid, setWifiSsid] = useState(currentBranchWifi.ssid);
+  const [wifiPassword, setWifiPassword] = useState(currentBranchWifi.password);
+  const [wifiSpeed, setWifiSpeed] = useState(currentBranchWifi.speed || '100 Mbps Dedicated Fiber');
+  const [wifiNotes, setWifiNotes] = useState(currentBranchWifi.notes);
+  const [wifiHelpdesk, setWifiHelpdesk] = useState(currentBranchWifi.helpdeskPhone || branchConfig.phone);
+  const [wifiAmenitiesList, setWifiAmenitiesList] = useState<string[]>(currentBranchWifi.amenities || []);
+  const [newAmenityInput, setNewAmenityInput] = useState('');
+  const [wifiSavedSuccess, setWifiSavedSuccess] = useState(false);
+
+  // Synchronize Wi-Fi inputs when branch changes
+  useEffect(() => {
+    const config = wifiFacilities?.[currentBranchId] || {
+      branchId: currentBranchId,
+      ssid: currentBranchId === 'science_library' ? 'SCIENCE_LIB_5G_FAST' : 'CENTRAL_LIB_5G_PLUS',
+      password: 'study@2026#pass',
+      speed: '100 Mbps Dedicated Fiber',
+      notes: 'Optimized for online video lectures and research.',
+      amenities: [
+        'Individual desk LED lamps and power sockets',
+        'Filtered hot, cold, and ambient drinking water',
+        'Quiet prayer room with ablution facility',
+        'Coffee and tea refreshment lounge',
+        '24/7 IPS and generator power backup',
+      ],
+      helpdeskPhone: branchConfig.phone || '01581624202',
+    };
+    setWifiSsid(config.ssid);
+    setWifiPassword(config.password);
+    setWifiSpeed(config.speed || '100 Mbps Dedicated Fiber');
+    setWifiNotes(config.notes);
+    setWifiHelpdesk(config.helpdeskPhone || branchConfig.phone);
+    setWifiAmenitiesList(config.amenities || []);
+    setWifiSavedSuccess(false);
+  }, [currentBranchId, wifiFacilities, branchConfig.phone]);
+
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
   const [noticeContent, setNoticeContent] = useState('');
   const [noticeType, setNoticeType] = useState<LibraryNotice['type']>('urgent');
+  const [noticePriority, setNoticePriority] = useState<LibraryNotice['priority']>('urgent');
+  const [noticeTargetBranch, setNoticeTargetBranch] = useState<'all' | BranchId>('all');
+  const [editingNoticeId, setEditingNoticeId] = useState<string | null>(null);
 
   // Backup & Diagnostic state
   const [syncStatusMsg, setSyncStatusMsg] = useState<string | null>(null);
@@ -303,22 +381,152 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setCustomSeatFemale(false);
   };
 
-  // Handle Post Notice
+  // Handle Add/Edit Rule Submit
+  const handleSaveRule = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!ruleTitle.trim() || !ruleDescription.trim()) return;
+
+    if (editingRuleId) {
+      updateRule(editingRuleId, {
+        title: ruleTitle.trim(),
+        bengaliTitle: ruleBengaliTitle.trim() || ruleTitle.trim(),
+        description: ruleDescription.trim(),
+        bengaliDescription: ruleBengaliDesc.trim() || ruleDescription.trim(),
+        category: ruleCategory,
+        icon: ruleIcon || '📌',
+        branchId: ruleBranchTarget,
+        order: Number(ruleOrder) || 1,
+      });
+      setEditingRuleId(null);
+    } else {
+      addRule({
+        title: ruleTitle.trim(),
+        bengaliTitle: ruleBengaliTitle.trim() || ruleTitle.trim(),
+        description: ruleDescription.trim(),
+        bengaliDescription: ruleBengaliDesc.trim() || ruleDescription.trim(),
+        category: ruleCategory,
+        icon: ruleIcon || '📌',
+        branchId: ruleBranchTarget,
+        order: Number(ruleOrder) || rules.length + 1,
+      });
+    }
+
+    setRuleTitle('');
+    setRuleBengaliTitle('');
+    setRuleDescription('');
+    setRuleBengaliDesc('');
+    setRuleCategory('general');
+    setRuleIcon('📌');
+    setRuleBranchTarget('all');
+    setRuleOrder(1);
+    setIsAddingRule(false);
+  };
+
+  const handleStartEditRule = (rule: LibraryRule) => {
+    setEditingRuleId(rule.id);
+    setRuleTitle(rule.title);
+    setRuleBengaliTitle(rule.bengaliTitle || '');
+    setRuleDescription(rule.description);
+    setRuleBengaliDesc(rule.bengaliDescription || '');
+    setRuleCategory(rule.category || 'general');
+    setRuleIcon(rule.icon || '📌');
+    setRuleBranchTarget(rule.branchId || 'all');
+    setRuleOrder(rule.order || 1);
+    setIsAddingRule(true);
+  };
+
+  const handleCancelRuleEdit = () => {
+    setEditingRuleId(null);
+    setRuleTitle('');
+    setRuleBengaliTitle('');
+    setRuleDescription('');
+    setRuleBengaliDesc('');
+    setRuleCategory('general');
+    setRuleIcon('📌');
+    setRuleBranchTarget('all');
+    setRuleOrder(1);
+    setIsAddingRule(false);
+  };
+
+  // Handle Save Wi-Fi & Amenities Config
+  const handleSaveWifiConfig = (e: React.FormEvent) => {
+    e.preventDefault();
+    updateWifiFacility(currentBranchId, {
+      branchId: currentBranchId,
+      ssid: wifiSsid.trim(),
+      password: wifiPassword.trim(),
+      speed: wifiSpeed.trim() || '100 Mbps Dedicated Fiber',
+      notes: wifiNotes.trim(),
+      amenities: wifiAmenitiesList.filter((a) => a.trim().length > 0),
+      helpdeskPhone: wifiHelpdesk.trim() || branchConfig.phone,
+    });
+    setWifiSavedSuccess(true);
+    setTimeout(() => setWifiSavedSuccess(false), 4000);
+  };
+
+  const handleAddAmenityItem = () => {
+    if (!newAmenityInput.trim()) return;
+    setWifiAmenitiesList([...wifiAmenitiesList, newAmenityInput.trim()]);
+    setNewAmenityInput('');
+  };
+
+  const handleRemoveAmenityItem = (indexToRemove: number) => {
+    setWifiAmenitiesList(wifiAmenitiesList.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // Handle Post / Edit Notice
   const handlePostNotice = (e: React.FormEvent) => {
     e.preventDefault();
     if (!noticeTitle.trim() || !noticeContent.trim()) return;
 
-    addNotice({
-      title: noticeTitle.trim(),
-      content: noticeContent.trim(),
-      type: noticeType,
-      branchId: currentBranchId,
-      active: true,
-      postedAt: new Date().toISOString(),
-    });
+    if (editingNoticeId) {
+      updateNotice(editingNoticeId, {
+        title: noticeTitle.trim(),
+        content: noticeContent.trim(),
+        type: noticeType,
+        priority: noticePriority,
+        targetBranch: noticeTargetBranch,
+        branchId: noticeTargetBranch,
+        active: true,
+      });
+      setEditingNoticeId(null);
+    } else {
+      addNotice({
+        title: noticeTitle.trim(),
+        content: noticeContent.trim(),
+        type: noticeType,
+        priority: noticePriority,
+        targetBranch: noticeTargetBranch,
+        branchId: noticeTargetBranch,
+        active: true,
+        postedAt: new Date().toISOString(),
+        author: adminUser?.name || 'Library Admin',
+      });
+    }
 
     setNoticeTitle('');
     setNoticeContent('');
+    setNoticeType('urgent');
+    setNoticePriority('urgent');
+    setNoticeTargetBranch('all');
+  };
+
+  const handleStartEditNotice = (n: LibraryNotice) => {
+    setEditingNoticeId(n.id);
+    setNoticeTitle(n.title);
+    setNoticeContent(n.content);
+    setNoticeType(n.type || 'urgent');
+    setNoticePriority(n.priority || (n.type === 'urgent' ? 'urgent' : 'info'));
+    setNoticeTargetBranch(n.targetBranch || n.branchId || 'all');
+  };
+
+  const handleCancelNoticeEdit = () => {
+    setEditingNoticeId(null);
+    setNoticeTitle('');
+    setNoticeContent('');
+    setNoticeType('urgent');
+    setNoticePriority('urgent');
+    setNoticeTargetBranch('all');
   };
 
   // Handle Cloud Sync Manual
@@ -777,7 +985,33 @@ export const AdminPage: React.FC<AdminPageProps> = ({
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Student Registry & PINs ({registeredStudents.length})</span>
+            <span>Student Registry ({registeredStudents.length})</span>
+          </button>
+
+          <button
+            id="tab-admin-guidelines"
+            onClick={() => setActiveTab('guidelines')}
+            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'guidelines'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <BookOpen className="w-4 h-4" />
+            <span>Guidelines & Code of Conduct ({rules.length})</span>
+          </button>
+
+          <button
+            id="tab-admin-wifi"
+            onClick={() => setActiveTab('wifi')}
+            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+              activeTab === 'wifi'
+                ? 'bg-blue-600 text-white shadow-xs'
+                : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
+            }`}
+          >
+            <Wifi className="w-4 h-4" />
+            <span>Wi-Fi & Amenities</span>
           </button>
 
           <button
@@ -1573,19 +1807,490 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           )}
 
           {/* ================================================================= */}
-          {/* TAB 4: NOTICES & ANNOUNCEMENTS */}
+          {/* TAB: GUIDELINES & CODE OF CONDUCT */}
+          {/* ================================================================= */}
+          {activeTab === 'guidelines' && (
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <BookOpen className="w-5 h-5 text-blue-600" />
+                    <span>Guidelines & Code of Conduct Management</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Create, edit, and organize library discipline rules and conduct policies visible to all students.
+                  </p>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (isAddingRule && !editingRuleId) {
+                      setIsAddingRule(false);
+                    } else {
+                      handleCancelRuleEdit();
+                      setIsAddingRule(true);
+                    }
+                  }}
+                  className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold shadow-xs cursor-pointer self-start sm:self-auto transition-all"
+                >
+                  <Plus className="w-4 h-4" />
+                  <span>{isAddingRule ? 'Close Form' : 'Add New Guideline'}</span>
+                </button>
+              </div>
+
+              {/* Add / Edit Rule Form */}
+              {isAddingRule && (
+                <form onSubmit={handleSaveRule} className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h4 className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>{editingRuleId ? 'Edit Guideline / Rule' : 'Create New Library Rule'}</span>
+                    </h4>
+                    {editingRuleId && (
+                      <button
+                        type="button"
+                        onClick={handleCancelRuleEdit}
+                        className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                      >
+                        Cancel Editing
+                      </button>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div className="sm:col-span-2">
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Rule Title (English) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. Absolute Silence & Phone Etiquette"
+                        value={ruleTitle}
+                        onChange={(e) => setRuleTitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Rule Title (বাংলা)
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="যেমন: পূর্ণ নীরবতা ও মোবাইল শিষ্টাচার"
+                        value={ruleBengaliTitle}
+                        onChange={(e) => setRuleBengaliTitle(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Detailed Description (English) *
+                      </label>
+                      <textarea
+                        rows={3}
+                        required
+                        placeholder="Mobile phones must strictly be set to silent or vibration mode inside study chambers..."
+                        value={ruleDescription}
+                        onChange={(e) => setRuleDescription(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">
+                        Detailed Description (বাংলা)
+                      </label>
+                      <textarea
+                        rows={3}
+                        placeholder="স্টাডি রুমের ভেতর মোবাইল ফোন সম্পূর্ণ সাইলেন্ট বা ভাইব্রেশন মোডে রাখতে হবে..."
+                        value={ruleBengaliDesc}
+                        onChange={(e) => setRuleBengaliDesc(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+                      <select
+                        value={ruleCategory}
+                        onChange={(e) => setRuleCategory(e.target.value as LibraryRule['category'])}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="silence">🔇 Silence / Noise</option>
+                        <option value="away">⏳ Break & Away Policy</option>
+                        <option value="female">🌸 Female Zone</option>
+                        <option value="cleanliness">🧹 Cleanliness & Safety</option>
+                        <option value="general">📌 General Guideline</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Icon / Emoji</label>
+                      <select
+                        value={ruleIcon}
+                        onChange={(e) => setRuleIcon(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                      >
+                        <option value="🔇">🔇 Silence (Mute)</option>
+                        <option value="⏳">⏳ Timer / Clock</option>
+                        <option value="🌸">🌸 Flower / Female</option>
+                        <option value="🔒">🔒 Lock / Security</option>
+                        <option value="📌">📌 Pin / Important</option>
+                        <option value="💡">💡 Lamp / Study</option>
+                        <option value="☕">☕ Coffee / Refresh</option>
+                        <option value="⚡">⚡ Power / Backup</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Target Branch</label>
+                      <select
+                        value={ruleBranchTarget}
+                        onChange={(e) => setRuleBranchTarget(e.target.value as 'all' | BranchId)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="all">🌐 All Branches</option>
+                        <option value="science_library">🔬 Science Library Only</option>
+                        <option value="central_library">🏛️ Central Library Only</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Display Serial Order</label>
+                      <input
+                        type="number"
+                        min={1}
+                        value={ruleOrder}
+                        onChange={(e) => setRuleOrder(Number(e.target.value))}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500 font-mono"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={handleCancelRuleEdit}
+                      className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs transition-colors cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer transition-colors"
+                    >
+                      {editingRuleId ? 'Update Guideline' : 'Save Guideline'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Guidelines List */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <h4 className="text-sm font-bold text-slate-900">
+                    Active Guidelines & Code of Conduct ({rules.length})
+                  </h4>
+                  <span className="text-xs text-slate-400">
+                    Changes reflect immediately in the public Guidelines Modal.
+                  </span>
+                </div>
+
+                {rules.length > 0 ? (
+                  <div className="grid grid-cols-1 gap-2.5">
+                    {rules
+                      .slice()
+                      .sort((a, b) => (a.order || 99) - (b.order || 99))
+                      .map((rule, idx) => (
+                        <div
+                          key={rule.id}
+                          className="p-4 rounded-2xl bg-white border border-slate-200 hover:border-slate-300 transition-all flex flex-col sm:flex-row sm:items-start justify-between gap-3 shadow-xs"
+                        >
+                          <div className="space-y-1.5 flex-1">
+                            <div className="flex flex-wrap items-center gap-2">
+                              <span className="text-lg">{rule.icon || '📌'}</span>
+                              <span className="font-bold text-slate-900 text-sm">
+                                {idx + 1}. {rule.title}
+                              </span>
+                              {rule.bengaliTitle && (
+                                <span className="text-xs text-slate-500 font-medium">
+                                  ({rule.bengaliTitle})
+                                </span>
+                              )}
+                              {rule.category && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
+                                  {rule.category}
+                                </span>
+                              )}
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200">
+                                {rule.branchId === 'all' || !rule.branchId
+                                  ? '🌐 All Branches'
+                                  : rule.branchId === 'science_library'
+                                  ? '🔬 Science Branch'
+                                  : '🏛️ Central Branch'}
+                              </span>
+                            </div>
+
+                            <p className="text-xs text-slate-600 leading-relaxed pl-7">
+                              {rule.description}
+                            </p>
+
+                            {rule.bengaliDescription && (
+                              <p className="text-xs text-slate-500 leading-relaxed pl-7 italic">
+                                {rule.bengaliDescription}
+                              </p>
+                            )}
+                          </div>
+
+                          <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditRule(rule)}
+                              className="p-2 rounded-xl text-blue-600 hover:bg-blue-50 transition-colors cursor-pointer"
+                              title="Edit Guideline"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm(`Delete rule "${rule.title}"?`)) {
+                                  deleteRule(rule.id);
+                                }
+                              }}
+                              className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                              title="Delete Guideline"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                  </div>
+                ) : (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-xs">
+                    No guidelines created yet. Click "Add New Guideline" to create center rules.
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB: WI-FI & CENTER FACILITY AMENITIES */}
+          {/* ================================================================= */}
+          {activeTab === 'wifi' && (
+            <div className="space-y-5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
+                    <Wifi className="w-5 h-5 text-blue-600" />
+                    <span>Wi-Fi Network & Center Amenities ({branchConfig.name})</span>
+                  </h3>
+                  <p className="text-xs text-slate-500">
+                    Configure high-speed optical fiber Wi-Fi credentials, bandwidth notes, and study center amenities.
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <span className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
+                    Active Branch: {branchConfig.name}
+                  </span>
+                </div>
+              </div>
+
+              <form onSubmit={handleSaveWifiConfig} className="bg-slate-50 rounded-2xl p-4 sm:p-6 border border-slate-200 space-y-5">
+                <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
+                  <span>Wi-Fi Network Credentials & Bandwidth</span>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Wi-Fi Network Name (SSID) *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={wifiSsid}
+                      onChange={(e) => setWifiSsid(e.target.value)}
+                      placeholder="e.g. SCIENCE_LIB_5G_FAST"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Wi-Fi Password *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      value={wifiPassword}
+                      onChange={(e) => setWifiPassword(e.target.value)}
+                      placeholder="e.g. study@2026#pass"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-emerald-700 font-mono font-semibold text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Dedicated Speed / Bandwidth
+                    </label>
+                    <input
+                      type="text"
+                      value={wifiSpeed}
+                      onChange={(e) => setWifiSpeed(e.target.value)}
+                      placeholder="e.g. 100 Mbps Dedicated Fiber"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Wi-Fi Usage Policy / Note
+                    </label>
+                    <textarea
+                      rows={2}
+                      value={wifiNotes}
+                      onChange={(e) => setWifiNotes(e.target.value)}
+                      placeholder="Optimized for online video lectures and research. High-volume torrents restricted."
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Helpdesk / Network Support Phone
+                    </label>
+                    <input
+                      type="text"
+                      value={wifiHelpdesk}
+                      onChange={(e) => setWifiHelpdesk(e.target.value)}
+                      placeholder="e.g. 01581624202"
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+                </div>
+
+                {/* Center Amenities List Manager */}
+                <div className="space-y-3 pt-3 border-t border-slate-200">
+                  <div className="flex items-center justify-between">
+                    <label className="block text-xs font-bold text-slate-900">
+                      Center Facility Amenities (Visible to Students in Modal)
+                    </label>
+                    <span className="text-xs text-slate-400">
+                      {wifiAmenitiesList.length} items configured
+                    </span>
+                  </div>
+
+                  {/* Add New Amenity Item Input */}
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="text"
+                      placeholder="e.g. Individual desk LED lamps and power sockets"
+                      value={newAmenityInput}
+                      onChange={(e) => setNewAmenityInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleAddAmenityItem();
+                        }
+                      }}
+                      className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                    <button
+                      type="button"
+                      onClick={handleAddAmenityItem}
+                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                    >
+                      Add Item
+                    </button>
+                  </div>
+
+                  {/* List of current amenities */}
+                  <div className="space-y-2">
+                    {wifiAmenitiesList.map((amenity, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white border border-slate-200 text-xs"
+                      >
+                        <div className="flex items-center gap-2 text-slate-700 flex-1">
+                          <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
+                          <span>{amenity}</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveAmenityItem(idx)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 transition-colors cursor-pointer"
+                          title="Remove item"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
+                  {wifiSavedSuccess ? (
+                    <span className="text-emerald-700 text-xs font-semibold flex items-center gap-1.5">
+                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                      Wi-Fi & Facility settings saved and synchronized with Cloud!
+                    </span>
+                  ) : (
+                    <span className="text-xs text-slate-400">
+                      Settings apply immediately for {branchConfig.name}.
+                    </span>
+                  )}
+
+                  <button
+                    type="submit"
+                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
+                  >
+                    Save Wi-Fi & Amenities
+                  </button>
+                </div>
+              </form>
+            </div>
+          )}
+
+          {/* ================================================================= */}
+          {/* TAB: NOTICES & ANNOUNCEMENTS */}
           {/* ================================================================= */}
           {activeTab === 'notices' && (
             <div className="space-y-4">
               <form onSubmit={handlePostNotice} className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-3.5">
-                <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
-                  <Bell className="w-4 h-4 text-amber-600" />
-                  <span>Publish Notice / Urgent Announcement:</span>
+                <div className="flex items-center justify-between">
+                  <div className="font-bold text-slate-800 text-sm flex items-center gap-1.5">
+                    <Bell className="w-4 h-4 text-amber-600" />
+                    <span>{editingNoticeId ? 'Edit Active Announcement:' : 'Publish Notice / Urgent Announcement:'}</span>
+                  </div>
+                  {editingNoticeId && (
+                    <button
+                      type="button"
+                      onClick={handleCancelNoticeEdit}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
+                    >
+                      Cancel Editing
+                    </button>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                   <div className="sm:col-span-2">
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Notice Title</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Notice Title *</label>
                     <input
                       type="text"
                       required
@@ -1597,68 +2302,138 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   </div>
 
                   <div>
-                    <label className="block text-xs font-semibold text-slate-600 mb-1">Category</label>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Category & Urgency</label>
                     <select
                       value={noticeType}
-                      onChange={(e) => setNoticeType(e.target.value as LibraryNotice['type'])}
+                      onChange={(e) => {
+                        const val = e.target.value as LibraryNotice['type'];
+                        setNoticeType(val);
+                        setNoticePriority(val === 'urgent' ? 'urgent' : 'info');
+                      }}
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                     >
-                      <option value="urgent">🔴 Urgent</option>
+                      <option value="urgent">🔴 Urgent Announcement</option>
                       <option value="event">🎉 Special Event</option>
-                      <option value="maintenance">🔧 Maintenance</option>
-                      <option value="announcement">📢 General Announcement</option>
+                      <option value="maintenance">🔧 Maintenance & Upgrades</option>
+                      <option value="announcement">📢 General Bulletin</option>
                     </select>
                   </div>
                 </div>
 
-                <div>
-                  <label className="block text-xs font-semibold text-slate-600 mb-1">Detailed Message Content</label>
-                  <textarea
-                    rows={3}
-                    required
-                    placeholder="Write detailed announcement here..."
-                    value={noticeContent}
-                    onChange={(e) => setNoticeContent(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                  />
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">Detailed Message Content *</label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Write detailed announcement here..."
+                      value={noticeContent}
+                      onChange={(e) => setNoticeContent(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="space-y-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Target Branch</label>
+                      <select
+                        value={noticeTargetBranch}
+                        onChange={(e) => setNoticeTargetBranch(e.target.value as 'all' | BranchId)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="all">🌐 All Branches</option>
+                        <option value="science_library">🔬 Science Library Only</option>
+                        <option value="central_library">🏛️ Central Library Only</option>
+                      </select>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-600 mb-1">Priority Style</label>
+                      <select
+                        value={noticePriority}
+                        onChange={(e) => setNoticePriority(e.target.value as LibraryNotice['priority'])}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="urgent">🔴 Urgent Banner</option>
+                        <option value="info">🔵 Informational Notice</option>
+                        <option value="guideline">🟢 Guideline Tip</option>
+                      </select>
+                    </div>
+                  </div>
                 </div>
 
-                <div className="flex justify-end">
+                <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                  {editingNoticeId && (
+                    <button
+                      type="button"
+                      onClick={handleCancelNoticeEdit}
+                      className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                  )}
                   <button
                     type="submit"
-                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer"
+                    className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer transition-colors"
                   >
-                    Publish Notice
+                    {editingNoticeId ? 'Update Notice' : 'Publish Notice'}
                   </button>
                 </div>
               </form>
 
               <div className="space-y-2.5">
                 <h4 className="text-sm font-bold text-slate-900">Active Notice Board ({notices.length})</h4>
-                {notices.map((n) => (
-                  <div key={n.id} className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start justify-between gap-3 shadow-xs">
-                    <div className="space-y-1">
-                      <div className="flex items-center gap-2">
-                        <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
-                          n.type === 'urgent' ? 'bg-rose-100 text-rose-700' : 'bg-blue-100 text-blue-700'
-                        }`}>
-                          {n.type.toUpperCase()}
-                        </span>
-                        <span className="font-bold text-slate-900 text-xs sm:text-sm">{n.title}</span>
+                {notices.length > 0 ? (
+                  notices.map((n) => (
+                    <div key={n.id} className="p-4 rounded-2xl bg-white border border-slate-200 flex items-start justify-between gap-3 shadow-xs">
+                      <div className="space-y-1 flex-1">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <span className={`px-2 py-0.5 rounded-md text-[11px] font-bold ${
+                            n.priority === 'urgent' || n.type === 'urgent'
+                              ? 'bg-rose-100 text-rose-700'
+                              : n.priority === 'info'
+                              ? 'bg-blue-100 text-blue-700'
+                              : 'bg-emerald-100 text-emerald-700'
+                          }`}>
+                            {(n.type || n.priority || 'ANNOUNCEMENT').toUpperCase()}
+                          </span>
+                          <span className="font-bold text-slate-900 text-xs sm:text-sm">{n.title}</span>
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-slate-100 text-slate-600">
+                            {n.targetBranch === 'all' || !n.targetBranch
+                              ? '🌐 All Branches'
+                              : n.targetBranch === 'science_library'
+                              ? '🔬 Science Branch'
+                              : '🏛️ Central Branch'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-600 leading-relaxed">{n.content}</p>
                       </div>
-                      <p className="text-xs text-slate-600">{n.content}</p>
-                    </div>
 
-                    <button
-                      type="button"
-                      onClick={() => deleteNotice(n.id)}
-                      className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
-                      title="Delete Notice"
-                    >
-                      <Trash2 className="w-4 h-4" />
-                    </button>
+                      <div className="flex items-center gap-1 shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => handleStartEditNotice(n)}
+                          className="p-1.5 rounded-lg text-blue-600 hover:bg-blue-50 cursor-pointer"
+                          title="Edit Notice"
+                        >
+                          <Edit2 className="w-4 h-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => deleteNotice(n.id)}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
+                          title="Delete Notice"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))
+                ) : (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-xs">
+                    No active notices published.
                   </div>
-                ))}
+                )}
               </div>
             </div>
           )}

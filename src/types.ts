@@ -64,6 +64,37 @@ export interface Seat {
   isSpecialReserved?: boolean;
   passCode?: string;
   maintenanceNote?: string;
+  // Secondary booking during temporary break
+  isSecondaryBooked?: boolean;
+  secondaryOccupantName?: string;
+  secondaryOccupantPhone?: string;
+  secondaryOccupantStudentId?: string;
+  secondaryOccupantGender?: Gender;
+  secondaryBookedAt?: number;
+  secondaryExpectedLeaveAt?: number;
+  secondaryPassCode?: string;
+}
+
+export interface LibraryRule {
+  id: string;
+  title: string;
+  bengaliTitle?: string;
+  description: string;
+  bengaliDescription?: string;
+  icon?: string; // e.g. "volume-x", "clock", "heart", "lock", "shield"
+  category?: 'silence' | 'away' | 'female' | 'cleanliness' | 'general';
+  branchId?: 'all' | BranchId;
+  order?: number;
+}
+
+export interface WifiFacilityConfig {
+  branchId: BranchId;
+  ssid: string;
+  password: string;
+  speed: string;
+  notes: string;
+  amenities: string[];
+  helpdeskPhone: string;
 }
 
 export interface StudentProfile {

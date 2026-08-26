@@ -11,11 +11,15 @@ import {
   LibraryStats,
   Gender,
   AwayReason,
+  LibraryRule,
+  WifiFacilityConfig,
 } from '../types';
 import {
   BRANCHES_DATA,
   INITIAL_ROOMS,
   INITIAL_NOTICES,
+  INITIAL_RULES,
+  INITIAL_WIFI_CONFIGS,
   DEMO_STUDENTS,
   generateInitialSeats,
 } from '../data/initialData';
@@ -94,7 +98,28 @@ interface LibraryContextType {
   leaveSeatTemporarily: (seatId: string, durationMinutes: number, reason: AwayReason, customReason?: string) => void;
   returnFromAway: (seatId: string) => void;
   releaseSeat: (seatId: string) => void;
+  secondaryBookSeat: (
+    seatId: string,
+    studentDetails: {
+      name: string;
+      phone: string;
+      studentId?: string;
+      gender: Gender;
+    }
+  ) => { success: boolean; message: string; passCode?: string };
+  releaseSecondaryBooking: (seatId: string) => void;
   
+  // Guidelines & Code of Conduct
+  rules: LibraryRule[];
+  addRule: (rule: Omit<LibraryRule, 'id'>) => void;
+  updateRule: (ruleId: string, updates: Partial<LibraryRule>) => void;
+  deleteRule: (ruleId: string) => void;
+
+  // Wi-Fi & Facility Amenities
+  wifiFacilities: Record<string, WifiFacilityConfig>;
+  currentBranchWifi: WifiFacilityConfig;
+  updateWifiFacility: (branchId: BranchId, updates: Partial<WifiFacilityConfig>) => void;
+
   // Admin actions
   adminForceReleaseSeat: (seatId: string) => void;
   adminToggleMaintenance: (seatId: string, note?: string) => void;
@@ -140,6 +165,7 @@ interface LibraryContextType {
   // Notices
   notices: LibraryNotice[];
   addNotice: (notice: Omit<LibraryNotice, 'id'>) => void;
+  updateNotice: (noticeId: string, updates: Partial<LibraryNotice>) => void;
   deleteNotice: (noticeId: string) => void;
 
   // Attendance Records
@@ -171,6 +197,8 @@ const STORAGE_KEYS = {
   NOTICES: 'smart_library_notices_v2',
   ATTENDANCE: 'smart_library_attendance_v2',
   LAST_RESET_DATE: 'smart_library_last_reset_date_v2',
+  RULES: 'smart_library_rules_v2',
+  WIFI_FACILITIES: 'smart_library_wifi_facilities_v2',
 };
 
 export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -518,11 +546,52 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(attendanceRecords));
   }, [attendanceRecords]);
 
+  // 8b. Guidelines & Code of Conduct Rules
+  const [rules, setRules] = useState<LibraryRule[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.RULES);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved rules', e);
+      }
+    }
+    return INITIAL_RULES;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(rules));
+  }, [rules]);
+
+  // 8c. Wi-Fi & Facility Amenities
+  const [wifiFacilities, setWifiFacilities] = useState<Record<string, WifiFacilityConfig>>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.WIFI_FACILITIES);
+    if (saved) {
+      try {
+        return JSON.parse(saved);
+      } catch (e) {
+        console.error('Failed to parse saved wifi facilities', e);
+      }
+    }
+    return INITIAL_WIFI_CONFIGS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.WIFI_FACILITIES, JSON.stringify(wifiFacilities));
+  }, [wifiFacilities]);
+
   // Cloud Sync & Backup State
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<string | null>(null);
 
   // Cross-Tab & Supabase Realtime Broadcast
-  const broadcastSync = useCallback((payload: { rooms?: Room[]; seats?: Seat[]; notices?: LibraryNotice[]; branchesConfig?: unknown }) => {
+  const broadcastSync = useCallback((payload: {
+    rooms?: Room[];
+    seats?: Seat[];
+    notices?: LibraryNotice[];
+    branchesConfig?: unknown;
+    rules?: LibraryRule[];
+    wifiFacilities?: unknown;
+  }) => {
     // 1. Cross-tab within same browser
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
       try {
@@ -548,6 +617,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (Array.isArray(p.rooms)) setRooms(p.rooms);
         if (Array.isArray(p.seats)) setSeats(p.seats);
         if (Array.isArray(p.notices)) setNotices(p.notices);
+        if (Array.isArray(p.rules)) setRules(p.rules);
+        if (p.wifiFacilities && typeof p.wifiFacilities === 'object') setWifiFacilities(p.wifiFacilities as Record<string, WifiFacilityConfig>);
       }
     };
 
@@ -568,6 +639,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (Array.isArray(payload.notices) && payload.notices.length > 0) {
           setNotices(payload.notices as LibraryNotice[]);
+        }
+        if (Array.isArray(payload.rules) && payload.rules.length > 0) {
+          setRules(payload.rules as LibraryRule[]);
+        }
+        if (payload.wifiFacilities && typeof payload.wifiFacilities === 'object') {
+          setWifiFacilities(payload.wifiFacilities as Record<string, WifiFacilityConfig>);
         }
         const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setCloudLastSyncedAt(timeStr);
@@ -595,6 +672,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (Array.isArray(cloudState.notices) && cloudState.notices.length > 0) {
           setNotices(cloudState.notices as LibraryNotice[]);
         }
+        if (Array.isArray(cloudState.rules) && cloudState.rules.length > 0) {
+          setRules(cloudState.rules as LibraryRule[]);
+        }
+        if (cloudState.wifiFacilities && typeof cloudState.wifiFacilities === 'object') {
+          setWifiFacilities(cloudState.wifiFacilities as Record<string, WifiFacilityConfig>);
+        }
         setCloudLastSyncedAt(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
       isCloudLoadedRef.current = true;
@@ -609,12 +692,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (!isCloudLoadedRef.current) return;
 
     const timer = setTimeout(() => {
-      broadcastSync({ rooms, seats, notices, branchesConfig: allBranches });
-      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches }).catch(() => {});
+      broadcastSync({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities });
+      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
     }, 300);
 
     return () => clearTimeout(timer);
-  }, [rooms, seats, notices, allBranches, broadcastSync]);
+  }, [rooms, seats, notices, allBranches, rules, wifiFacilities, broadcastSync]);
 
   // 9. Live Digital Clock (1s tick)
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -800,6 +883,77 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             awayDurationMinutes: undefined,
             awayReason: undefined,
             awayCustomReason: undefined,
+            isSecondaryBooked: false,
+            secondaryOccupantName: undefined,
+            secondaryOccupantPhone: undefined,
+            secondaryOccupantStudentId: undefined,
+            secondaryOccupantGender: undefined,
+            secondaryBookedAt: undefined,
+            secondaryExpectedLeaveAt: undefined,
+            secondaryPassCode: undefined,
+          };
+        }
+        return s;
+      })
+    );
+  }, []);
+
+  // Secondary Book Seat during Break (Orange Seat turns Blue)
+  const secondaryBookSeat = useCallback(
+    (
+      seatId: string,
+      studentDetails: {
+        name: string;
+        phone: string;
+        studentId?: string;
+        gender: Gender;
+      }
+    ) => {
+      const now = Date.now();
+      const passCode = `SEC-${Math.floor(10000 + Math.random() * 90000)}`;
+
+      setSeats((prev) =>
+        prev.map((s) => {
+          if (s.id === seatId) {
+            return {
+              ...s,
+              isSecondaryBooked: true,
+              secondaryOccupantName: studentDetails.name,
+              secondaryOccupantPhone: studentDetails.phone,
+              secondaryOccupantStudentId: studentDetails.studentId || 'N/A',
+              secondaryOccupantGender: studentDetails.gender,
+              secondaryBookedAt: now,
+              secondaryPassCode: passCode,
+            };
+          }
+          return s;
+        })
+      );
+
+      return {
+        success: true,
+        message: 'Secondary break booking confirmed! Seat is now marked in Blue for your temporary study session.',
+        passCode,
+      };
+    },
+    []
+  );
+
+  // Release Secondary Booking
+  const releaseSecondaryBooking = useCallback((seatId: string) => {
+    setSeats((prev) =>
+      prev.map((s) => {
+        if (s.id === seatId) {
+          return {
+            ...s,
+            isSecondaryBooked: false,
+            secondaryOccupantName: undefined,
+            secondaryOccupantPhone: undefined,
+            secondaryOccupantStudentId: undefined,
+            secondaryOccupantGender: undefined,
+            secondaryBookedAt: undefined,
+            secondaryExpectedLeaveAt: undefined,
+            secondaryPassCode: undefined,
           };
         }
         return s;
@@ -829,6 +983,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             awayReason: undefined,
             awayCustomReason: undefined,
             passCode: undefined,
+            isSecondaryBooked: false,
+            secondaryOccupantName: undefined,
+            secondaryOccupantPhone: undefined,
+            secondaryOccupantStudentId: undefined,
+            secondaryOccupantGender: undefined,
+            secondaryBookedAt: undefined,
+            secondaryExpectedLeaveAt: undefined,
+            secondaryPassCode: undefined,
           };
         }
         return s;
@@ -1284,6 +1446,74 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
   }, [rooms, notices, allBranches, broadcastSync]);
 
+  // Guidelines & Code of Conduct Rules CRUD
+  const addRule = useCallback((ruleData: Omit<LibraryRule, 'id'>) => {
+    const newRule: LibraryRule = {
+      ...ruleData,
+      id: `rule_${Date.now()}`,
+    };
+    setRules((prev) => {
+      const next = [...prev, newRule];
+      broadcastSync({ rules: next });
+      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules: next, wifiFacilities }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, notices, allBranches, wifiFacilities, broadcastSync]);
+
+  const updateRule = useCallback((ruleId: string, updates: Partial<LibraryRule>) => {
+    setRules((prev) => {
+      const next = prev.map((r) => (r.id === ruleId ? { ...r, ...updates } : r));
+      broadcastSync({ rules: next });
+      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules: next, wifiFacilities }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, notices, allBranches, wifiFacilities, broadcastSync]);
+
+  const deleteRule = useCallback((ruleId: string) => {
+    setRules((prev) => {
+      const next = prev.filter((r) => r.id !== ruleId);
+      broadcastSync({ rules: next });
+      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules: next, wifiFacilities }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, notices, allBranches, wifiFacilities, broadcastSync]);
+
+  // Wi-Fi & Facility Amenities Management
+  const updateWifiFacility = useCallback((branchId: BranchId, updates: Partial<WifiFacilityConfig>) => {
+    setWifiFacilities((prev) => {
+      const next = {
+        ...prev,
+        [branchId]: {
+          ...(prev[branchId] || INITIAL_WIFI_CONFIGS[branchId] || {
+            branchId,
+            ssid: '',
+            password: '',
+            speed: '',
+            notes: '',
+            amenities: [],
+            helpdeskPhone: '',
+          }),
+          ...updates,
+        },
+      };
+      broadcastSync({ wifiFacilities: next });
+      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities: next }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, notices, allBranches, rules, broadcastSync]);
+
+  const currentBranchWifi = useMemo(() => {
+    return wifiFacilities[currentBranchId] || INITIAL_WIFI_CONFIGS[currentBranchId] || {
+      branchId: currentBranchId,
+      ssid: 'STUDY_CENTER_5G',
+      password: 'study@2026#pass',
+      speed: '100 Mbps',
+      notes: '',
+      amenities: [],
+      helpdeskPhone: '',
+    };
+  }, [wifiFacilities, currentBranchId]);
+
   // Data Backup & Restore
   const exportFullBackupJSON = useCallback(() => {
     const backupData = {
@@ -1294,11 +1524,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       rooms,
       seats,
       notices,
+      rules,
+      wifiFacilities,
       registeredStudents,
       attendanceRecords,
     };
     return JSON.stringify(backupData, null, 2);
-  }, [allBranches, rooms, seats, notices, registeredStudents, attendanceRecords]);
+  }, [allBranches, rooms, seats, notices, rules, wifiFacilities, registeredStudents, attendanceRecords]);
 
   const importFullBackupJSON = useCallback((jsonStr: string) => {
     try {
@@ -1319,6 +1551,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setNotices(data.notices);
         localStorage.setItem(STORAGE_KEYS.NOTICES, JSON.stringify(data.notices));
       }
+      if (Array.isArray(data.rules)) {
+        setRules(data.rules);
+        localStorage.setItem(STORAGE_KEYS.RULES, JSON.stringify(data.rules));
+      }
+      if (data.wifiFacilities && typeof data.wifiFacilities === 'object') {
+        setWifiFacilities(data.wifiFacilities);
+        localStorage.setItem(STORAGE_KEYS.WIFI_FACILITIES, JSON.stringify(data.wifiFacilities));
+      }
       if (Array.isArray(data.registeredStudents)) {
         setRegisteredStudents(data.registeredStudents);
         localStorage.setItem(STORAGE_KEYS.REGISTERED_STUDENTS, JSON.stringify(data.registeredStudents));
@@ -1328,12 +1568,20 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         localStorage.setItem(STORAGE_KEYS.ATTENDANCE, JSON.stringify(data.attendanceRecords));
       }
 
-      broadcastSync({ rooms: data.rooms, seats: data.seats, notices: data.notices });
+      broadcastSync({
+        rooms: data.rooms,
+        seats: data.seats,
+        notices: data.notices,
+        rules: data.rules,
+        wifiFacilities: data.wifiFacilities,
+      });
       syncLibraryStateToCloud({
         rooms: data.rooms,
         seats: data.seats,
         notices: data.notices,
         branchesConfig: data.branchesConfig,
+        rules: data.rules,
+        wifiFacilities: data.wifiFacilities,
       }).catch(() => {});
 
       return { success: true, message: 'Entire database successfully restored!' };
@@ -1348,6 +1596,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       seats,
       notices,
       branchesConfig: allBranches,
+      rules,
+      wifiFacilities,
     });
     if (res.success) {
       const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: true });
@@ -1355,7 +1605,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return { success: true, message: `Successfully synced to cloud (${timeStr})` };
     }
     return { success: false, message: 'Cloud sync failed. However, local storage data is secure.' };
-  }, [rooms, seats, notices, allBranches]);
+  }, [rooms, seats, notices, allBranches, rules, wifiFacilities]);
 
   const runDiagnostics = useCallback(async () => {
     return await runSupabaseDiagnostics(rooms, seats);
@@ -1370,19 +1620,28 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setNotices((prev) => {
       const next = [newNotice, ...prev];
       broadcastSync({ notices: next });
-      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches }).catch(() => {});
+      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
       return next;
     });
-  }, [rooms, seats, allBranches, broadcastSync]);
+  }, [rooms, seats, allBranches, rules, wifiFacilities, broadcastSync]);
+
+  const updateNotice = useCallback((noticeId: string, updates: Partial<LibraryNotice>) => {
+    setNotices((prev) => {
+      const next = prev.map((n) => (n.id === noticeId ? { ...n, ...updates } : n));
+      broadcastSync({ notices: next });
+      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, allBranches, rules, wifiFacilities, broadcastSync]);
 
   const deleteNotice = useCallback((noticeId: string) => {
     setNotices((prev) => {
       const next = prev.filter((n) => n.id !== noticeId);
       broadcastSync({ notices: next });
-      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches }).catch(() => {});
+      syncLibraryStateToCloud({ rooms, seats, notices: next, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
       return next;
     });
-  }, [rooms, seats, allBranches, broadcastSync]);
+  }, [rooms, seats, allBranches, rules, wifiFacilities, broadcastSync]);
 
   // Daily auto reset
   const triggerDailyAutoReset = useCallback(() => {
@@ -1403,12 +1662,20 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         awayReason: undefined,
         awayCustomReason: undefined,
         passCode: undefined,
+        isSecondaryBooked: false,
+        secondaryOccupantName: undefined,
+        secondaryOccupantPhone: undefined,
+        secondaryOccupantStudentId: undefined,
+        secondaryOccupantGender: undefined,
+        secondaryBookedAt: undefined,
+        secondaryExpectedLeaveAt: undefined,
+        secondaryPassCode: undefined,
       }));
       broadcastSync({ seats: next });
-      syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches }).catch(() => {});
+      syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
       return next;
     });
-  }, [rooms, notices, allBranches, broadcastSync]);
+  }, [rooms, notices, allBranches, rules, wifiFacilities, broadcastSync]);
 
   const resetToDefaultData = useCallback(() => {
     localStorage.clear();
@@ -1417,15 +1684,25 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const initSeats = generateInitialSeats();
     setSeats(initSeats);
     setNotices(INITIAL_NOTICES);
+    setRules(INITIAL_RULES);
+    setWifiFacilities(INITIAL_WIFI_CONFIGS);
     setRegisteredStudents([]);
     setCurrentStudent(null);
     setAdminUser(null);
-    broadcastSync({ rooms: INITIAL_ROOMS, seats: initSeats, notices: INITIAL_NOTICES });
+    broadcastSync({
+      rooms: INITIAL_ROOMS,
+      seats: initSeats,
+      notices: INITIAL_NOTICES,
+      rules: INITIAL_RULES,
+      wifiFacilities: INITIAL_WIFI_CONFIGS,
+    });
     syncLibraryStateToCloud({
       rooms: INITIAL_ROOMS,
       seats: initSeats,
       notices: INITIAL_NOTICES,
       branchesConfig: BRANCHES_DATA,
+      rules: INITIAL_RULES,
+      wifiFacilities: INITIAL_WIFI_CONFIGS,
     }).catch(() => {});
   }, [broadcastSync]);
 
@@ -1498,6 +1775,17 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       leaveSeatTemporarily,
       returnFromAway,
       releaseSeat,
+      secondaryBookSeat,
+      releaseSecondaryBooking,
+
+      rules,
+      addRule,
+      updateRule,
+      deleteRule,
+
+      wifiFacilities,
+      currentBranchWifi,
+      updateWifiFacility,
 
       adminForceReleaseSeat,
       adminToggleMaintenance,
@@ -1533,6 +1821,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       notices,
       addNotice,
+      updateNotice,
       deleteNotice,
 
       attendanceRecords,
@@ -1565,6 +1854,15 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       leaveSeatTemporarily,
       returnFromAway,
       releaseSeat,
+      secondaryBookSeat,
+      releaseSecondaryBooking,
+      rules,
+      addRule,
+      updateRule,
+      deleteRule,
+      wifiFacilities,
+      currentBranchWifi,
+      updateWifiFacility,
       adminForceReleaseSeat,
       adminToggleMaintenance,
       adminManuallyAssignSeat,
@@ -1594,6 +1892,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       logoutAdmin,
       notices,
       addNotice,
+      updateNotice,
       deleteNotice,
       attendanceRecords,
       branchStats,

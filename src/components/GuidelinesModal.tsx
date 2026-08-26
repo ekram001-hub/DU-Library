@@ -22,7 +22,7 @@ interface GuidelinesModalProps {
 }
 
 export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClose }) => {
-  const { branchConfig, notices, currentBranchId } = useLibrary();
+  const { branchConfig, notices, currentBranchId, rules, wifiFacilities } = useLibrary();
   const [activeTab, setActiveTab] = useState<'rules' | 'notices' | 'wifi'>('rules');
 
   if (!isOpen) return null;
@@ -30,6 +30,24 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
   const branchNotices = notices.filter(
     (n) => n.targetBranch === 'all' || n.targetBranch === currentBranchId
   );
+
+  const branchRules = (rules || []).filter(
+    (r) => r.branchId === 'all' || r.branchId === currentBranchId
+  );
+
+  const wifiConfig = wifiFacilities?.[currentBranchId] || {
+    branchId: currentBranchId,
+    ssid: currentBranchId === 'science_library' ? 'SCIENCE_LIB_5G_FAST' : 'CENTRAL_LIB_5G_PLUS',
+    password: 'study@2026#pass',
+    notes: 'Optimized for online video lectures and research. High-volume torrents and unapproved downloads are restricted.',
+    amenities: [
+      'Individual desk LED lamps and power sockets',
+      'Filtered hot, cold, and ambient drinking water',
+      'Quiet prayer room with ablution facility',
+      'Coffee and tea refreshment lounge',
+      '24/7 IPS and generator power backup',
+    ],
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn">
@@ -103,49 +121,28 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
           {/* Tab 1: Rules & Guidelines */}
           {activeTab === 'rules' && (
             <div className="space-y-2.5">
-              {/* Rule Card 1 */}
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-                <div className="font-semibold text-slate-900 flex items-center gap-2">
-                  <VolumeX className="w-4 h-4 text-rose-500" />
-                  <span>1. Absolute Silence & Phone Etiquette</span>
+              {branchRules.length > 0 ? (
+                branchRules.map((rule, idx) => (
+                  <div key={rule.id} className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
+                    <div className="font-semibold text-slate-900 flex items-center gap-2">
+                      <span className="text-base">{rule.icon || '📌'}</span>
+                      <span>{idx + 1}. {rule.title}</span>
+                      {rule.category && (
+                        <span className="text-[10px] uppercase font-bold text-slate-400 bg-slate-200/60 px-1.5 py-0.2 rounded ml-auto">
+                          {rule.category}
+                        </span>
+                      )}
+                    </div>
+                    <p className="text-slate-600 pl-6 leading-relaxed">
+                      {rule.description}
+                    </p>
+                  </div>
+                ))
+              ) : (
+                <div className="py-6 text-center text-slate-400">
+                  No guidelines published for this branch yet.
                 </div>
-                <p className="text-slate-500 pl-6 leading-relaxed">
-                  Mobile phones must strictly be set to silent or vibration mode inside study chambers. Whispering, phone calls, or audible alarms are strictly prohibited. Use the common lounge for urgent calls.
-                </p>
-              </div>
-
-              {/* Rule Card 2 */}
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-                <div className="font-semibold text-slate-900 flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-amber-500" />
-                  <span>2. Away Timer & Seat Policy</span>
-                </div>
-                <p className="text-slate-500 pl-6 leading-relaxed">
-                  Always activate the "Away Timer" when stepping out for prayers, meals, or short breaks (15-60 mins). When you leave for the day, please click "Release Seat" to keep seats available for fellow students.
-                </p>
-              </div>
-
-              {/* Rule Card 3 */}
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-                <div className="font-semibold text-slate-900 flex items-center gap-2">
-                  <Heart className="w-4 h-4 text-pink-500" />
-                  <span>3. Female-Reserved Area</span>
-                </div>
-                <p className="text-slate-500 pl-6 leading-relaxed">
-                  Dedicated female sections are strictly reserved for female students to ensure utmost safety, privacy, and a comfortable study environment.
-                </p>
-              </div>
-
-              {/* Rule Card 4 */}
-              <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1">
-                <div className="font-semibold text-slate-900 flex items-center gap-2">
-                  <Lock className="w-4 h-4 text-blue-500" />
-                  <span>4. Personal Belongings & Cleanliness</span>
-                </div>
-                <p className="text-slate-500 pl-6 leading-relaxed">
-                  Keep your study desk neat and tidy. Food waste must be placed in designated lounge bins. The study center maintains 24/7 CCTV surveillance for security.
-                </p>
-              </div>
+              )}
             </div>
           )}
 
@@ -202,31 +199,28 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-medium">Wi-Fi Network (SSID)</span>
                     <span className="font-semibold text-slate-900 font-mono text-xs">
-                      {currentBranchId === 'science_library' ? 'SCIENCE_LIB_5G_FAST' : 'CENTRAL_LIB_5G_PLUS'}
+                      {wifiConfig.ssid}
                     </span>
                   </div>
                   <div>
                     <span className="text-slate-400 block text-[10px] uppercase font-medium">Password</span>
                     <span className="font-semibold text-emerald-600 font-mono text-xs">
-                      study@2026#pass
+                      {wifiConfig.password}
                     </span>
                   </div>
                 </div>
 
-
                 <p className="text-[11px] text-slate-500">
-                  Optimized for online video lectures and research. High-volume torrents and unapproved downloads are restricted.
+                  {wifiConfig.notes}
                 </p>
               </div>
 
               <div className="p-3 rounded-lg bg-slate-50 border border-slate-100 space-y-1.5">
                 <div className="font-semibold text-slate-800 text-xs">Center Amenities:</div>
                 <ul className="space-y-1 text-slate-600 list-disc list-inside text-xs">
-                  <li>Individual desk LED lamps and power sockets</li>
-                  <li>Filtered hot, cold, and ambient drinking water</li>
-                  <li>Quiet prayer room with ablution facility</li>
-                  <li>Coffee and tea refreshment lounge</li>
-                  <li>24/7 IPS and generator power backup</li>
+                  {wifiConfig.amenities.map((item, idx) => (
+                    <li key={idx}>{item}</li>
+                  ))}
                 </ul>
               </div>
 

@@ -169,7 +169,7 @@ export function getRealtimeChannel() {
       { event: '*', schema: 'public', table: 'system_config', filter: 'key=eq.library_live_state' },
       (payload) => {
         if (payload.new && (payload.new as { value?: unknown }).value) {
-          const val = (payload.new as { value: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown } }).value;
+          const val = (payload.new as { value: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown; rules?: unknown[]; wifiFacilities?: unknown } }).value;
           if (realtimeStateCallback) {
             realtimeStateCallback(val);
           }
@@ -345,6 +345,8 @@ export function broadcastStateViaSupabase(payload: {
   seats?: unknown[];
   notices?: unknown[];
   branchesConfig?: unknown;
+  rules?: unknown[];
+  wifiFacilities?: unknown;
 }) {
   try {
     const channel = getRealtimeChannel();
@@ -369,6 +371,8 @@ export function subscribeToSupabaseRealtime(
     seats?: unknown[];
     notices?: unknown[];
     branchesConfig?: unknown;
+    rules?: unknown[];
+    wifiFacilities?: unknown;
   }) => void
 ): () => void {
   try {
@@ -376,7 +380,7 @@ export function subscribeToSupabaseRealtime(
     const channel = getRealtimeChannel();
     if (!channel) return () => {};
 
-    const handler = (data: { payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown } }) => {
+    const handler = (data: { payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown; rules?: unknown[]; wifiFacilities?: unknown } }) => {
       if (data?.payload) {
         callback(data.payload);
       }
@@ -394,13 +398,15 @@ export function subscribeToSupabaseRealtime(
 }
 
 /**
- * Sync / Backup full library configuration (Rooms, Seats, Notices) to cloud storage
+ * Sync / Backup full library configuration (Rooms, Seats, Notices, Rules, Wifi) to cloud storage
  */
 export async function syncLibraryStateToCloud(payload: {
   rooms?: unknown[];
   seats?: unknown[];
   notices?: unknown[];
   branchesConfig?: unknown;
+  rules?: unknown[];
+  wifiFacilities?: unknown;
 }): Promise<{ success: boolean; error?: unknown }> {
   try {
     // 1. Instantly broadcast to all connected clients in real-time
@@ -430,13 +436,15 @@ export async function syncLibraryStateToCloud(payload: {
 }
 
 /**
- * Fetch library configuration (Rooms, Seats, Notices) from cloud
+ * Fetch library configuration (Rooms, Seats, Notices, Rules, Wifi) from cloud
  */
 export async function fetchLibraryStateFromCloud(): Promise<{
   rooms?: unknown[];
   seats?: unknown[];
   notices?: unknown[];
   branchesConfig?: unknown;
+  rules?: unknown[];
+  wifiFacilities?: unknown;
 } | null> {
   try {
     const client = getSupabase();

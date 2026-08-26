@@ -235,7 +235,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         <div className="bg-rose-50/90 border border-rose-200/80 rounded-xl p-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-rose-800">
             <User className="w-4 h-4 text-rose-600" />
-            <span className="text-xs font-semibold">Occupied</span>
+            <span className="text-xs font-semibold">Occupied (Red)</span>
           </div>
           <span className="text-sm font-bold text-rose-900 font-mono">
             {occupiedCount}
@@ -246,7 +246,7 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
           <div className="flex items-center gap-2 text-amber-900">
             <Coffee className="w-4 h-4 text-amber-600" />
-            <span className="text-xs font-semibold">On Break</span>
+            <span className="text-xs font-semibold">Break (Orange)</span>
           </div>
           <span className="text-sm font-bold text-amber-900 font-mono">
             {awayCount}
@@ -273,6 +273,35 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
           <span className="text-sm font-bold text-teal-950 font-mono">
             {totalCount}
           </span>
+        </div>
+      </div>
+
+      {/* Visual Status Legend */}
+      <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-700 shadow-2xs">
+        <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+          <span className="w-2 h-2 rounded-full bg-slate-900" /> Seat Status Colors:
+        </span>
+        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-white border border-slate-300 shadow-2xs inline-block" />
+            <span>Available (সাদা)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-red-600 shadow-2xs inline-block" />
+            <span className="font-semibold text-red-700">Occupied (লাল)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-orange-500 shadow-2xs inline-block" />
+            <span className="font-semibold text-orange-700">On Break (কমলা + টাইমার)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-blue-600 shadow-2xs inline-block" />
+            <span className="font-semibold text-blue-700">2nd Booking (নীল)</span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-md bg-emerald-600 shadow-2xs inline-block" />
+            <span className="font-semibold text-emerald-800">My Seat (সবুজ)</span>
+          </div>
         </div>
       </div>
 
