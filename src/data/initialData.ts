@@ -158,7 +158,8 @@ export function generateInitialSeats(): Seat[] {
     const isFemaleRoom = room.category === 'female_only';
 
     for (let i = 1; i <= room.capacity; i++) {
-      const seatNumber = `${i}`;
+      const seatNumPadded = i < 10 ? `0${i}` : `${i}`;
+      const seatNumber = `${room.seatPrefix}-${seatNumPadded}`;
       const seatId = `${room.id}_seat_${i}`;
 
       seats.push({

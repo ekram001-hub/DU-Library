@@ -201,6 +201,93 @@ const STORAGE_KEYS = {
   WIFI_FACILITIES: 'smart_library_wifi_facilities_v2',
 };
 
+/**
+ * Reconcile & Heal Seats to guarantee every room has its full configured capacity of seats
+ * and preserves live active booking states, student info, and countdowns.
+ */
+export function reconcileSeatsWithRooms(roomsList: Room[], seatsList: Seat[]): Seat[] {
+  if (!Array.isArray(roomsList) || roomsList.length === 0) {
+    return seatsList || [];
+  }
+
+  const result: Seat[] = [];
+  const safeSeatsList = Array.isArray(seatsList) ? seatsList : [];
+
+  // Group existing seats by roomId
+  const existingSeatsByRoomId = new Map<string, Seat[]>();
+  safeSeatsList.forEach((s) => {
+    if (!existingSeatsByRoomId.has(s.roomId)) {
+      existingSeatsByRoomId.set(s.roomId, []);
+    }
+    existingSeatsByRoomId.get(s.roomId)!.push(s);
+  });
+
+  // Track orphan seats (whose roomId does not match any current room)
+  const orphanSeats = safeSeatsList.filter((s) => !roomsList.some((r) => r.id === s.roomId));
+
+  roomsList.forEach((room, roomIdx) => {
+    let matchedSeats = existingSeatsByRoomId.get(room.id) || [];
+
+    // If no seats directly match room.id, rescue from orphan seats (e.g. legacy room_1 -> sci_room_1)
+    if (matchedSeats.length === 0 && orphanSeats.length > 0) {
+      const rescued = orphanSeats.filter(
+        (s) =>
+          s.branchId === room.branchId &&
+          (s.seatNumber.startsWith(room.seatPrefix) ||
+            s.roomId.endsWith(`_${roomIdx + 1}`) ||
+            s.roomId === `room_${roomIdx + 1}` ||
+            s.roomId === `sci_room_${roomIdx + 1}` ||
+            s.roomId === `cen_room_${roomIdx + 1}`)
+      );
+      if (rescued.length > 0) {
+        matchedSeats = rescued.map((s) => ({
+          ...s,
+          roomId: room.id,
+          branchId: room.branchId,
+        }));
+      }
+    }
+
+    const isFemale = room.category === 'female_only';
+    const finalRoomSeats: Seat[] = [];
+
+    for (let i = 1; i <= room.capacity; i++) {
+      const seatNumPadded = i < 10 ? `0${i}` : `${i}`;
+      const expectedSeatNumber = `${room.seatPrefix}-${seatNumPadded}`;
+      const existingSeat =
+        matchedSeats[i - 1] ||
+        matchedSeats.find(
+          (s) => s.seatNumber === expectedSeatNumber || s.seatNumber === `${i}` || s.seatNumber === `${room.seatPrefix}-${i}`
+        );
+
+      if (existingSeat) {
+        finalRoomSeats.push({
+          ...existingSeat,
+          id: existingSeat.id || `${room.id}_seat_${i}`,
+          roomId: room.id,
+          branchId: room.branchId,
+          seatNumber: expectedSeatNumber,
+          isFemaleReserved: existingSeat.isFemaleReserved ?? isFemale,
+        });
+      } else {
+        finalRoomSeats.push({
+          id: `${room.id}_seat_${i}`,
+          roomId: room.id,
+          branchId: room.branchId,
+          seatNumber: expectedSeatNumber,
+          status: 'available',
+          isFemaleReserved: isFemale,
+          isSpecialReserved: false,
+        });
+      }
+    }
+
+    result.push(...finalRoomSeats);
+  });
+
+  return result;
+}
+
 export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // 1. Current Branch
   const [currentBranchId, setCurrentBranchIdState] = useState<BranchId>(() => {
@@ -253,7 +340,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     if (saved) {
       try {
         const parsed: Room[] = JSON.parse(saved);
-        // Ensure both science_library and central_library rooms exist
         const hasSciRooms = parsed.some((r) => r.branchId === 'science_library');
         const hasCenRooms = parsed.some((r) => r.branchId === 'central_library');
         if (hasSciRooms && hasCenRooms && parsed.length >= 8) {
@@ -270,23 +356,38 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(rooms));
   }, [rooms]);
 
-  // 4. Seats
+  // 4. Seats (Always healed and reconciled with rooms)
   const [seats, setSeats] = useState<Seat[]>(() => {
     const saved = localStorage.getItem(STORAGE_KEYS.SEATS);
     if (saved) {
       try {
         const parsed: Seat[] = JSON.parse(saved);
-        const hasSciSeats = parsed.some((s) => s.branchId === 'science_library');
-        const hasCenSeats = parsed.some((s) => s.branchId === 'central_library');
-        if (hasSciSeats && hasCenSeats && parsed.length >= 100) {
-          return parsed;
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return reconcileSeatsWithRooms(rooms, parsed);
         }
       } catch (e) {
         console.error('Failed to parse saved seats', e);
       }
     }
-    return generateInitialSeats();
+    return reconcileSeatsWithRooms(rooms, generateInitialSeats());
   });
+
+  // Reconcile seats whenever rooms list changes
+  useEffect(() => {
+    setSeats((prev) => {
+      const reconciled = reconcileSeatsWithRooms(rooms, prev);
+      const isMismatch =
+        reconciled.length !== prev.length ||
+        reconciled.some(
+          (s, idx) =>
+            !prev[idx] ||
+            prev[idx].id !== s.id ||
+            prev[idx].roomId !== s.roomId ||
+            prev[idx].seatNumber !== s.seatNumber
+        );
+      return isMismatch ? reconciled : prev;
+    });
+  }, [rooms]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(seats));
@@ -635,11 +736,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const unsubscribe = subscribeToSupabaseRealtime((payload) => {
       if (payload) {
         isRemoteUpdateRef.current = true;
+        let incomingRooms = rooms;
         if (Array.isArray(payload.rooms) && payload.rooms.length > 0) {
-          setRooms(payload.rooms as Room[]);
+          incomingRooms = payload.rooms as Room[];
+          setRooms(incomingRooms);
         }
         if (Array.isArray(payload.seats) && payload.seats.length > 0) {
-          setSeats(payload.seats as Seat[]);
+          const reconciled = reconcileSeatsWithRooms(incomingRooms, payload.seats as Seat[]);
+          setSeats(reconciled);
         }
         if (Array.isArray(payload.notices) && payload.notices.length > 0) {
           setNotices(payload.notices as LibraryNotice[]);
@@ -658,7 +762,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [rooms]);
 
   // Supabase initial cloud load tracker
   const isCloudLoadedRef = React.useRef(false);
@@ -669,11 +773,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const cloudState = await fetchLibraryStateFromCloud();
       if (cloudState) {
         isRemoteUpdateRef.current = true;
+        let incomingRooms = rooms;
         if (Array.isArray(cloudState.rooms) && cloudState.rooms.length > 0) {
-          setRooms(cloudState.rooms as Room[]);
+          incomingRooms = cloudState.rooms as Room[];
+          setRooms(incomingRooms);
         }
         if (Array.isArray(cloudState.seats) && cloudState.seats.length > 0) {
-          setSeats(cloudState.seats as Seat[]);
+          const reconciled = reconcileSeatsWithRooms(incomingRooms, cloudState.seats as Seat[]);
+          setSeats(reconciled);
         }
         if (Array.isArray(cloudState.notices) && cloudState.notices.length > 0) {
           setNotices(cloudState.notices as LibraryNotice[]);
@@ -690,7 +797,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {
       isCloudLoadedRef.current = true;
     }
-  }, []);
+  }, [rooms]);
 
   // Fetch initial global library configuration from Supabase Cloud on mount
   useEffect(() => {
@@ -1565,13 +1672,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setAllBranches(data.branchesConfig);
         localStorage.setItem(STORAGE_KEYS.BRANCHES_CONFIG, JSON.stringify(data.branchesConfig));
       }
+      let targetRooms = rooms;
       if (Array.isArray(data.rooms) && data.rooms.length > 0) {
-        setRooms(data.rooms);
-        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(data.rooms));
+        targetRooms = data.rooms as Room[];
+        setRooms(targetRooms);
+        localStorage.setItem(STORAGE_KEYS.ROOMS, JSON.stringify(targetRooms));
       }
       if (Array.isArray(data.seats) && data.seats.length > 0) {
-        setSeats(data.seats);
-        localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(data.seats));
+        const healed = reconcileSeatsWithRooms(targetRooms, data.seats as Seat[]);
+        setSeats(healed);
+        localStorage.setItem(STORAGE_KEYS.SEATS, JSON.stringify(healed));
       }
       if (Array.isArray(data.notices)) {
         setNotices(data.notices);
