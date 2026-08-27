@@ -254,16 +254,22 @@ export function reconcileSeatsWithRooms(roomsList: Room[], seatsList: Seat[]): S
     for (let i = 1; i <= room.capacity; i++) {
       const seatNumPadded = i < 10 ? `0${i}` : `${i}`;
       const expectedSeatNumber = `${room.seatPrefix}-${seatNumPadded}`;
+      const expectedSeatId = `${room.id}_seat_${i}`;
+
+      // Prioritize exact seat ID and exact seat number match so active bookings & status are preserved
       const existingSeat =
-        matchedSeats[i - 1] ||
         matchedSeats.find(
-          (s) => s.seatNumber === expectedSeatNumber || s.seatNumber === `${i}` || s.seatNumber === `${room.seatPrefix}-${i}`
-        );
+          (s) =>
+            s.id === expectedSeatId ||
+            s.seatNumber === expectedSeatNumber ||
+            s.seatNumber === `${i}` ||
+            s.seatNumber === `${room.seatPrefix}-${i}`
+        ) || matchedSeats[i - 1];
 
       if (existingSeat) {
         finalRoomSeats.push({
           ...existingSeat,
-          id: existingSeat.id || `${room.id}_seat_${i}`,
+          id: expectedSeatId,
           roomId: room.id,
           branchId: room.branchId,
           seatNumber: expectedSeatNumber,
@@ -271,7 +277,7 @@ export function reconcileSeatsWithRooms(roomsList: Room[], seatsList: Seat[]): S
         });
       } else {
         finalRoomSeats.push({
-          id: `${room.id}_seat_${i}`,
+          id: expectedSeatId,
           roomId: room.id,
           branchId: room.branchId,
           seatNumber: expectedSeatNumber,
@@ -684,6 +690,25 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Cloud Sync & Backup State
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<string | null>(null);
 
+  // References to track current state without triggering effect closures
+  const roomsRef = React.useRef(rooms);
+  useEffect(() => { roomsRef.current = rooms; }, [rooms]);
+
+  const seatsRef = React.useRef(seats);
+  useEffect(() => { seatsRef.current = seats; }, [seats]);
+
+  const allBranchesRef = React.useRef(allBranches);
+  useEffect(() => { allBranchesRef.current = allBranches; }, [allBranches]);
+
+  const noticesRef = React.useRef(notices);
+  useEffect(() => { noticesRef.current = notices; }, [notices]);
+
+  const rulesRef = React.useRef(rules);
+  useEffect(() => { rulesRef.current = rules; }, [rules]);
+
+  const wifiFacilitiesRef = React.useRef(wifiFacilities);
+  useEffect(() => { wifiFacilitiesRef.current = wifiFacilities; }, [wifiFacilities]);
+
   // Cross-Tab & Supabase Realtime Broadcast
   const broadcastSync = useCallback((payload: {
     rooms?: Room[];
@@ -707,6 +732,23 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     broadcastStateViaSupabase(payload);
   }, []);
 
+  // Instant Cloud Push for interactive user seat actions (Booking, Break, Release)
+  const pushStateToCloudNow = useCallback(
+    (customSeats?: Seat[], customRooms?: Room[]) => {
+      const payload = {
+        rooms: customRooms || roomsRef.current,
+        seats: customSeats || seatsRef.current,
+        notices: noticesRef.current,
+        branchesConfig: allBranchesRef.current,
+        rules: rulesRef.current,
+        wifiFacilities: wifiFacilitiesRef.current,
+      };
+      broadcastSync(payload);
+      syncLibraryStateToCloud(payload).catch(() => {});
+    },
+    [broadcastSync]
+  );
+
   // Listen for Cross-Tab broadcast (same browser)
   useEffect(() => {
     if (typeof window === 'undefined' || !('BroadcastChannel' in window)) return;
@@ -715,8 +757,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     channel.onmessage = (event) => {
       if (event.data?.type === 'STATE_UPDATE') {
         const p = event.data.payload;
-        if (Array.isArray(p.rooms)) setRooms(p.rooms);
-        if (Array.isArray(p.seats)) setSeats(p.seats);
+        if (Array.isArray(p.rooms) && p.rooms.length > 0) setRooms(p.rooms);
+        if (Array.isArray(p.seats) && p.seats.length > 0) {
+          const reconciled = reconcileSeatsWithRooms(p.rooms || roomsRef.current, p.seats);
+          setSeats(reconciled);
+        }
         if (Array.isArray(p.notices)) setNotices(p.notices);
         if (Array.isArray(p.rules)) setRules(p.rules);
         if (p.wifiFacilities && typeof p.wifiFacilities === 'object') setWifiFacilities(p.wifiFacilities as Record<string, WifiFacilityConfig>);
@@ -736,7 +781,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const unsubscribe = subscribeToSupabaseRealtime((payload) => {
       if (payload) {
         isRemoteUpdateRef.current = true;
-        let incomingRooms = rooms;
+        let incomingRooms = roomsRef.current;
         if (Array.isArray(payload.rooms) && payload.rooms.length > 0) {
           incomingRooms = payload.rooms as Room[];
           setRooms(incomingRooms);
@@ -762,7 +807,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       unsubscribe();
     };
-  }, [rooms]);
+  }, []);
 
   // Supabase initial cloud load tracker
   const isCloudLoadedRef = React.useRef(false);
@@ -773,7 +818,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const cloudState = await fetchLibraryStateFromCloud();
       if (cloudState) {
         isRemoteUpdateRef.current = true;
-        let incomingRooms = rooms;
+        let incomingRooms = roomsRef.current;
         if (Array.isArray(cloudState.rooms) && cloudState.rooms.length > 0) {
           incomingRooms = cloudState.rooms as Room[];
           setRooms(incomingRooms);
@@ -797,7 +842,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {
       isCloudLoadedRef.current = true;
     }
-  }, [rooms]);
+  }, []);
 
   // Fetch initial global library configuration from Supabase Cloud on mount
   useEffect(() => {
@@ -930,29 +975,30 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       )}`;
 
       // Update seat
-      setSeats((prev) =>
-        prev.map((s) => {
-          if (s.id === seatId) {
-            return {
-              ...s,
-              status: 'occupied',
-              occupantName: studentDetails.name,
-              occupantPhone: studentDetails.phone,
-              occupantEmail: studentDetails.email || '',
-              studentId: studentDetails.studentId || `STU-${Math.floor(1000 + Math.random() * 9000)}`,
-              occupantGender: studentDetails.gender,
-              bookedAt: now,
-              expectedLeaveAt: expectedLeave,
-              targetDurationHours: studentDetails.targetHours,
-              awaySince: undefined,
-              awayDurationMinutes: undefined,
-              awayReason: undefined,
-              passCode,
-            };
-          }
-          return s;
-        })
-      );
+      const updatedSeats = seatsRef.current.map((s) => {
+        if (s.id === seatId) {
+          return {
+            ...s,
+            status: 'occupied' as const,
+            occupantName: studentDetails.name,
+            occupantPhone: studentDetails.phone,
+            occupantEmail: studentDetails.email || '',
+            studentId: studentDetails.studentId || `STU-${Math.floor(1000 + Math.random() * 9000)}`,
+            occupantGender: studentDetails.gender,
+            bookedAt: now,
+            expectedLeaveAt: expectedLeave,
+            targetDurationHours: studentDetails.targetHours,
+            awaySince: undefined,
+            awayDurationMinutes: undefined,
+            awayReason: undefined,
+            passCode,
+          };
+        }
+        return s;
+      });
+
+      setSeats(updatedSeats);
+      pushStateToCloudNow(updatedSeats);
 
       // Record attendance
       const newAttendance: AttendanceRecord = {
@@ -978,58 +1024,58 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         passCode,
       };
     },
-    [seats, rooms, allBranches]
+    [rooms, allBranches, pushStateToCloudNow]
   );
 
   // Leave Seat Temporarily (Break)
   const leaveSeatTemporarily = useCallback(
     (seatId: string, durationMinutes: number, reason: AwayReason, customReason?: string) => {
       const now = Date.now();
-      setSeats((prev) =>
-        prev.map((s) => {
-          if (s.id === seatId) {
-            return {
-              ...s,
-              status: 'away',
-              awaySince: now,
-              awayDurationMinutes: durationMinutes,
-              awayReason: reason,
-              awayCustomReason: customReason,
-            };
-          }
-          return s;
-        })
-      );
+      const updatedSeats = seatsRef.current.map((s) => {
+        if (s.id === seatId) {
+          return {
+            ...s,
+            status: 'away' as const,
+            awaySince: now,
+            awayDurationMinutes: durationMinutes,
+            awayReason: reason,
+            awayCustomReason: customReason,
+          };
+        }
+        return s;
+      });
+      setSeats(updatedSeats);
+      pushStateToCloudNow(updatedSeats);
     },
-    []
+    [pushStateToCloudNow]
   );
 
   // Return from away
   const returnFromAway = useCallback((seatId: string) => {
-    setSeats((prev) =>
-      prev.map((s) => {
-        if (s.id === seatId) {
-          return {
-            ...s,
-            status: 'occupied',
-            awaySince: undefined,
-            awayDurationMinutes: undefined,
-            awayReason: undefined,
-            awayCustomReason: undefined,
-            isSecondaryBooked: false,
-            secondaryOccupantName: undefined,
-            secondaryOccupantPhone: undefined,
-            secondaryOccupantStudentId: undefined,
-            secondaryOccupantGender: undefined,
-            secondaryBookedAt: undefined,
-            secondaryExpectedLeaveAt: undefined,
-            secondaryPassCode: undefined,
-          };
-        }
-        return s;
-      })
-    );
-  }, []);
+    const updatedSeats = seatsRef.current.map((s) => {
+      if (s.id === seatId) {
+        return {
+          ...s,
+          status: 'occupied' as const,
+          awaySince: undefined,
+          awayDurationMinutes: undefined,
+          awayReason: undefined,
+          awayCustomReason: undefined,
+          isSecondaryBooked: false,
+          secondaryOccupantName: undefined,
+          secondaryOccupantPhone: undefined,
+          secondaryOccupantStudentId: undefined,
+          secondaryOccupantGender: undefined,
+          secondaryBookedAt: undefined,
+          secondaryExpectedLeaveAt: undefined,
+          secondaryPassCode: undefined,
+        };
+      }
+      return s;
+    });
+    setSeats(updatedSeats);
+    pushStateToCloudNow(updatedSeats);
+  }, [pushStateToCloudNow]);
 
   // Secondary Book Seat during Break (Orange Seat turns Blue)
   const secondaryBookSeat = useCallback(
@@ -1045,23 +1091,24 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const now = Date.now();
       const passCode = `SEC-${Math.floor(10000 + Math.random() * 90000)}`;
 
-      setSeats((prev) =>
-        prev.map((s) => {
-          if (s.id === seatId) {
-            return {
-              ...s,
-              isSecondaryBooked: true,
-              secondaryOccupantName: studentDetails.name,
-              secondaryOccupantPhone: studentDetails.phone,
-              secondaryOccupantStudentId: studentDetails.studentId || 'N/A',
-              secondaryOccupantGender: studentDetails.gender,
-              secondaryBookedAt: now,
-              secondaryPassCode: passCode,
-            };
-          }
-          return s;
-        })
-      );
+      const updatedSeats = seatsRef.current.map((s) => {
+        if (s.id === seatId) {
+          return {
+            ...s,
+            isSecondaryBooked: true,
+            secondaryOccupantName: studentDetails.name,
+            secondaryOccupantPhone: studentDetails.phone,
+            secondaryOccupantStudentId: studentDetails.studentId || 'N/A',
+            secondaryOccupantGender: studentDetails.gender,
+            secondaryBookedAt: now,
+            secondaryPassCode: passCode,
+          };
+        }
+        return s;
+      });
+
+      setSeats(updatedSeats);
+      pushStateToCloudNow(updatedSeats);
 
       return {
         success: true,
@@ -1069,66 +1116,67 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         passCode,
       };
     },
-    []
+    [pushStateToCloudNow]
   );
 
   // Release Secondary Booking
   const releaseSecondaryBooking = useCallback((seatId: string) => {
-    setSeats((prev) =>
-      prev.map((s) => {
-        if (s.id === seatId) {
-          return {
-            ...s,
-            isSecondaryBooked: false,
-            secondaryOccupantName: undefined,
-            secondaryOccupantPhone: undefined,
-            secondaryOccupantStudentId: undefined,
-            secondaryOccupantGender: undefined,
-            secondaryBookedAt: undefined,
-            secondaryExpectedLeaveAt: undefined,
-            secondaryPassCode: undefined,
-          };
-        }
-        return s;
-      })
-    );
-  }, []);
+    const updatedSeats = seatsRef.current.map((s) => {
+      if (s.id === seatId) {
+        return {
+          ...s,
+          isSecondaryBooked: false,
+          secondaryOccupantName: undefined,
+          secondaryOccupantPhone: undefined,
+          secondaryOccupantStudentId: undefined,
+          secondaryOccupantGender: undefined,
+          secondaryBookedAt: undefined,
+          secondaryExpectedLeaveAt: undefined,
+          secondaryPassCode: undefined,
+        };
+      }
+      return s;
+    });
+    setSeats(updatedSeats);
+    pushStateToCloudNow(updatedSeats);
+  }, [pushStateToCloudNow]);
 
   // Release Seat
   const releaseSeat = useCallback((seatId: string) => {
     const now = Date.now();
-    setSeats((prev) =>
-      prev.map((s) => {
-        if (s.id === seatId) {
-          return {
-            ...s,
-            status: 'available',
-            occupantName: undefined,
-            occupantPhone: undefined,
-            occupantEmail: undefined,
-            studentId: undefined,
-            occupantGender: undefined,
-            bookedAt: undefined,
-            expectedLeaveAt: undefined,
-            targetDurationHours: undefined,
-            awaySince: undefined,
-            awayDurationMinutes: undefined,
-            awayReason: undefined,
-            awayCustomReason: undefined,
-            passCode: undefined,
-            isSecondaryBooked: false,
-            secondaryOccupantName: undefined,
-            secondaryOccupantPhone: undefined,
-            secondaryOccupantStudentId: undefined,
-            secondaryOccupantGender: undefined,
-            secondaryBookedAt: undefined,
-            secondaryExpectedLeaveAt: undefined,
-            secondaryPassCode: undefined,
-          };
-        }
-        return s;
-      })
-    );
+    const updatedSeats = seatsRef.current.map((s) => {
+      if (s.id === seatId) {
+        return {
+          ...s,
+          status: 'available' as const,
+          occupantName: undefined,
+          occupantPhone: undefined,
+          occupantEmail: undefined,
+          studentId: undefined,
+          occupantGender: undefined,
+          bookedAt: undefined,
+          expectedLeaveAt: undefined,
+          targetDurationHours: undefined,
+          awaySince: undefined,
+          awayDurationMinutes: undefined,
+          awayReason: undefined,
+          awayCustomReason: undefined,
+          passCode: undefined,
+          isSecondaryBooked: false,
+          secondaryOccupantName: undefined,
+          secondaryOccupantPhone: undefined,
+          secondaryOccupantStudentId: undefined,
+          secondaryOccupantGender: undefined,
+          secondaryBookedAt: undefined,
+          secondaryExpectedLeaveAt: undefined,
+          secondaryPassCode: undefined,
+        };
+      }
+      return s;
+    });
+
+    setSeats(updatedSeats);
+    pushStateToCloudNow(updatedSeats);
 
     // Update attendance checkout time
     setAttendanceRecords((prev) =>
@@ -1143,7 +1191,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return record;
       })
     );
-  }, []);
+  }, [pushStateToCloudNow]);
 
   // Admin Actions
   const adminForceReleaseSeat = useCallback((seatId: string) => {
@@ -1151,24 +1199,24 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [releaseSeat]);
 
   const adminToggleMaintenance = useCallback((seatId: string, note?: string) => {
-    setSeats((prev) =>
-      prev.map((s) => {
-        if (s.id === seatId) {
-          const nextStatus = s.status === 'maintenance' ? 'available' : 'maintenance';
-          return {
-            ...s,
-            status: nextStatus,
-            maintenanceNote: nextStatus === 'maintenance' ? note || 'Under maintenance' : undefined,
-            occupantName: undefined,
-            occupantPhone: undefined,
-            studentId: undefined,
-            bookedAt: undefined,
-          };
-        }
-        return s;
-      })
-    );
-  }, []);
+    const updatedSeats = seatsRef.current.map((s) => {
+      if (s.id === seatId) {
+        const nextStatus = s.status === 'maintenance' ? ('available' as const) : ('maintenance' as const);
+        return {
+          ...s,
+          status: nextStatus,
+          maintenanceNote: nextStatus === 'maintenance' ? note || 'Under maintenance' : undefined,
+          occupantName: undefined,
+          occupantPhone: undefined,
+          studentId: undefined,
+          bookedAt: undefined,
+        };
+      }
+      return s;
+    });
+    setSeats(updatedSeats);
+    pushStateToCloudNow(updatedSeats);
+  }, [pushStateToCloudNow]);
 
   const adminManuallyAssignSeat = useCallback(
     (
@@ -1182,28 +1230,29 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const expectedLeave = now + durationHours * 3600 * 1000;
       const passCode = `ADMIN-PASS-${Math.floor(10000 + Math.random() * 90000)}`;
 
-      setSeats((prev) =>
-        prev.map((s) => {
-          if (s.id === seatId) {
-            return {
-              ...s,
-              status: 'occupied',
-              occupantName,
-              occupantPhone: phone,
-              occupantGender: gender,
-              studentId: `ADM-MANUAL-${Math.floor(100 + Math.random() * 900)}`,
-              bookedAt: now,
-              expectedLeaveAt: expectedLeave,
-              targetDurationHours: durationHours,
-              awaySince: undefined,
-              passCode,
-            };
-          }
-          return s;
-        })
-      );
+      const updatedSeats = seatsRef.current.map((s) => {
+        if (s.id === seatId) {
+          return {
+            ...s,
+            status: 'occupied' as const,
+            occupantName,
+            occupantPhone: phone,
+            occupantGender: gender,
+            studentId: `ADM-MANUAL-${Math.floor(100 + Math.random() * 900)}`,
+            bookedAt: now,
+            expectedLeaveAt: expectedLeave,
+            targetDurationHours: durationHours,
+            awaySince: undefined,
+            passCode,
+          };
+        }
+        return s;
+      });
+
+      setSeats(updatedSeats);
+      pushStateToCloudNow(updatedSeats);
     },
-    []
+    [pushStateToCloudNow]
   );
 
   // Student Auth

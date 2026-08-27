@@ -8,7 +8,7 @@ const DEFAULT_SUPABASE_ANON_KEY =
 // Ready-to-execute SQL Script for Supabase SQL Editor
 export const SUPABASE_SETUP_SQL = `-- =========================================================================
 -- SMART STUDY CENTER & LIBRARY CLOUD SYNCHRONIZATION SCHEMA
--- Copy and paste this script into your Supabase Dashboard -> SQL Editor
+-- Supabase Dashboard -> SQL Editor -> New Query -> Paste & Click RUN
 -- =========================================================================
 
 -- 1. Create table for live seat reservations, rooms, rules, wifi & notices
@@ -18,7 +18,7 @@ CREATE TABLE IF NOT EXISTS public.system_config (
   updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 2. Create table for registered student profiles & PINs
+-- 2. Create table for registered student profiles & login PINs
 CREATE TABLE IF NOT EXISTS public.students (
   phone TEXT PRIMARY KEY,
   name TEXT NOT NULL,
@@ -32,38 +32,40 @@ CREATE TABLE IF NOT EXISTS public.students (
   last_active TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
 );
 
--- 3. Enable Row Level Security (RLS)
+-- 3. Enable Row Level Security (RLS) on both tables
 ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
 ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
 
--- 4. Create Policies allowing Public Access (Anon / Public Client Read & Write)
+-- 4. Clean up any previous policies to allow fresh permissive rules
 DROP POLICY IF EXISTS "Allow public read system_config" ON public.system_config;
+DROP POLICY IF EXISTS "Allow public write system_config" ON public.system_config;
+DROP POLICY IF EXISTS "Allow public read students" ON public.students;
+DROP POLICY IF EXISTS "Allow public write students" ON public.students;
+
+-- 5. Create Permissive Policies for Web Clients (Public/Anon & Auth)
 CREATE POLICY "Allow public read system_config"
   ON public.system_config FOR SELECT
   TO anon, authenticated
   USING (true);
 
-DROP POLICY IF EXISTS "Allow public write system_config" ON public.system_config;
 CREATE POLICY "Allow public write system_config"
   ON public.system_config FOR ALL
   TO anon, authenticated
   USING (true)
   WITH CHECK (true);
 
-DROP POLICY IF EXISTS "Allow public read students" ON public.students;
 CREATE POLICY "Allow public read students"
   ON public.students FOR SELECT
   TO anon, authenticated
   USING (true);
 
-DROP POLICY IF EXISTS "Allow public write students" ON public.students;
 CREATE POLICY "Allow public write students"
   ON public.students FOR ALL
   TO anon, authenticated
   USING (true)
   WITH CHECK (true);
 
--- 5. Enable Realtime Replication for instant live seat status changes
+-- 6. Enable Realtime Replication for instant live seat status changes
 DO $$
 BEGIN
   BEGIN
@@ -229,6 +231,32 @@ export async function fetchAllStudentsFromCloud(): Promise<Array<{
 }
 
 let realtimeChannel: ReturnType<SupabaseClient['channel']> | null = null;
+let realtimeChannelStatus: string = 'DISCONNECTED';
+let lastRealtimeEventAt: string | null = null;
+let lastRealtimeError: string | null = null;
+
+export type RealtimeStatePayload = {
+  rooms?: unknown[];
+  seats?: unknown[];
+  notices?: unknown[];
+  branchesConfig?: unknown;
+  rules?: unknown[];
+  wifiFacilities?: unknown;
+};
+
+const realtimeListeners = new Set<(payload: RealtimeStatePayload) => void>();
+
+function notifyAllRealtimeListeners(payload: RealtimeStatePayload) {
+  if (!payload || typeof payload !== 'object') return;
+  lastRealtimeEventAt = new Date().toISOString();
+  realtimeListeners.forEach((listener) => {
+    try {
+      listener(payload);
+    } catch (e) {
+      console.warn('[Supabase Realtime] Listener callback error:', e);
+    }
+  });
+}
 
 /**
  * Initialize / Get shared Supabase Realtime Channel
@@ -243,16 +271,25 @@ export function getRealtimeChannel() {
       },
     });
 
-    // Also listen to Postgres changes on system_config table
+    // 1. Listen for Broadcast messages (Instant cross-device WebSocket)
+    realtimeChannel.on(
+      'broadcast',
+      { event: 'STATE_CHANGED' },
+      (event: { payload?: RealtimeStatePayload }) => {
+        if (event && event.payload) {
+          notifyAllRealtimeListeners(event.payload);
+        }
+      }
+    );
+
+    // 2. Also listen to Postgres table changes on system_config table
     realtimeChannel.on(
       'postgres_changes',
       { event: '*', schema: 'public', table: 'system_config', filter: 'key=eq.library_live_state' },
       (payload) => {
         if (payload.new && (payload.new as { value?: unknown }).value) {
-          const val = (payload.new as { value: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown; rules?: unknown[]; wifiFacilities?: unknown } }).value;
-          if (realtimeStateCallback) {
-            realtimeStateCallback(val);
-          }
+          const val = (payload.new as { value: RealtimeStatePayload }).value;
+          notifyAllRealtimeListeners(val);
         }
       }
     );
@@ -271,11 +308,6 @@ export function getRealtimeChannel() {
   }
   return realtimeChannel;
 }
-
-let realtimeStateCallback: ((payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown }) => void) | null = null;
-let realtimeChannelStatus: string = 'DISCONNECTED';
-let lastRealtimeEventAt: string | null = null;
-let lastRealtimeError: string | null = null;
 
 export interface SupabaseDiagnosticReport {
   timestamp: string;
@@ -446,30 +478,14 @@ export function broadcastStateViaSupabase(payload: {
  * Subscribe to Supabase Realtime state updates
  */
 export function subscribeToSupabaseRealtime(
-  callback: (payload: {
-    rooms?: unknown[];
-    seats?: unknown[];
-    notices?: unknown[];
-    branchesConfig?: unknown;
-    rules?: unknown[];
-    wifiFacilities?: unknown;
-  }) => void
+  callback: (payload: RealtimeStatePayload) => void
 ): () => void {
   try {
-    realtimeStateCallback = callback;
-    const channel = getRealtimeChannel();
-    if (!channel) return () => {};
-
-    const handler = (data: { payload: { rooms?: unknown[]; seats?: unknown[]; notices?: unknown[]; branchesConfig?: unknown; rules?: unknown[]; wifiFacilities?: unknown } }) => {
-      if (data?.payload) {
-        callback(data.payload);
-      }
-    };
-
-    channel.on('broadcast', { event: 'STATE_CHANGED' }, handler);
+    getRealtimeChannel();
+    realtimeListeners.add(callback);
 
     return () => {
-      realtimeStateCallback = null;
+      realtimeListeners.delete(callback);
     };
   } catch (err) {
     console.warn('[Supabase Realtime] Subscribe error:', err);
