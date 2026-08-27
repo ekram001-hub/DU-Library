@@ -13,6 +13,7 @@ import {
   AwayReason,
   LibraryRule,
   WifiFacilityConfig,
+  WifiNetwork,
 } from '../types';
 import {
   BRANCHES_DATA,
@@ -20,6 +21,7 @@ import {
   INITIAL_NOTICES,
   INITIAL_RULES,
   INITIAL_WIFI_CONFIGS,
+  INITIAL_WIFI_NETWORKS,
   DEMO_STUDENTS,
   generateInitialSeats,
 } from '../data/initialData';
@@ -119,6 +121,11 @@ interface LibraryContextType {
   wifiFacilities: Record<string, WifiFacilityConfig>;
   currentBranchWifi: WifiFacilityConfig;
   updateWifiFacility: (branchId: BranchId, updates: Partial<WifiFacilityConfig>) => void;
+  wifiNetworks: WifiNetwork[];
+  addWifiNetwork: (network: Omit<WifiNetwork, 'id'>) => void;
+  updateWifiNetwork: (networkId: string, updates: Partial<WifiNetwork>) => void;
+  deleteWifiNetwork: (networkId: string) => void;
+  setWifiNetworkPassword: (networkId: string, newPassword: string) => void;
 
   // Admin actions
   adminForceReleaseSeat: (seatId: string) => void;
@@ -199,6 +206,7 @@ const STORAGE_KEYS = {
   LAST_RESET_DATE: 'smart_library_last_reset_date_v2',
   RULES: 'smart_library_rules_v2',
   WIFI_FACILITIES: 'smart_library_wifi_facilities_v2',
+  WIFI_NETWORKS: 'smart_library_wifi_networks_v2',
 };
 
 /**
@@ -687,6 +695,26 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.WIFI_FACILITIES, JSON.stringify(wifiFacilities));
   }, [wifiFacilities]);
 
+  // 8d. Wi-Fi Networks List
+  const [wifiNetworks, setWifiNetworks] = useState<WifiNetwork[]>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.WIFI_NETWORKS);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed) && parsed.length > 0) {
+          return parsed;
+        }
+      } catch (e) {
+        console.error('Failed to parse saved wifi networks', e);
+      }
+    }
+    return INITIAL_WIFI_NETWORKS;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.WIFI_NETWORKS, JSON.stringify(wifiNetworks));
+  }, [wifiNetworks]);
+
   // Cloud Sync & Backup State
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<string | null>(null);
 
@@ -709,6 +737,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const wifiFacilitiesRef = React.useRef(wifiFacilities);
   useEffect(() => { wifiFacilitiesRef.current = wifiFacilities; }, [wifiFacilities]);
 
+  const wifiNetworksRef = React.useRef(wifiNetworks);
+  useEffect(() => { wifiNetworksRef.current = wifiNetworks; }, [wifiNetworks]);
+
   // Cross-Tab & Supabase Realtime Broadcast
   const broadcastSync = useCallback((payload: {
     rooms?: Room[];
@@ -717,6 +748,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     branchesConfig?: unknown;
     rules?: LibraryRule[];
     wifiFacilities?: unknown;
+    wifiNetworks?: unknown[];
   }) => {
     // 1. Cross-tab within same browser
     if (typeof window !== 'undefined' && 'BroadcastChannel' in window) {
@@ -742,6 +774,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         branchesConfig: allBranchesRef.current,
         rules: rulesRef.current,
         wifiFacilities: wifiFacilitiesRef.current,
+        wifiNetworks: wifiNetworksRef.current,
       };
       broadcastSync(payload);
       syncLibraryStateToCloud(payload).catch(() => {});
@@ -765,6 +798,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (Array.isArray(p.notices)) setNotices(p.notices);
         if (Array.isArray(p.rules)) setRules(p.rules);
         if (p.wifiFacilities && typeof p.wifiFacilities === 'object') setWifiFacilities(p.wifiFacilities as Record<string, WifiFacilityConfig>);
+        if (Array.isArray(p.wifiNetworks)) setWifiNetworks(p.wifiNetworks as WifiNetwork[]);
       }
     };
 
@@ -798,6 +832,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (payload.wifiFacilities && typeof payload.wifiFacilities === 'object') {
           setWifiFacilities(payload.wifiFacilities as Record<string, WifiFacilityConfig>);
+        }
+        if (Array.isArray(payload.wifiNetworks) && payload.wifiNetworks.length > 0) {
+          setWifiNetworks(payload.wifiNetworks as WifiNetwork[]);
         }
         const timeStr = new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
         setCloudLastSyncedAt(timeStr);
@@ -835,6 +872,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (cloudState.wifiFacilities && typeof cloudState.wifiFacilities === 'object') {
           setWifiFacilities(cloudState.wifiFacilities as Record<string, WifiFacilityConfig>);
+        }
+        if (Array.isArray(cloudState.wifiNetworks) && cloudState.wifiNetworks.length > 0) {
+          setWifiNetworks(cloudState.wifiNetworks as WifiNetwork[]);
         }
         setCloudLastSyncedAt(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
@@ -1705,6 +1745,86 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, [wifiFacilities, currentBranchId]);
 
+  // Wi-Fi Networks Management (Add, Delete, Edit, Password change)
+  const addWifiNetwork = useCallback((networkData: Omit<WifiNetwork, 'id'>) => {
+    const newNetwork: WifiNetwork = {
+      ...networkData,
+      id: `wifi_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
+      createdAt: new Date().toISOString(),
+    };
+    setWifiNetworks((prev) => {
+      const next = [newNetwork, ...prev];
+      broadcastSync({ wifiNetworks: next });
+      syncLibraryStateToCloud({
+        rooms,
+        seats,
+        notices,
+        branchesConfig: allBranches,
+        rules,
+        wifiFacilities,
+        wifiNetworks: next,
+      }).catch(() => {});
+      return next;
+    });
+
+    if (newNetwork.isActive) {
+      updateWifiFacility(newNetwork.branchId, {
+        ssid: newNetwork.ssid,
+        password: newNetwork.password,
+        speed: newNetwork.speed,
+        notes: newNetwork.notes,
+      });
+    }
+  }, [rooms, seats, notices, allBranches, rules, wifiFacilities, broadcastSync, updateWifiFacility]);
+
+  const updateWifiNetwork = useCallback((networkId: string, updates: Partial<WifiNetwork>) => {
+    setWifiNetworks((prev) => {
+      const next = prev.map((net) => (net.id === networkId ? { ...net, ...updates } : net));
+      broadcastSync({ wifiNetworks: next });
+      syncLibraryStateToCloud({
+        rooms,
+        seats,
+        notices,
+        branchesConfig: allBranches,
+        rules,
+        wifiFacilities,
+        wifiNetworks: next,
+      }).catch(() => {});
+
+      const updatedNet = next.find((n) => n.id === networkId);
+      if (updatedNet && updatedNet.isActive && (updates.password || updates.ssid || updates.speed || updates.notes)) {
+        updateWifiFacility(updatedNet.branchId, {
+          ssid: updatedNet.ssid,
+          password: updatedNet.password,
+          speed: updatedNet.speed,
+          notes: updatedNet.notes,
+        });
+      }
+      return next;
+    });
+  }, [rooms, seats, notices, allBranches, rules, wifiFacilities, broadcastSync, updateWifiFacility]);
+
+  const deleteWifiNetwork = useCallback((networkId: string) => {
+    setWifiNetworks((prev) => {
+      const next = prev.filter((net) => net.id !== networkId);
+      broadcastSync({ wifiNetworks: next });
+      syncLibraryStateToCloud({
+        rooms,
+        seats,
+        notices,
+        branchesConfig: allBranches,
+        rules,
+        wifiFacilities,
+        wifiNetworks: next,
+      }).catch(() => {});
+      return next;
+    });
+  }, [rooms, seats, notices, allBranches, rules, wifiFacilities, broadcastSync]);
+
+  const setWifiNetworkPassword = useCallback((networkId: string, newPassword: string) => {
+    updateWifiNetwork(networkId, { password: newPassword });
+  }, [updateWifiNetwork]);
+
   // Data Backup & Restore
   const exportFullBackupJSON = useCallback(() => {
     const backupData = {
@@ -1980,6 +2100,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       wifiFacilities,
       currentBranchWifi,
       updateWifiFacility,
+      wifiNetworks,
+      addWifiNetwork,
+      updateWifiNetwork,
+      deleteWifiNetwork,
+      setWifiNetworkPassword,
 
       adminForceReleaseSeat,
       adminToggleMaintenance,
@@ -2057,6 +2182,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       wifiFacilities,
       currentBranchWifi,
       updateWifiFacility,
+      wifiNetworks,
+      addWifiNetwork,
+      updateWifiNetwork,
+      deleteWifiNetwork,
+      setWifiNetworkPassword,
       adminForceReleaseSeat,
       adminToggleMaintenance,
       adminManuallyAssignSeat,

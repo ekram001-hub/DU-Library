@@ -87,6 +87,18 @@ export interface LibraryRule {
   order?: number;
 }
 
+export interface WifiNetwork {
+  id: string;
+  branchId: 'all' | BranchId;
+  ssid: string;
+  password: string;
+  speed?: string;
+  notes?: string;
+  band?: '5 GHz' | '2.4 GHz' | 'Dual Band';
+  isActive?: boolean;
+  createdAt?: string;
+}
+
 export interface WifiFacilityConfig {
   branchId: BranchId;
   ssid: string;

@@ -1,7 +1,6 @@
 import React, { useMemo } from 'react';
 import {
   X,
-  Armchair,
   Clock,
   User,
   Phone,
@@ -218,10 +217,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-5 space-y-3.5">
+        <div className="p-4 sm:p-5 space-y-3.5 font-['Poppins',_sans-serif]">
           {/* Secondary Booked Blue Banner */}
           {seat.isSecondaryBooked ? (
-            <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-400 text-center space-y-1 shadow-2xs">
+            <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-400 text-center space-y-1.5 shadow-2xs">
               <div className="text-xs font-bold text-blue-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
                 <Sparkles className="w-4 h-4 text-blue-600" />
                 <span>Secondary Temporary Session Active (Blue Seat)</span>
@@ -229,21 +228,21 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               <div className="text-sm font-semibold text-blue-900">
                 Temp Occupant: <span className="font-bold">{seat.secondaryOccupantName}</span> ({seat.secondaryOccupantStudentId || 'Student'})
               </div>
-              <div className="text-xs text-blue-700">
+              <div className="text-xs text-blue-700 font-medium">
                 Original Owner on break ({awayCountdown ? awayCountdown.text : 'Away remaining'})
               </div>
             </div>
           ) : seat.status === 'away' ? (
-            /* Away Big Timer Banner in Green (Emerald) */
+            /* Away Big Timer Banner in Green (Emerald) in Poppins Font */
             <div className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center space-y-1.5 shadow-2xs">
               <div className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
                 <Timer className="w-4 h-4 text-emerald-600" />
                 <span>Away Remaining Time (Live Countdown)</span>
               </div>
-              <div className="text-3xl font-mono font-black text-emerald-700 tracking-wider animate-pulse">
+              <div className="text-3xl sm:text-4xl font-['Poppins',_sans-serif] font-black text-emerald-700 tracking-wider animate-pulse my-1">
                 {awayCountdown ? awayCountdown.text : '30:00'}
               </div>
-              <div className="text-xs text-emerald-800 font-medium">
+              <div className="text-xs text-emerald-800 font-semibold">
                 Reason: {seat.awayReason === 'Prayer' ? 'Prayer Break 🕌' : seat.awayReason === 'Lunch' ? 'Meal Break 🍱' : seat.awayReason === 'Tea' ? 'Tea & Snack ☕' : seat.awayReason === 'Rest' ? 'Rest & Refresh 🛋️' : 'Emergency Break ⚡'}
               </div>
               {!awayCountdown?.expired && (
@@ -283,29 +282,37 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             </div>
           )}
 
-          {/* Occupant Info if occupied or away */}
+          {/* Primary Occupant Info Card (Visible for occupied, away, or secondary booked) */}
           {seat.status !== 'available' && seat.status !== 'maintenance' && (
             <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs">
-              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">Primary Occupant:</span>
-                <span className="font-semibold text-slate-800">{seat.occupantName}</span>
-              </div>
-
-              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">Student ID:</span>
-                <span className="font-mono text-slate-700">{seat.studentId || 'N/A'}</span>
-              </div>
-
-              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
-                <span className="text-slate-500">Contact:</span>
-                <span className="font-mono text-slate-700">
-                  {isAdminLoggedIn || isMySeat
-                    ? seat.occupantPhone
-                    : seat.occupantPhone?.replace(/(\d{3})\d{4}(\d{4})/, '$1****$2')}
+              <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-1.5">
+                <span className="flex items-center gap-1.5 text-slate-700">
+                  <User className="w-3.5 h-3.5 text-emerald-600" />
+                  <span>Primary Occupant User Details</span>
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
+                  {seat.status === 'away' ? '🟢 On Break' : seat.status === 'occupied' ? '🔴 Booked' : '🔵 Booked'}
                 </span>
               </div>
 
-              <div className="flex items-center justify-between border-b border-slate-200 pb-1.5">
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                <span className="text-slate-500">Name:</span>
+                <span className="font-bold text-slate-900">{seat.occupantName || 'Registered Student'}</span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                <span className="text-slate-500">Student ID:</span>
+                <span className="font-mono text-slate-800 font-semibold">{seat.studentId || 'N/A'}</span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
+                <span className="text-slate-500">Contact Phone:</span>
+                <span className="font-mono text-slate-800 font-semibold">
+                  {seat.occupantPhone || 'N/A'}
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
                 <span className="text-slate-500">Booking Time:</span>
                 <span className="font-mono text-emerald-700 font-semibold">{bookedTimeFormatted}</span>
               </div>
@@ -313,6 +320,38 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Valid Until:</span>
                 <span className="font-mono text-slate-800 font-semibold">{expectedLeaveFormatted}</span>
+              </div>
+            </div>
+          )}
+
+          {/* Secondary Occupant Details Card (if seat is secondary booked) */}
+          {seat.isSecondaryBooked && (
+            <div className="bg-blue-50/70 rounded-xl p-3.5 border border-blue-200 space-y-2 text-xs">
+              <div className="flex items-center justify-between font-bold text-blue-900 border-b border-blue-200 pb-1.5">
+                <span className="flex items-center gap-1.5 text-blue-800">
+                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
+                  <span>Temporary (2nd) Occupant Details</span>
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">
+                  Active Temp Study
+                </span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-blue-100 pb-1">
+                <span className="text-blue-700">Name:</span>
+                <span className="font-bold text-blue-950">{seat.secondaryOccupantName || '2nd Student'}</span>
+              </div>
+
+              <div className="flex items-center justify-between border-b border-blue-100 pb-1">
+                <span className="text-blue-700">Student ID:</span>
+                <span className="font-mono text-blue-950 font-semibold">{seat.secondaryOccupantStudentId || 'N/A'}</span>
+              </div>
+
+              <div className="flex items-center justify-between">
+                <span className="text-blue-700">Contact Phone:</span>
+                <span className="font-mono text-blue-950 font-semibold">
+                  {seat.secondaryOccupantPhone || 'N/A'}
+                </span>
               </div>
             </div>
           )}
@@ -330,7 +369,6 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                 }}
                 className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
               >
-                <Armchair className="w-4 h-4 text-emerald-400" />
                 <span>Book This Seat</span>
               </button>
             )}

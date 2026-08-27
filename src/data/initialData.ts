@@ -1,4 +1,4 @@
-import { BranchConfig, Room, Seat, LibraryNotice, StudentProfile, LibraryRule, WifiFacilityConfig } from '../types';
+import { BranchConfig, Room, Seat, LibraryNotice, StudentProfile, LibraryRule, WifiFacilityConfig, WifiNetwork } from '../types';
 
 export const BRANCHES_DATA: Record<string, BranchConfig> = {
   science_library: {
@@ -297,4 +297,47 @@ export const INITIAL_WIFI_CONFIGS: Record<string, WifiFacilityConfig> = {
     helpdeskPhone: '+880 1812-987654',
   },
 };
+
+export const INITIAL_WIFI_NETWORKS: WifiNetwork[] = [
+  {
+    id: 'wifi_sci_1',
+    branchId: 'science_library',
+    ssid: 'SCIENCE_LIB_5G_FAST',
+    password: 'study@2026#pass',
+    speed: '100 Mbps Optical Fiber (Dual-Band 5G)',
+    notes: 'Optimized for online video lectures and research. High-speed 5GHz band.',
+    isActive: true,
+    createdAt: '2026-08-20T08:00:00.000Z',
+  },
+  {
+    id: 'wifi_sci_2',
+    branchId: 'science_library',
+    ssid: 'SCIENCE_LIB_2.4G_BACKUP',
+    password: 'study@2026#backup',
+    speed: '50 Mbps Long Range',
+    notes: 'High range Wi-Fi for mobile phones and ground floor study cubicles.',
+    isActive: true,
+    createdAt: '2026-08-20T08:00:00.000Z',
+  },
+  {
+    id: 'wifi_cen_1',
+    branchId: 'central_library',
+    ssid: 'CENTRAL_LIB_5G_PLUS',
+    password: 'study@2026#pass',
+    speed: '150 Mbps Dedicated Optical Fiber',
+    notes: 'Dedicated for BCS study hall and executive reading room.',
+    isActive: true,
+    createdAt: '2026-08-20T08:00:00.000Z',
+  },
+  {
+    id: 'wifi_cen_2',
+    branchId: 'central_library',
+    ssid: 'CENTRAL_LIB_SILENT_ZONE',
+    password: 'study@2026#silent',
+    speed: '100 Mbps Dedicated Fiber',
+    notes: 'Floor 2 silent study zone mesh network.',
+    isActive: true,
+    createdAt: '2026-08-20T08:00:00.000Z',
+  },
+];
 

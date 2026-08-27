@@ -41,9 +41,14 @@ import {
   Heart,
   Clock,
   Copy,
+  Eye,
+  EyeOff,
+  Key,
+  Signal,
+  Radio,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
-import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig } from '../types';
+import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig, WifiNetwork } from '../types';
 import { SupabaseDiagnosticReport, SUPABASE_SETUP_SQL } from '../lib/supabase';
 
 interface AdminPageProps {
@@ -88,6 +93,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     deleteRule,
     wifiFacilities,
     updateWifiFacility,
+    wifiNetworks,
+    addWifiNetwork,
+    updateWifiNetwork,
+    deleteWifiNetwork,
+    setWifiNetworkPassword,
     exportFullBackupJSON,
     importFullBackupJSON,
     syncStateToCloudManual,
@@ -208,6 +218,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setWifiAmenitiesList(config.amenities || []);
     setWifiSavedSuccess(false);
   }, [currentBranchId, wifiFacilities, branchConfig.phone]);
+
+  // Wi-Fi Networks Management State (Add / Edit / Password Setting)
+  const [isAddingWifi, setIsAddingWifi] = useState(false);
+  const [editingWifiId, setEditingWifiId] = useState<string | null>(null);
+  const [wifiNetSsid, setWifiNetSsid] = useState('');
+  const [wifiNetPassword, setWifiNetPassword] = useState('');
+  const [wifiNetBranchId, setWifiNetBranchId] = useState<BranchId>(currentBranchId);
+  const [wifiNetSpeed, setWifiNetSpeed] = useState('100 Mbps Dedicated Fiber');
+  const [wifiNetNotes, setWifiNetNotes] = useState('High-speed connection for video lectures and research.');
+  const [wifiNetBand, setWifiNetBand] = useState<'5 GHz' | '2.4 GHz' | 'Dual Band'>('5 GHz');
+  const [wifiNetIsActive, setWifiNetIsActive] = useState(true);
+  const [wifiFilterBranch, setWifiFilterBranch] = useState<'all' | BranchId>('all');
+  const [showPasswordMap, setShowPasswordMap] = useState<Record<string, boolean>>({});
+  const [copiedPasswordId, setCopiedPasswordId] = useState<string | null>(null);
+  const [quickChangePassId, setQuickChangePassId] = useState<string | null>(null);
+  const [quickNewPassword, setQuickNewPassword] = useState('');
 
   // Notice Form State
   const [noticeTitle, setNoticeTitle] = useState('');
@@ -480,6 +506,87 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
   const handleRemoveAmenityItem = (indexToRemove: number) => {
     setWifiAmenitiesList(wifiAmenitiesList.filter((_, idx) => idx !== indexToRemove));
+  };
+
+  // WiFi Network Management Handlers
+  const handleSaveWifiNetwork = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!wifiNetSsid.trim() || !wifiNetPassword.trim()) return;
+
+    if (editingWifiId) {
+      updateWifiNetwork(editingWifiId, {
+        ssid: wifiNetSsid.trim(),
+        password: wifiNetPassword.trim(),
+        branchId: wifiNetBranchId,
+        speed: wifiNetSpeed.trim() || '100 Mbps Dedicated Fiber',
+        notes: wifiNetNotes.trim(),
+        band: wifiNetBand,
+        isActive: wifiNetIsActive,
+      });
+      setEditingWifiId(null);
+    } else {
+      addWifiNetwork({
+        ssid: wifiNetSsid.trim(),
+        password: wifiNetPassword.trim(),
+        branchId: wifiNetBranchId,
+        speed: wifiNetSpeed.trim() || '100 Mbps Dedicated Fiber',
+        notes: wifiNetNotes.trim(),
+        band: wifiNetBand,
+        isActive: wifiNetIsActive,
+      });
+    }
+
+    setIsAddingWifi(false);
+    setWifiNetSsid('');
+    setWifiNetPassword('');
+    setWifiNetSpeed('100 Mbps Dedicated Fiber');
+    setWifiNetNotes('High-speed connection for video lectures and research.');
+    setWifiNetBand('5 GHz');
+    setWifiNetIsActive(true);
+    setWifiSavedSuccess(true);
+    setTimeout(() => setWifiSavedSuccess(false), 3500);
+  };
+
+  const handleStartEditWifiNetwork = (net: WifiNetwork) => {
+    setEditingWifiId(net.id);
+    setWifiNetSsid(net.ssid);
+    setWifiNetPassword(net.password);
+    setWifiNetBranchId(net.branchId);
+    setWifiNetSpeed(net.speed || '100 Mbps Dedicated Fiber');
+    setWifiNetNotes(net.notes || '');
+    setWifiNetBand(net.band || '5 GHz');
+    setWifiNetIsActive(net.isActive !== false);
+    setIsAddingWifi(true);
+  };
+
+  const handleCancelWifiEdit = () => {
+    setEditingWifiId(null);
+    setIsAddingWifi(false);
+    setWifiNetSsid('');
+    setWifiNetPassword('');
+    setWifiNetSpeed('100 Mbps Dedicated Fiber');
+    setWifiNetNotes('High-speed connection for video lectures and research.');
+    setWifiNetBand('5 GHz');
+    setWifiNetIsActive(true);
+  };
+
+  const toggleShowPassword = (id: string) => {
+    setShowPasswordMap((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
+
+  const handleCopyPassword = (net: WifiNetwork) => {
+    navigator.clipboard.writeText(net.password);
+    setCopiedPasswordId(net.id);
+    setTimeout(() => setCopiedPasswordId(null), 2500);
+  };
+
+  const handleQuickPasswordSubmit = (netId: string) => {
+    if (!quickNewPassword.trim()) return;
+    setWifiNetworkPassword(netId, quickNewPassword.trim());
+    setQuickChangePassId(null);
+    setQuickNewPassword('');
+    setWifiSavedSuccess(true);
+    setTimeout(() => setWifiSavedSuccess(false), 3000);
   };
 
   // Handle Post / Edit Notice
@@ -2096,143 +2203,507 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           {/* TAB: WI-FI & CENTER FACILITY AMENITIES */}
           {/* ================================================================= */}
           {activeTab === 'wifi' && (
-            <div className="space-y-5">
+            <div className="space-y-6">
+              {/* Header & Controls */}
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-100">
                 <div>
                   <h3 className="text-base font-bold text-slate-900 flex items-center gap-2">
                     <Wifi className="w-5 h-5 text-blue-600" />
-                    <span>Wi-Fi Network & Center Amenities ({branchConfig.name})</span>
+                    <span>Wi-Fi Networks & Password Management</span>
                   </h3>
                   <p className="text-xs text-slate-500">
-                    Configure high-speed optical fiber Wi-Fi credentials, bandwidth notes, and study center amenities.
+                    Add, delete, update networks, and configure instant Wi-Fi passwords with real-time sync.
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <span className="px-2.5 py-1 rounded-xl text-xs font-semibold bg-blue-50 text-blue-800 border border-blue-200">
-                    Active Branch: {branchConfig.name}
-                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (isAddingWifi) {
+                        handleCancelWifiEdit();
+                      } else {
+                        setWifiNetBranchId(currentBranchId);
+                        setIsAddingWifi(true);
+                      }
+                    }}
+                    className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-colors cursor-pointer"
+                  >
+                    {isAddingWifi ? (
+                      <>
+                        <X className="w-4 h-4" />
+                        <span>Close Form</span>
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="w-4 h-4" />
+                        <span>Add New Wi-Fi Network</span>
+                      </>
+                    )}
+                  </button>
                 </div>
               </div>
 
-              <form onSubmit={handleSaveWifiConfig} className="bg-slate-50 rounded-2xl p-4 sm:p-6 border border-slate-200 space-y-5">
-                <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
-                  <ShieldCheck className="w-4 h-4 text-emerald-600" />
-                  <span>Wi-Fi Network Credentials & Bandwidth</span>
+              {/* Status Alert */}
+              {wifiSavedSuccess && (
+                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 font-semibold animate-fadeIn">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                  <span>Wi-Fi settings and passwords updated and synchronized in real-time across all devices!</span>
                 </div>
+              )}
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Wi-Fi Network Name (SSID) *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={wifiSsid}
-                      onChange={(e) => setWifiSsid(e.target.value)}
-                      placeholder="e.g. SCIENCE_LIB_5G_FAST"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Wi-Fi Password *
-                    </label>
-                    <input
-                      type="text"
-                      required
-                      value={wifiPassword}
-                      onChange={(e) => setWifiPassword(e.target.value)}
-                      placeholder="e.g. study@2026#pass"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-emerald-700 font-mono font-semibold text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Dedicated Speed / Bandwidth
-                    </label>
-                    <input
-                      type="text"
-                      value={wifiSpeed}
-                      onChange={(e) => setWifiSpeed(e.target.value)}
-                      placeholder="e.g. 100 Mbps Dedicated Fiber"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Wi-Fi Usage Policy / Note
-                    </label>
-                    <textarea
-                      rows={2}
-                      value={wifiNotes}
-                      onChange={(e) => setWifiNotes(e.target.value)}
-                      placeholder="Optimized for online video lectures and research. High-volume torrents restricted."
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-xs font-semibold text-slate-700 mb-1">
-                      Helpdesk / Network Support Phone
-                    </label>
-                    <input
-                      type="text"
-                      value={wifiHelpdesk}
-                      onChange={(e) => setWifiHelpdesk(e.target.value)}
-                      placeholder="e.g. 01581624202"
-                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500"
-                    />
-                  </div>
-                </div>
-
-                {/* Center Amenities List Manager */}
-                <div className="space-y-3 pt-3 border-t border-slate-200">
+              {/* Add / Edit Wi-Fi Network Form */}
+              {isAddingWifi && (
+                <form
+                  onSubmit={handleSaveWifiNetwork}
+                  className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-4 shadow-xs animate-fadeIn"
+                >
                   <div className="flex items-center justify-between">
-                    <label className="block text-xs font-bold text-slate-900">
-                      Center Facility Amenities (Visible to Students in Modal)
-                    </label>
-                    <span className="text-xs text-slate-400">
-                      {wifiAmenitiesList.length} items configured
-                    </span>
-                  </div>
-
-                  {/* Add New Amenity Item Input */}
-                  <div className="flex items-center gap-2">
-                    <input
-                      type="text"
-                      placeholder="e.g. Individual desk LED lamps and power sockets"
-                      value={newAmenityInput}
-                      onChange={(e) => setNewAmenityInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') {
-                          e.preventDefault();
-                          handleAddAmenityItem();
-                        }
-                      }}
-                      className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                    />
+                    <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                      <Signal className="w-4 h-4 text-blue-600" />
+                      <span>{editingWifiId ? 'Edit Wi-Fi Network' : 'Add New Wi-Fi Network'}</span>
+                    </div>
                     <button
                       type="button"
-                      onClick={handleAddAmenityItem}
-                      className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors"
+                      onClick={handleCancelWifiEdit}
+                      className="text-xs text-slate-500 hover:text-slate-800 underline cursor-pointer"
                     >
-                      Add Item
+                      Cancel
                     </button>
                   </div>
 
-                  {/* List of current amenities */}
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Network Name (SSID) *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        placeholder="e.g. SCIENCE_LIB_5G_FAST"
+                        value={wifiNetSsid}
+                        onChange={(e) => setWifiNetSsid(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Wi-Fi Password *
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="text"
+                          required
+                          placeholder="e.g. study@2026#pass"
+                          value={wifiNetPassword}
+                          onChange={(e) => setWifiNetPassword(e.target.value)}
+                          className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-emerald-700 font-mono font-semibold text-xs focus:outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Assigned Branch *
+                      </label>
+                      <select
+                        value={wifiNetBranchId}
+                        onChange={(e) => setWifiNetBranchId(e.target.value as BranchId)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      >
+                        {allBranches.map((b) => (
+                          <option key={b.id} value={b.id}>
+                            {b.id === 'science_library' ? '🔬 Science Library' : '🏛️ Central Library'} ({b.name})
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Dedicated Speed / Bandwidth
+                      </label>
+                      <input
+                        type="text"
+                        placeholder="e.g. 100 Mbps Dedicated Fiber"
+                        value={wifiNetSpeed}
+                        onChange={(e) => setWifiNetSpeed(e.target.value)}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Frequency Band
+                      </label>
+                      <select
+                        value={wifiNetBand}
+                        onChange={(e) => setWifiNetBand(e.target.value as '5 GHz' | '2.4 GHz' | 'Dual Band')}
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      >
+                        <option value="5 GHz">🚀 5.0 GHz Ultra-High Speed</option>
+                        <option value="2.4 GHz">📡 2.4 GHz Long Range</option>
+                        <option value="Dual Band">⚡ Dual-Band 2.4 / 5.0 GHz</option>
+                      </select>
+                    </div>
+
+                    <div className="flex flex-col justify-end">
+                      <label className="flex items-center gap-2 cursor-pointer p-2 bg-white border border-slate-200 rounded-xl">
+                        <input
+                          type="checkbox"
+                          checked={wifiNetIsActive}
+                          onChange={(e) => setWifiNetIsActive(e.target.checked)}
+                          className="w-4 h-4 text-blue-600 rounded"
+                        />
+                        <span className="text-xs font-semibold text-slate-800">
+                          Active Network (Broadcast to Students)
+                        </span>
+                      </label>
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Wi-Fi Usage Notes / Restrictions
+                    </label>
+                    <textarea
+                      rows={2}
+                      placeholder="e.g. Fast connection for BCS model tests and video lectures. High-volume torrents restricted."
+                      value={wifiNetNotes}
+                      onChange={(e) => setWifiNetNotes(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
+                  </div>
+
+                  <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-200">
+                    <button
+                      type="button"
+                      onClick={handleCancelWifiEdit}
+                      className="px-4 py-2 rounded-xl bg-slate-200 hover:bg-slate-300 text-slate-700 font-semibold text-xs cursor-pointer"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs cursor-pointer transition-colors"
+                    >
+                      {editingWifiId ? 'Update Wi-Fi Network' : 'Add Wi-Fi Network'}
+                    </button>
+                  </div>
+                </form>
+              )}
+
+              {/* Branch Filter Tabs */}
+              <div className="flex flex-wrap items-center justify-between gap-3 pt-2">
+                <div className="flex items-center gap-1.5 p-1 bg-slate-100 rounded-xl">
+                  <button
+                    type="button"
+                    onClick={() => setWifiFilterBranch('all')}
+                    className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                      wifiFilterBranch === 'all'
+                        ? 'bg-white text-blue-700 shadow-xs'
+                        : 'text-slate-600 hover:text-slate-900'
+                    }`}
+                  >
+                    🌐 All Branches ({wifiNetworks.length})
+                  </button>
+                  {allBranches.map((b) => {
+                    const count = wifiNetworks.filter((n) => n.branchId === b.id).length;
+                    return (
+                      <button
+                        key={b.id}
+                        type="button"
+                        onClick={() => setWifiFilterBranch(b.id)}
+                        className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                          wifiFilterBranch === b.id
+                            ? 'bg-white text-blue-700 shadow-xs'
+                            : 'text-slate-600 hover:text-slate-900'
+                        }`}
+                      >
+                        {b.id === 'science_library' ? '🔬' : '🏛️'} {b.name} ({count})
+                      </button>
+                    );
+                  })}
+                </div>
+
+                <div className="text-xs text-slate-500">
+                  Total Configured Networks: <span className="font-bold text-slate-800">{wifiNetworks.length}</span>
+                </div>
+              </div>
+
+              {/* Wi-Fi Networks Grid */}
+              <div className="space-y-3">
+                {wifiNetworks
+                  .filter((net) => wifiFilterBranch === 'all' || net.branchId === wifiFilterBranch)
+                  .map((net) => {
+                    const isVisible = !!showPasswordMap[net.id];
+                    const isCopied = copiedPasswordId === net.id;
+                    const isQuickEditing = quickChangePassId === net.id;
+                    const branch = allBranches.find((b) => b.id === net.branchId);
+
+                    return (
+                      <div
+                        key={net.id}
+                        className={`p-4 rounded-2xl bg-white border transition-all shadow-xs space-y-3 ${
+                          net.isActive ? 'border-slate-200 hover:border-blue-300' : 'border-slate-200 opacity-70 bg-slate-50/50'
+                        }`}
+                      >
+                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-start sm:items-center gap-3">
+                            <div
+                              className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
+                                net.isActive ? 'bg-blue-50 text-blue-600 border border-blue-200' : 'bg-slate-100 text-slate-400'
+                              }`}
+                            >
+                              <Wifi className="w-5 h-5" />
+                            </div>
+
+                            <div>
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="font-mono font-bold text-sm text-slate-900">{net.ssid}</span>
+                                <span
+                                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                    net.isActive
+                                      ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                      : 'bg-slate-100 text-slate-600'
+                                  }`}
+                                >
+                                  {net.isActive ? '🟢 ACTIVE' : '⚪ STANDBY'}
+                                </span>
+                                <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-100">
+                                  {branch ? (branch.id === 'science_library' ? '🔬 Science Branch' : '🏛️ Central Branch') : net.branchId}
+                                </span>
+                                {net.band && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-purple-50 text-purple-700 border border-purple-100">
+                                    {net.band}
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-xs text-slate-500 mt-0.5 flex items-center gap-2">
+                                <span>Speed: <strong className="text-slate-700">{net.speed || '100 Mbps'}</strong></span>
+                                {net.notes && (
+                                  <>
+                                    <span>•</span>
+                                    <span className="truncate max-w-xs">{net.notes}</span>
+                                  </>
+                                )}
+                              </p>
+                            </div>
+                          </div>
+
+                          {/* Top Action Buttons */}
+                          <div className="flex items-center gap-1.5 self-end sm:self-auto">
+                            <button
+                              type="button"
+                              onClick={() => updateWifiNetwork(net.id, { isActive: !net.isActive })}
+                              className={`px-2.5 py-1.5 rounded-xl text-xs font-semibold border transition-all cursor-pointer ${
+                                net.isActive
+                                  ? 'bg-slate-50 hover:bg-slate-100 text-slate-700 border-slate-200'
+                                  : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                              }`}
+                              title="Toggle active status"
+                            >
+                              {net.isActive ? 'Set Inactive' : 'Activate'}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleStartEditWifiNetwork(net)}
+                              className="p-1.5 rounded-xl text-blue-600 hover:bg-blue-50 border border-blue-200 transition-colors cursor-pointer"
+                              title="Edit Wi-Fi Details"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (window.confirm(`Delete Wi-Fi network "${net.ssid}"?`)) {
+                                  deleteWifiNetwork(net.id);
+                                }
+                              }}
+                              className="p-1.5 rounded-xl text-rose-500 hover:bg-rose-50 border border-rose-200 transition-colors cursor-pointer"
+                              title="Delete Wi-Fi Network"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Password Management Bar */}
+                        <div className="p-3 rounded-xl bg-slate-50 border border-slate-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                          <div className="flex items-center gap-2.5 flex-1">
+                            <div className="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center shrink-0">
+                              <Key className="w-3.5 h-3.5" />
+                            </div>
+                            <div>
+                              <div className="text-[10px] uppercase font-bold text-slate-500">Wi-Fi Password:</div>
+                              <div className="font-mono text-xs font-bold text-slate-900 tracking-wide flex items-center gap-2">
+                                {isVisible ? (
+                                  <span className="text-emerald-700">{net.password}</span>
+                                ) : (
+                                  <span className="text-slate-400">••••••••••••</span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap items-center gap-1.5">
+                            {/* Toggle Show Password */}
+                            <button
+                              type="button"
+                              onClick={() => toggleShowPassword(net.id)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+                            >
+                              {isVisible ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                              <span>{isVisible ? 'Hide' : 'Show'}</span>
+                            </button>
+
+                            {/* Copy Password */}
+                            <button
+                              type="button"
+                              onClick={() => handleCopyPassword(net)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-white border border-slate-200 hover:bg-slate-100 text-slate-700 text-xs font-semibold cursor-pointer transition-colors"
+                            >
+                              {isCopied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                              <span>{isCopied ? 'Copied!' : 'Copy'}</span>
+                            </button>
+
+                            {/* Quick Set / Change Password */}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (isQuickEditing) {
+                                  setQuickChangePassId(null);
+                                  setQuickNewPassword('');
+                                } else {
+                                  setQuickChangePassId(net.id);
+                                  setQuickNewPassword(net.password);
+                                }
+                              }}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-blue-50 border border-blue-200 hover:bg-blue-100 text-blue-700 text-xs font-semibold cursor-pointer transition-colors"
+                            >
+                              <Lock className="w-3.5 h-3.5" />
+                              <span>{isQuickEditing ? 'Cancel Password Change' : 'Set Password'}</span>
+                            </button>
+                          </div>
+                        </div>
+
+                        {/* Quick Password Change Form */}
+                        {isQuickEditing && (
+                          <div className="p-3 bg-blue-50/70 border border-blue-200 rounded-xl space-y-2 animate-fadeIn">
+                            <div className="text-xs font-bold text-blue-900 flex items-center gap-1.5">
+                              <Key className="w-3.5 h-3.5 text-blue-600" />
+                              <span>Set New Password for SSID: {net.ssid}</span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              <input
+                                type="text"
+                                placeholder="Enter new Wi-Fi password..."
+                                value={quickNewPassword}
+                                onChange={(e) => setQuickNewPassword(e.target.value)}
+                                onKeyDown={(e) => {
+                                  if (e.key === 'Enter') {
+                                    e.preventDefault();
+                                    handleQuickPasswordSubmit(net.id);
+                                  }
+                                }}
+                                className="flex-1 px-3 py-1.5 bg-white border border-blue-300 rounded-lg text-slate-900 font-mono font-semibold text-xs focus:outline-none focus:border-blue-600"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => handleQuickPasswordSubmit(net.id)}
+                                className="px-4 py-1.5 rounded-lg bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs cursor-pointer shadow-xs transition-colors"
+                              >
+                                Save Password
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })}
+
+                {wifiNetworks.length === 0 && (
+                  <div className="p-8 text-center bg-slate-50 rounded-2xl border border-dashed border-slate-300 text-slate-400 text-xs">
+                    No Wi-Fi networks configured yet. Click "Add New Wi-Fi Network" to configure center credentials.
+                  </div>
+                )}
+              </div>
+
+              {/* Branch Facility Amenities & Support Section */}
+              <div className="pt-4 border-t border-slate-200 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                      <Sparkles className="w-4 h-4 text-amber-500" />
+                      <span>Study Center Facility Amenities ({branchConfig.name})</span>
+                    </h4>
+                    <p className="text-xs text-slate-500">
+                      These amenities are shown to students in the seat booking modal and info panels.
+                    </p>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSaveWifiConfig} className="bg-slate-50 rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Network Support / Helpdesk Phone
+                      </label>
+                      <input
+                        type="text"
+                        value={wifiHelpdesk}
+                        onChange={(e) => setWifiHelpdesk(e.target.value)}
+                        placeholder="e.g. 01581624202"
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 font-mono text-xs focus:outline-none focus:border-blue-500"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Branch Amenities Count
+                      </label>
+                      <div className="px-3 py-2 bg-white border border-slate-200 rounded-xl text-slate-700 text-xs">
+                        {wifiAmenitiesList.length} items configured for {branchConfig.name}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Add New Amenity Item Input */}
                   <div className="space-y-2">
+                    <label className="block text-xs font-semibold text-slate-700">Add Amenity Item</label>
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        placeholder="e.g. Filtered hot, cold, and ambient drinking water"
+                        value={newAmenityInput}
+                        onChange={(e) => setNewAmenityInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddAmenityItem();
+                          }
+                        }}
+                        className="flex-1 px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                      />
+                      <button
+                        type="button"
+                        onClick={handleAddAmenityItem}
+                        className="px-4 py-2 bg-slate-800 hover:bg-slate-700 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors shrink-0"
+                      >
+                        Add Item
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* List of current amenities */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
                     {wifiAmenitiesList.map((amenity, idx) => (
                       <div
                         key={idx}
-                        className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white border border-slate-200 text-xs"
+                        className="flex items-center justify-between gap-3 p-2.5 rounded-xl bg-white border border-slate-200 text-xs shadow-2xs"
                       >
                         <div className="flex items-center gap-2 text-slate-700 flex-1">
                           <Check className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
@@ -2249,28 +2720,17 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       </div>
                     ))}
                   </div>
-                </div>
 
-                <div className="flex items-center justify-between pt-3 border-t border-slate-200">
-                  {wifiSavedSuccess ? (
-                    <span className="text-emerald-700 text-xs font-semibold flex items-center gap-1.5">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      Wi-Fi & Facility settings saved and synchronized with Cloud!
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-400">
-                      Settings apply immediately for {branchConfig.name}.
-                    </span>
-                  )}
-
-                  <button
-                    type="submit"
-                    className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs shadow-md transition-all cursor-pointer"
-                  >
-                    Save Wi-Fi & Amenities
-                  </button>
-                </div>
-              </form>
+                  <div className="flex items-center justify-end pt-3 border-t border-slate-200">
+                    <button
+                      type="submit"
+                      className="px-5 py-2 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer"
+                    >
+                      Save Amenities & Helpdesk
+                    </button>
+                  </div>
+                </form>
+              </div>
             </div>
           )}
 

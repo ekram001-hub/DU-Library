@@ -242,6 +242,7 @@ export type RealtimeStatePayload = {
   branchesConfig?: unknown;
   rules?: unknown[];
   wifiFacilities?: unknown;
+  wifiNetworks?: unknown[];
 };
 
 const realtimeListeners = new Set<(payload: RealtimeStatePayload) => void>();
@@ -503,6 +504,7 @@ export async function syncLibraryStateToCloud(payload: {
   branchesConfig?: unknown;
   rules?: unknown[];
   wifiFacilities?: unknown;
+  wifiNetworks?: unknown[];
 }): Promise<{ success: boolean; error?: unknown }> {
   try {
     // 1. Instantly broadcast to all connected clients in real-time
@@ -541,6 +543,7 @@ export async function fetchLibraryStateFromCloud(): Promise<{
   branchesConfig?: unknown;
   rules?: unknown[];
   wifiFacilities?: unknown;
+  wifiNetworks?: unknown[];
 } | null> {
   try {
     const client = getSupabase();

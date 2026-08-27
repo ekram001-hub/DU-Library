@@ -1,5 +1,4 @@
 import React, { useMemo } from 'react';
-import { Armchair } from 'lucide-react';
 import { Seat, Room } from '../types';
 import { useLibrary } from '../context/LibraryContext';
 
@@ -53,7 +52,6 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
     if (seat.status === 'maintenance') {
       return {
         cardBg: 'bg-slate-100/80 border-slate-300 text-slate-400 opacity-60',
-        iconColor: 'text-slate-400',
         numColor: 'text-slate-500',
       };
     }
@@ -63,17 +61,15 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       return {
         cardBg:
           'bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-600 text-white border-2 border-blue-700 shadow-md ring-2 ring-blue-300/60 hover:brightness-105 active:scale-95',
-        iconColor: 'text-white',
         numColor: 'text-white font-bold',
       };
     }
 
-    // DIRECTIVE 2: Away seat MUST show in prominent complete GREEN with large live countdown timer
+    // DIRECTIVE 2: Away seat MUST show in prominent complete GREEN with large live countdown timer in Poppins
     if (seat.status === 'away') {
       return {
         cardBg:
           'bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white border-2 border-emerald-500 shadow-md ring-2 ring-emerald-300/70 hover:brightness-105 active:scale-95',
-        iconColor: 'text-white',
         numColor: 'text-white font-bold',
       };
     }
@@ -83,7 +79,6 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       return {
         cardBg:
           'bg-gradient-to-br from-teal-700 via-teal-800 to-emerald-900 text-white border-2 border-teal-400 ring-2 ring-amber-300 shadow-md hover:brightness-105',
-        iconColor: 'text-emerald-100',
         numColor: 'text-white font-bold',
       };
     }
@@ -93,7 +88,6 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       return {
         cardBg:
           'bg-gradient-to-br from-rose-600 via-red-600 to-red-700 text-white border-2 border-red-700 shadow-md ring-2 ring-red-300/50 hover:brightness-105',
-        iconColor: 'text-white',
         numColor: 'text-white font-bold',
       };
     }
@@ -101,9 +95,8 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
     // Available
     return {
       cardBg:
-        'bg-white border-slate-200/90 hover:border-emerald-500 hover:bg-emerald-50/30 text-slate-700 shadow-2xs hover:shadow-xs',
-      iconColor: 'text-slate-600 group-hover:text-emerald-700',
-      numColor: 'text-slate-800 group-hover:text-emerald-950 font-semibold',
+        'bg-white border-slate-200/90 hover:border-emerald-500 hover:bg-emerald-50/40 text-slate-700 shadow-2xs hover:shadow-xs',
+      numColor: 'text-slate-800 group-hover:text-emerald-950 font-bold',
     };
   }, [seat.status, seat.isSecondaryBooked, isMySeat]);
 
@@ -117,37 +110,30 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
         seat.status === 'available'
           ? 'Available (Click to book)'
           : seat.status === 'occupied'
-          ? `Booked (${seat.occupantName || 'Student'})`
+          ? `Booked (${seat.occupantName || 'Student'}) - Click for details`
           : seat.status === 'away'
-          ? `Temporary Break • ${awayCountdown?.text || 'Away'} remaining`
+          ? `Temporary Break • ${awayCountdown?.text || 'Away'} remaining - Click for details`
           : 'Under Maintenance'
       }`}
     >
-      {/* Top row: Female indicator, Seat Number, My Seat badge */}
+      {/* Top row: Female indicator & Status indicator badge */}
       <div className="w-full flex items-center justify-between gap-1 shrink-0">
         <div className="flex items-center gap-0.5">
-          {seat.isFemaleReserved && (
+          {seat.isFemaleReserved ? (
             <span
               className={`text-[9px] px-1 rounded-sm font-semibold ${
-                seat.status === 'away'
-                  ? 'bg-pink-900/60 text-pink-100'
-                  : 'text-pink-600'
+                seat.status === 'away' || seat.status === 'occupied' || seat.isSecondaryBooked
+                  ? 'bg-black/30 text-pink-200'
+                  : 'text-pink-600 bg-pink-50'
               }`}
               title="Female Reserved Seat"
             >
               🌸
             </span>
+          ) : (
+            <span className="w-2" />
           )}
         </div>
-
-        {/* Seat Number Top / Corner */}
-        <span
-          className={`text-[11px] sm:text-xs tracking-tight font-bold ${
-            seat.status === 'away' ? 'text-white/95 drop-shadow-2xs' : statusTheme.numColor
-          }`}
-        >
-          {seat.seatNumber}
-        </span>
 
         {/* Status indicator badge */}
         <div>
@@ -166,20 +152,25 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
               className="inline-block w-2.5 h-2.5 rounded-full bg-white animate-ping"
               title="On Break"
             />
+          ) : seat.status === 'occupied' ? (
+            <span
+              className="inline-block w-2 h-2 rounded-full bg-white/70 shadow-2xs"
+              title="Occupied"
+            />
           ) : null}
         </div>
       </div>
 
       {/* ============================================================== */}
-      {/* CENTER BODY: SECONDARY BOOKED (BLUE) OR AWAY (ORANGE) OR OTHER */}
+      {/* CENTER BODY: CLEAN TYPOGRAPHY (NO SEAT ICON) */}
       {/* ============================================================== */}
       {seat.isSecondaryBooked ? (
         /* BLUE SECONDARY BOOKED DISPLAY */
-        <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center">
+        <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center font-['Poppins',_sans-serif]">
           <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-sky-100 leading-tight">
             SEC. BOOKED
           </span>
-          <div className="text-sm sm:text-base font-mono font-black text-white tracking-wide leading-tight my-0.5 drop-shadow-xs">
+          <div className="text-base sm:text-lg font-['Poppins',_sans-serif] font-black text-white tracking-wide leading-tight my-0.5 drop-shadow-xs">
             {awayCountdown ? awayCountdown.text : 'ACTIVE'}
           </div>
           <span className="text-[8px] sm:text-[9px] text-sky-100 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/25 rounded-full">
@@ -187,12 +178,12 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           </span>
         </div>
       ) : seat.status === 'away' ? (
-        /* GREEN AWAY DISPLAY WITH COUNTDOWN TIMER */
-        <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center">
+        /* GREEN AWAY DISPLAY WITH LIVE COUNTDOWN TIMER IN POPPINS FONT */
+        <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center font-['Poppins',_sans-serif]">
           <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-100 leading-tight">
             ON BREAK
           </span>
-          <div className="text-base sm:text-lg md:text-xl font-mono font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
+          <div className="text-base sm:text-lg md:text-xl font-['Poppins',_sans-serif] font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
             {awayCountdown ? awayCountdown.text : '30:00'}
           </div>
           <span className="text-[8px] sm:text-[9px] text-white/95 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/30 rounded-full mt-0.5">
@@ -207,31 +198,48 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
               : '⏳ Break'}
           </span>
         </div>
+      ) : seat.status === 'occupied' ? (
+        /* OCCUPIED (RED) SEAT: Clean seat number & Occupant Name */
+        <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif]">
+          <span className="text-base sm:text-lg font-['Poppins',_sans-serif] font-black text-white tracking-tight leading-none drop-shadow-2xs">
+            {seat.seatNumber}
+          </span>
+          <span className="text-[9px] sm:text-[10px] font-bold text-red-100 uppercase tracking-wider mt-0.5">
+            BOOKED
+          </span>
+        </div>
+      ) : seat.status === 'available' ? (
+        /* AVAILABLE SEAT: Prominent clean Seat Number */
+        <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif]">
+          <span className="text-base sm:text-lg md:text-xl font-['Poppins',_sans-serif] font-black text-slate-800 group-hover:text-emerald-700 group-hover:scale-105 transition-all tracking-tight leading-none">
+            {seat.seatNumber}
+          </span>
+        </div>
       ) : (
-        /* STANDARD BODY FOR OCCUPIED / AVAILABLE / MAINTENANCE */
-        <div className="flex-1 flex flex-col items-center justify-center">
-          <div className={`transition-colors ${statusTheme.iconColor}`}>
-            <Armchair className="w-5 h-5 sm:w-6 sm:h-6 stroke-[1.75]" />
-          </div>
+        /* MAINTENANCE SEAT */
+        <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif]">
+          <span className="text-sm font-bold text-slate-400">
+            {seat.seatNumber}
+          </span>
         </div>
       )}
 
       {/* Bottom Status / Name Indicator */}
-      <div className="w-full flex items-center justify-center shrink-0">
+      <div className="w-full flex items-center justify-center shrink-0 font-['Poppins',_sans-serif]">
         {seat.isSecondaryBooked ? (
           <span className="text-[8px] sm:text-[9px] text-sky-100 font-medium truncate max-w-full">
             {seat.secondaryOccupantName ? `${seat.secondaryOccupantName.split(' ')[0]} (2nd)` : '2nd Booked'}
           </span>
         ) : seat.status === 'away' ? (
-          <span className="text-[8px] sm:text-[9px] text-white/90 font-mono font-semibold truncate">
+          <span className="text-[8px] sm:text-[9px] text-white/90 font-semibold truncate">
             {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Away'}
           </span>
         ) : seat.status === 'occupied' ? (
-          <span className="text-[8px] sm:text-[9px] text-white font-medium truncate max-w-full">
+          <span className="text-[8px] sm:text-[9px] text-white/95 font-semibold truncate max-w-full">
             {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Booked'}
           </span>
         ) : seat.status === 'available' ? (
-          <span className="text-[9px] text-emerald-700 group-hover:text-emerald-800 font-medium">
+          <span className="text-[9px] text-emerald-700 group-hover:text-emerald-800 font-bold uppercase tracking-wider">
             Available
           </span>
         ) : (
