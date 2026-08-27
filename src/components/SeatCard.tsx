@@ -24,15 +24,28 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
 
   // Calculate live away countdown if seat is on break
   const awayCountdown = useMemo(() => {
-    if (seat.status !== 'away' || !seat.awaySince || !seat.awayDurationMinutes) {
+    if (seat.status !== 'away') {
       return null;
     }
-    const elapsedMs = currentTime.getTime() - seat.awaySince;
-    const totalMs = seat.awayDurationMinutes * 60 * 1000;
+    const rawAwaySince = seat.awaySince;
+    let awaySinceMs = 0;
+    if (typeof rawAwaySince === 'number') {
+      awaySinceMs = rawAwaySince;
+    } else if (typeof rawAwaySince === 'string') {
+      awaySinceMs = new Date(rawAwaySince).getTime();
+    }
+
+    if (!awaySinceMs || isNaN(awaySinceMs)) {
+      awaySinceMs = currentTime.getTime();
+    }
+
+    const durationMins = Number(seat.awayDurationMinutes) || 30;
+    const totalMs = durationMins * 60 * 1000;
+    const elapsedMs = Math.max(0, currentTime.getTime() - awaySinceMs);
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: '00:00', label: 'Time Expired' };
+      return { expired: true, text: '00:00' };
     }
 
     const totalSeconds = Math.floor(remainingMs / 1000);
@@ -45,7 +58,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       mins,
       secs,
     };
-  }, [seat, currentTime]);
+  }, [seat.status, seat.awaySince, seat.awayDurationMinutes, currentTime]);
 
   // Card theme styling
   const statusTheme = useMemo(() => {
@@ -178,25 +191,14 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           </span>
         </div>
       ) : seat.status === 'away' ? (
-        /* GREEN AWAY DISPLAY WITH LIVE COUNTDOWN TIMER IN POPPINS FONT */
-        <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center font-['Poppins',_sans-serif]">
-          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-100 leading-tight">
-            ON BREAK
+        /* GREEN AWAY DISPLAY: ONLY SEAT NUMBER & LARGE FONT LIVE COUNTDOWN TIMER */
+        <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif]">
+          <span className="text-xs sm:text-sm font-extrabold text-emerald-100 tracking-tight leading-tight drop-shadow-2xs">
+            {seat.seatNumber}
           </span>
-          <div className="text-base sm:text-lg md:text-xl font-['Poppins',_sans-serif] font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
+          <div className="text-lg sm:text-xl md:text-2xl font-black font-mono text-white tracking-tight leading-none drop-shadow-xs my-0.5">
             {awayCountdown ? awayCountdown.text : '30:00'}
           </div>
-          <span className="text-[8px] sm:text-[9px] text-white/95 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/30 rounded-full mt-0.5">
-            {seat.awayReason === 'Prayer'
-              ? '🕌 Prayer'
-              : seat.awayReason === 'Lunch'
-              ? '🍱 Lunch'
-              : seat.awayReason === 'Tea'
-              ? '☕ Tea'
-              : seat.awayReason === 'Rest'
-              ? '🛋️ Rest'
-              : '⏳ Break'}
-          </span>
         </div>
       ) : seat.status === 'occupied' ? (
         /* OCCUPIED (RED) SEAT: Clean seat number & Occupant Name */
@@ -226,13 +228,12 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
 
       {/* Bottom Status / Name Indicator */}
       <div className="w-full flex items-center justify-center shrink-0 font-['Poppins',_sans-serif]">
-        {seat.isSecondaryBooked ? (
+        {seat.status === 'away' ? (
+          /* NO OTHER TEXT FOR ON-BREAK SEATS */
+          <span className="h-1" />
+        ) : seat.isSecondaryBooked ? (
           <span className="text-[8px] sm:text-[9px] text-sky-100 font-medium truncate max-w-full">
             {seat.secondaryOccupantName ? `${seat.secondaryOccupantName.split(' ')[0]} (2nd)` : '2nd Booked'}
-          </span>
-        ) : seat.status === 'away' ? (
-          <span className="text-[8px] sm:text-[9px] text-white/90 font-semibold truncate">
-            {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Away'}
           </span>
         ) : seat.status === 'occupied' ? (
           <span className="text-[8px] sm:text-[9px] text-white/95 font-semibold truncate max-w-full">
