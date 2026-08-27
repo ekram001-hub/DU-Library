@@ -627,10 +627,14 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
   }, []);
 
+  // Remote update flag to prevent echo loops
+  const isRemoteUpdateRef = React.useRef(false);
+
   // Listen for Supabase Realtime Broadcast (all external users & devices live)
   useEffect(() => {
     const unsubscribe = subscribeToSupabaseRealtime((payload) => {
       if (payload) {
+        isRemoteUpdateRef.current = true;
         if (Array.isArray(payload.rooms) && payload.rooms.length > 0) {
           setRooms(payload.rooms as Room[]);
         }
@@ -659,10 +663,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Supabase initial cloud load tracker
   const isCloudLoadedRef = React.useRef(false);
 
-  // Fetch initial global library configuration from Supabase Cloud on mount
-  useEffect(() => {
-    fetchLibraryStateFromCloud().then((cloudState) => {
+  // Helper to load and apply cloud state
+  const loadCloudState = useCallback(async () => {
+    try {
+      const cloudState = await fetchLibraryStateFromCloud();
       if (cloudState) {
+        isRemoteUpdateRef.current = true;
         if (Array.isArray(cloudState.rooms) && cloudState.rooms.length > 0) {
           setRooms(cloudState.rooms as Room[]);
         }
@@ -681,15 +687,35 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         setCloudLastSyncedAt(new Date().toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', second: '2-digit' }));
       }
       isCloudLoadedRef.current = true;
-    }).catch(() => {
+    } catch {
       isCloudLoadedRef.current = true;
-    });
+    }
   }, []);
+
+  // Fetch initial global library configuration from Supabase Cloud on mount
+  useEffect(() => {
+    loadCloudState();
+  }, [loadCloudState]);
+
+  // Periodic Cloud Polling Fallback (every 4 seconds) to guarantee real-time sync across all devices
+  useEffect(() => {
+    const pollTimer = setInterval(() => {
+      loadCloudState();
+    }, 4000);
+
+    return () => clearInterval(pollTimer);
+  }, [loadCloudState]);
 
   // Automatically broadcast and sync state changes to Supabase Cloud (debounced)
   useEffect(() => {
     // Prevent pushing local blank/initial state before fetching latest from cloud
     if (!isCloudLoadedRef.current) return;
+
+    // Skip if state was updated by a remote broadcast/fetch to prevent bounce-back loops
+    if (isRemoteUpdateRef.current) {
+      isRemoteUpdateRef.current = false;
+      return;
+    }
 
     const timer = setTimeout(() => {
       broadcastSync({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities });

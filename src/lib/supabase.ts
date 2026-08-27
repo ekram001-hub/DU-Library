@@ -5,6 +5,80 @@ const DEFAULT_SUPABASE_URL = 'https://mqrpjhyxfngngegetflb.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcnBqaHl4Zm5nbmdlZ2V0ZmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMjg4MTEsImV4cCI6MjEwMjgwNDgxMX0.n0qjKmDlFO9beIh2R2Gv_SjYppmijlvPp2h-YehCOiM';
 
+// Ready-to-execute SQL Script for Supabase SQL Editor
+export const SUPABASE_SETUP_SQL = `-- =========================================================================
+-- SMART STUDY CENTER & LIBRARY CLOUD SYNCHRONIZATION SCHEMA
+-- Copy and paste this script into your Supabase Dashboard -> SQL Editor
+-- =========================================================================
+
+-- 1. Create table for live seat reservations, rooms, rules, wifi & notices
+CREATE TABLE IF NOT EXISTS public.system_config (
+  key TEXT PRIMARY KEY,
+  value JSONB NOT NULL,
+  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 2. Create table for registered student profiles & PINs
+CREATE TABLE IF NOT EXISTS public.students (
+  phone TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  email TEXT,
+  student_id TEXT,
+  gender TEXT DEFAULT 'male',
+  target_exam TEXT,
+  pin TEXT,
+  is_blocked BOOLEAN DEFAULT false,
+  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
+  last_active TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
+);
+
+-- 3. Enable Row Level Security (RLS)
+ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
+ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
+
+-- 4. Create Policies allowing Public Access (Anon / Public Client Read & Write)
+DROP POLICY IF EXISTS "Allow public read system_config" ON public.system_config;
+CREATE POLICY "Allow public read system_config"
+  ON public.system_config FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "Allow public write system_config" ON public.system_config;
+CREATE POLICY "Allow public write system_config"
+  ON public.system_config FOR ALL
+  TO anon, authenticated
+  USING (true)
+  WITH CHECK (true);
+
+DROP POLICY IF EXISTS "Allow public read students" ON public.students;
+CREATE POLICY "Allow public read students"
+  ON public.students FOR SELECT
+  TO anon, authenticated
+  USING (true);
+
+DROP POLICY IF EXISTS "Allow public write students" ON public.students;
+CREATE POLICY "Allow public write students"
+  ON public.students FOR ALL
+  TO anon, authenticated
+  USING (true)
+  WITH CHECK (true);
+
+-- 5. Enable Realtime Replication for instant live seat status changes
+DO $$
+BEGIN
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.system_config;
+  EXCEPTION
+    WHEN duplicate_object THEN NULL;
+  END;
+  BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.students;
+  EXCEPTION
+    WHEN duplicate_object THEN NULL;
+  END;
+END $$;
+`;
+
 // Get credentials from environment or fallback
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
 const supabaseAnonKey =
@@ -17,7 +91,13 @@ let supabaseInstance: SupabaseClient | null = null;
 
 export function getSupabase(): SupabaseClient {
   if (!supabaseInstance) {
-    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey);
+    supabaseInstance = createClient(supabaseUrl, supabaseAnonKey, {
+      realtime: {
+        params: {
+          eventsPerSecond: 10,
+        },
+      },
+    });
   }
   return supabaseInstance;
 }

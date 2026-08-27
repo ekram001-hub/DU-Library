@@ -40,10 +40,11 @@ import {
   VolumeX,
   Heart,
   Clock,
+  Copy,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig } from '../types';
-import { SupabaseDiagnosticReport } from '../lib/supabase';
+import { SupabaseDiagnosticReport, SUPABASE_SETUP_SQL } from '../lib/supabase';
 
 interface AdminPageProps {
   onBackToPortal: () => void;
@@ -221,7 +222,14 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [isSyncingCloud, setIsSyncingCloud] = useState(false);
   const [diagnosticReport, setDiagnosticReport] = useState<SupabaseDiagnosticReport | null>(null);
   const [isRunningDiag, setIsRunningDiag] = useState(false);
+  const [copiedSql, setCopiedSql] = useState(false);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+
+  const handleCopySql = () => {
+    navigator.clipboard.writeText(SUPABASE_SETUP_SQL);
+    setCopiedSql(true);
+    setTimeout(() => setCopiedSql(false), 2500);
+  };
 
   // Branch Settings State
   const [fbUrl, setFbUrl] = useState(branchConfig.facebookUrl);
@@ -2620,6 +2628,62 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     Click &quot;Run Diagnostics Now&quot; to test your Supabase subscription, inspect cloud vs rendered seat counts, and detect synchronization issues.
                   </div>
                 )}
+              </div>
+
+              {/* Supabase Cloud SQL Schema & Setup Guide */}
+              <div className="p-5 rounded-2xl bg-slate-900 text-slate-100 border border-slate-800 space-y-3.5 shadow-sm">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-800">
+                  <div className="flex items-center gap-2.5">
+                    <Database className="w-5 h-5 text-sky-400" />
+                    <div>
+                      <h4 className="text-sm font-bold text-white flex items-center gap-2">
+                        <span>Supabase Cloud SQL Setup (Required for Cross-Device Sync)</span>
+                        <span className="px-2 py-0.5 text-[10px] font-mono rounded bg-sky-950 text-sky-300 border border-sky-800">
+                          ONE-TIME SETUP
+                        </span>
+                      </h4>
+                      <p className="text-xs text-slate-400">
+                        সিট বুকিং, বিরতি (Orange) ও সেকেন্ডারি বুকিং (Blue) সবার মোবাইলে লাইভ দেখতে এই SQL স্ক্রিপ্টটি Supabase-এ রান করুন।
+                      </p>
+                    </div>
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={handleCopySql}
+                    className="flex items-center gap-2 px-4 py-2 rounded-xl bg-sky-600 hover:bg-sky-500 text-white font-semibold text-xs shadow-xs transition-all cursor-pointer self-start sm:self-auto"
+                  >
+                    {copiedSql ? (
+                      <>
+                        <Check className="w-4 h-4 text-white" />
+                        <span>SQL Copied!</span>
+                      </>
+                    ) : (
+                      <>
+                        <Copy className="w-4 h-4" />
+                        <span>Copy Supabase SQL</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+
+                <div className="space-y-2 text-xs text-slate-300">
+                  <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 space-y-1.5">
+                    <div className="font-bold text-sky-300">📌 কীভাবে Supabase-এ কোড রান করবেন:</div>
+                    <ol className="list-decimal list-inside space-y-1 text-slate-300 text-[11px] leading-relaxed">
+                      <li>আপনার Supabase ড্যাশবোর্ডে (<a href="https://supabase.com/dashboard" target="_blank" rel="noreferrer" className="text-sky-400 underline">supabase.com/dashboard</a>) লগইন করুন।</li>
+                      <li>বামপাশের মেনু থেকে <strong>SQL Editor</strong>-এ ক্লিক করুন এবং <strong>New query</strong> খুলুন।</li>
+                      <li>উপরের <strong>&quot;Copy Supabase SQL&quot;</strong> বাটনে ক্লিক করে কোডটি কপি করে পেস্ট করুন।</li>
+                      <li>নিচের সবুজ <strong>&quot;RUN&quot;</strong> বাটনে ক্লিক করুন। সাথে সাথে <code className="text-sky-300">system_config</code> ও <code className="text-sky-300">students</code> টেবিল এবং Realtime তৈরি হয়ে যাবে!</li>
+                    </ol>
+                  </div>
+
+                  <div className="relative">
+                    <pre className="p-3.5 rounded-xl bg-slate-950 border border-slate-800 text-[11px] font-mono text-emerald-400 max-h-48 overflow-y-auto leading-relaxed select-all">
+                      {SUPABASE_SETUP_SQL}
+                    </pre>
+                  </div>
+                </div>
               </div>
 
               {/* JSON Backup & Restore Tools */}
