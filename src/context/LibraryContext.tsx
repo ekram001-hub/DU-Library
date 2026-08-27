@@ -1050,8 +1050,17 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     [pushStateToCloudNow]
   );
 
-  // Return from away
-  const returnFromAway = useCallback((seatId: string) => {
+  // Return from away (Enforces: Cannot cancel early before duration finishes)
+  const returnFromAway = useCallback((seatId: string, force = false) => {
+    const targetSeat = seatsRef.current.find((s) => s.id === seatId);
+    if (!force && targetSeat && targetSeat.awaySince && targetSeat.awayDurationMinutes) {
+      const remainingMs = targetSeat.awaySince + targetSeat.awayDurationMinutes * 60 * 1000 - Date.now();
+      if (remainingMs > 2000) {
+        console.warn('Cannot return early before break timer expires.');
+        return;
+      }
+    }
+
     const updatedSeats = seatsRef.current.map((s) => {
       if (s.id === seatId) {
         return {

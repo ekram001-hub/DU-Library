@@ -14,6 +14,7 @@ import {
   AlertTriangle,
   RotateCcw,
   CheckCircle2,
+  Lock,
 } from 'lucide-react';
 import { Seat, Room } from '../types';
 import { useLibrary } from '../context/LibraryContext';
@@ -150,7 +151,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             seat.isSecondaryBooked
               ? 'bg-blue-600 text-white border-blue-700'
               : seat.status === 'away'
-              ? 'bg-orange-500 text-white border-orange-600'
+              ? 'bg-emerald-600 text-white border-emerald-700'
               : 'bg-slate-50 border-slate-100 text-slate-900'
           }`}
         >
@@ -160,7 +161,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                 seat.isSecondaryBooked
                   ? 'bg-white text-blue-600'
                   : seat.status === 'away'
-                  ? 'bg-white text-orange-600'
+                  ? 'bg-white text-emerald-700'
                   : 'bg-white border border-slate-200 text-slate-800'
               }`}
             >
@@ -172,7 +173,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   {seat.isSecondaryBooked
                     ? 'Secondary Active (Temporary Study)'
                     : seat.status === 'away'
-                    ? 'Temporary Break (Away)'
+                    ? 'Temporary Break (Green Seat)'
                     : 'Seat Details'}
                 </h3>
                 {isMySeat && (
@@ -194,7 +195,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               </div>
               <p
                 className={`text-xs ${
-                  seat.status === 'away' || seat.isSecondaryBooked ? 'text-blue-100' : 'text-slate-500'
+                  seat.status === 'away' || seat.isSecondaryBooked ? 'text-emerald-100' : 'text-slate-500'
                 }`}
               >
                 {room ? room.name : 'Study Room'}
@@ -233,18 +234,24 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               </div>
             </div>
           ) : seat.status === 'away' ? (
-            /* Away Big Timer Banner if status is away */
-            <div className="p-4 rounded-xl bg-orange-50 border-2 border-orange-400 text-center space-y-1 shadow-2xs">
-              <div className="text-xs font-bold text-orange-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
-                <Timer className="w-4 h-4 text-orange-600" />
+            /* Away Big Timer Banner in Green (Emerald) */
+            <div className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center space-y-1.5 shadow-2xs">
+              <div className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+                <Timer className="w-4 h-4 text-emerald-600" />
                 <span>Away Remaining Time (Live Countdown)</span>
               </div>
-              <div className="text-3xl font-mono font-black text-orange-600 tracking-wider animate-pulse">
+              <div className="text-3xl font-mono font-black text-emerald-700 tracking-wider animate-pulse">
                 {awayCountdown ? awayCountdown.text : '30:00'}
               </div>
-              <div className="text-xs text-orange-700 font-medium">
+              <div className="text-xs text-emerald-800 font-medium">
                 Reason: {seat.awayReason === 'Prayer' ? 'Prayer Break 🕌' : seat.awayReason === 'Lunch' ? 'Meal Break 🍱' : seat.awayReason === 'Tea' ? 'Tea & Snack ☕' : seat.awayReason === 'Rest' ? 'Rest & Refresh 🛋️' : 'Emergency Break ⚡'}
               </div>
+              {!awayCountdown?.expired && (
+                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-1.5 flex items-center justify-center gap-1">
+                  <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
+                  <span>টাইম শেষ হওয়ার আগে ব্রেক ক্যান্সেল করা যাবে না</span>
+                </div>
+              )}
             </div>
           ) : (
             /* Status Banner for other states */
@@ -420,18 +427,31 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
                   {seat.status === 'away' ? (
-                    <button
-                      id="btn-return-break"
-                      type="button"
-                      onClick={() => {
-                        returnFromAway(seat.id);
-                        onClose();
-                      }}
-                      className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>I'm Back</span>
-                    </button>
+                    !awayCountdown?.expired ? (
+                      <button
+                        id="btn-return-break-locked"
+                        type="button"
+                        disabled
+                        title="ব্রেক টাইম শেষ হওয়ার আগে ক্যান্সেল বা রিটার্ন করা যাবে না"
+                        className="py-2.5 px-3 rounded-xl bg-slate-100 border border-slate-300 text-slate-400 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-80"
+                      >
+                        <Lock className="w-4 h-4 text-slate-400" />
+                        <span>Locked ({awayCountdown?.text || 'Away'})</span>
+                      </button>
+                    ) : (
+                      <button
+                        id="btn-return-break"
+                        type="button"
+                        onClick={() => {
+                          returnFromAway(seat.id);
+                          onClose();
+                        }}
+                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer animate-pulse"
+                      >
+                        <RotateCcw className="w-4 h-4" />
+                        <span>I'm Back (ব্রেক শেষ)</span>
+                      </button>
+                    )
                   ) : (
                     <button
                       id="btn-take-break"
@@ -440,7 +460,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         onClose();
                         onOpenAwayTimer();
                       }}
-                      className="py-2.5 px-3 rounded-xl bg-orange-500 hover:bg-orange-600 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Timer className="w-4 h-4" />
                       <span>Take Break</span>
@@ -461,15 +481,22 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   </button>
                 </div>
 
-                <button
-                  id="btn-release-seat"
-                  type="button"
-                  onClick={handleRelease}
-                  className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
-                >
-                  <LogOut className="w-3.5 h-3.5" />
-                  <span>Release Seat</span>
-                </button>
+                {seat.status === 'away' && !awayCountdown?.expired ? (
+                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-[11px] text-center flex items-center justify-center gap-1.5">
+                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                    <span>ব্রেক চলাকালীন সিট রিলিজ ও রিটার্ন লক করা আছে</span>
+                  </div>
+                ) : (
+                  <button
+                    id="btn-release-seat"
+                    type="button"
+                    onClick={handleRelease}
+                    className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                  >
+                    <LogOut className="w-3.5 h-3.5" />
+                    <span>Release Seat</span>
+                  </button>
+                )}
               </div>
             )}
 

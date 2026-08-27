@@ -68,21 +68,21 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       };
     }
 
-    // DIRECTIVE 2: Away seat MUST show in prominent complete ORANGE with large timer taking over the seat
+    // DIRECTIVE 2: Away seat MUST show in prominent complete GREEN with large live countdown timer
     if (seat.status === 'away') {
       return {
         cardBg:
-          'bg-gradient-to-br from-amber-500 via-orange-500 to-orange-600 text-white border-2 border-orange-600 shadow-md ring-2 ring-orange-300/60 hover:brightness-105 active:scale-95',
+          'bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white border-2 border-emerald-500 shadow-md ring-2 ring-emerald-300/70 hover:brightness-105 active:scale-95',
         iconColor: 'text-white',
         numColor: 'text-white font-bold',
       };
     }
 
-    // My Seat: Glowing Emerald Green
+    // My Seat: Glowing Teal / Emerald with Distinct Golden Ring
     if (isMySeat) {
       return {
         cardBg:
-          'bg-gradient-to-br from-emerald-600 to-teal-700 text-white border-2 border-emerald-500 ring-2 ring-emerald-300 shadow-md hover:brightness-105',
+          'bg-gradient-to-br from-teal-700 via-teal-800 to-emerald-900 text-white border-2 border-teal-400 ring-2 ring-amber-300 shadow-md hover:brightness-105',
         iconColor: 'text-emerald-100',
         numColor: 'text-white font-bold',
       };
@@ -187,15 +187,15 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           </span>
         </div>
       ) : seat.status === 'away' ? (
-        /* ORANGE AWAY DISPLAY WITH COUNTDOWN TIMER */
+        /* GREEN AWAY DISPLAY WITH COUNTDOWN TIMER */
         <div className="w-full flex-1 flex flex-col items-center justify-center my-0.5 sm:my-1 text-center">
-          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-orange-100/90 leading-tight">
+          <span className="text-[9px] sm:text-[10px] font-black uppercase tracking-wider text-emerald-100 leading-tight">
             ON BREAK
           </span>
           <div className="text-base sm:text-lg md:text-xl font-mono font-black text-white tracking-wider leading-none drop-shadow-xs my-0.5 animate-pulse">
             {awayCountdown ? awayCountdown.text : '30:00'}
           </div>
-          <span className="text-[8px] sm:text-[9px] text-white/90 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/25 rounded-full mt-0.5">
+          <span className="text-[8px] sm:text-[9px] text-white/95 font-medium truncate max-w-full px-1.5 py-0.5 bg-black/30 rounded-full mt-0.5">
             {seat.awayReason === 'Prayer'
               ? '🕌 Prayer'
               : seat.awayReason === 'Lunch'

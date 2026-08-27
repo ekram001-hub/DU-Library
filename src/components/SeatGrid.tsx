@@ -243,12 +243,12 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         </div>
 
         {/* Away */}
-        <div className="bg-amber-50/90 border border-amber-200/80 rounded-xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-amber-900">
-            <Coffee className="w-4 h-4 text-amber-600" />
-            <span className="text-xs font-semibold">Break (Orange)</span>
+        <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-emerald-900">
+            <Coffee className="w-4 h-4 text-emerald-600" />
+            <span className="text-xs font-semibold">Break (Green)</span>
           </div>
-          <span className="text-sm font-bold text-amber-900 font-mono">
+          <span className="text-sm font-bold text-emerald-950 font-mono">
             {awayCount}
           </span>
         </div>
@@ -291,16 +291,16 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
             <span className="font-semibold text-red-700">Occupied (লাল)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-orange-500 shadow-2xs inline-block" />
-            <span className="font-semibold text-orange-700">On Break (কমলা + টাইমার)</span>
+            <span className="w-3 h-3 rounded-md bg-emerald-600 shadow-2xs inline-block" />
+            <span className="font-semibold text-emerald-700">On Break (গ্রিন + টাইমার)</span>
           </div>
           <div className="flex items-center gap-1.5">
             <span className="w-3 h-3 rounded-md bg-blue-600 shadow-2xs inline-block" />
             <span className="font-semibold text-blue-700">2nd Booking (নীল)</span>
           </div>
           <div className="flex items-center gap-1.5">
-            <span className="w-3 h-3 rounded-md bg-emerald-600 shadow-2xs inline-block" />
-            <span className="font-semibold text-emerald-800">My Seat (সবুজ)</span>
+            <span className="w-3 h-3 rounded-md bg-teal-800 ring-2 ring-amber-300 shadow-2xs inline-block" />
+            <span className="font-semibold text-teal-900">My Seat (গোল্ডেন রিং)</span>
           </div>
         </div>
       </div>
