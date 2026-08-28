@@ -30,13 +30,15 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
     currentTime,
   } = useLibrary();
 
-  if (!currentStudentSeat) return null;
-
-  const room = rooms.find((r) => r.id === currentStudentSeat.roomId);
+  // Rules of Hooks: both useMemo hooks below MUST run before the early
+  // return. When a student books their first seat this widget switches from
+  // hidden (currentStudentSeat === null) to visible, and hooks placed after
+  // a conditional return change the hook order between renders — crashing
+  // the whole app with "Rendered more hooks than during the previous render".
 
   // Elapsed study time calculation
   const elapsedStudyTime = useMemo(() => {
-    if (!currentStudentSeat.bookedAt) return '0m';
+    if (!currentStudentSeat?.bookedAt) return '0m';
     const diffMs = currentTime.getTime() - currentStudentSeat.bookedAt;
     const totalMinutes = Math.floor(diffMs / (60 * 1000));
     const hours = Math.floor(totalMinutes / 60);
@@ -45,11 +47,12 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
       return `${hours}h ${mins}m`;
     }
     return `${mins}m`;
-  }, [currentStudentSeat.bookedAt, currentTime]);
+  }, [currentStudentSeat?.bookedAt, currentTime]);
 
   // Away countdown if on break
   const awayCountdown = useMemo(() => {
     if (
+      !currentStudentSeat ||
       currentStudentSeat.status !== 'away' ||
       !currentStudentSeat.awaySince ||
       !currentStudentSeat.awayDurationMinutes
@@ -86,6 +89,10 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
       hmText: `${hours}h ${mins < 10 ? '0' : ''}${mins}m`,
     };
   }, [currentStudentSeat, currentTime]);
+
+  if (!currentStudentSeat) return null;
+
+  const room = rooms.find((r) => r.id === currentStudentSeat.roomId);
 
   const handleRelease = () => {
     if (currentStudentSeat.status === 'away' && !awayCountdown?.expired) {
