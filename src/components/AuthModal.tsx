@@ -213,14 +213,19 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   };
 
   // Handler: Admin Login
-  const handleAdminSubmit = (e: React.FormEvent) => {
+  const handleAdminSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setAdminError(null);
-    const success = loginAdmin(adminEmail, adminPass);
-    if (success) {
+    // Credentials are verified by Supabase Auth and the `admins` table —
+    // nothing is compared inside the browser bundle any more.
+    const result = await loginAdmin(adminEmail, adminPass);
+    if (result.ok) {
       onClose();
     } else {
-      setAdminError('Invalid email or password. Please contact the library administrator if you need access.');
+      setAdminError(
+        result.message ||
+          'Invalid email or password. Please contact the library administrator if you need access.'
+      );
     }
   };
 

@@ -1,4 +1,9 @@
 import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
+// Single source of truth for the database migration: the exact same file lives
+// in `supabase/01_security_core.sql` so it can be opened, reviewed and run
+// directly from the repository, and it is also handed to the admin console's
+// "Copy SQL" button through SUPABASE_SETUP_SQL below.
+import SECURITY_CORE_SQL from '../../supabase/01_security_core.sql?raw';
 
 // Default Supabase project URL & Public Anon Key from user configuration.
 //
@@ -12,81 +17,18 @@ const DEFAULT_SUPABASE_URL = 'https://mqrpjhyxfngngegetflb.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcnBqaHl4Zm5nbmdlZ2V0ZmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMjg4MTEsImV4cCI6MjEwMjgwNDgxMX0.n0qjKmDlFO9beIh2R2Gv_SjYppmijlvPp2h-YehCOiM';
 
-// Ready-to-execute SQL Script for Supabase SQL Editor
-export const SUPABASE_SETUP_SQL = `-- =========================================================================
--- SMART STUDY CENTER & LIBRARY CLOUD SYNCHRONIZATION SCHEMA
--- Supabase Dashboard -> SQL Editor -> New Query -> Paste & Click RUN
--- =========================================================================
-
--- 1. Create table for live seat reservations, rooms, rules, wifi & notices
-CREATE TABLE IF NOT EXISTS public.system_config (
-  key TEXT PRIMARY KEY,
-  value JSONB NOT NULL,
-  updated_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 2. Create table for registered student profiles & login PINs
-CREATE TABLE IF NOT EXISTS public.students (
-  phone TEXT PRIMARY KEY,
-  name TEXT NOT NULL,
-  email TEXT,
-  student_id TEXT,
-  gender TEXT DEFAULT 'male',
-  target_exam TEXT,
-  pin TEXT,
-  is_blocked BOOLEAN DEFAULT false,
-  created_at TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL,
-  last_active TIMESTAMP WITH TIME ZONE DEFAULT timezone('utc'::text, now()) NOT NULL
-);
-
--- 3. Enable Row Level Security (RLS) on both tables
-ALTER TABLE public.system_config ENABLE ROW LEVEL SECURITY;
-ALTER TABLE public.students ENABLE ROW LEVEL SECURITY;
-
--- 4. Clean up any previous policies to allow fresh permissive rules
-DROP POLICY IF EXISTS "Allow public read system_config" ON public.system_config;
-DROP POLICY IF EXISTS "Allow public write system_config" ON public.system_config;
-DROP POLICY IF EXISTS "Allow public read students" ON public.students;
-DROP POLICY IF EXISTS "Allow public write students" ON public.students;
-
--- 5. Create Permissive Policies for Web Clients (Public/Anon & Auth)
-CREATE POLICY "Allow public read system_config"
-  ON public.system_config FOR SELECT
-  TO anon, authenticated
-  USING (true);
-
-CREATE POLICY "Allow public write system_config"
-  ON public.system_config FOR ALL
-  TO anon, authenticated
-  USING (true)
-  WITH CHECK (true);
-
-CREATE POLICY "Allow public read students"
-  ON public.students FOR SELECT
-  TO anon, authenticated
-  USING (true);
-
-CREATE POLICY "Allow public write students"
-  ON public.students FOR ALL
-  TO anon, authenticated
-  USING (true)
-  WITH CHECK (true);
-
--- 6. Enable Realtime Replication for instant live seat status changes
-DO $$
-BEGIN
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.system_config;
-  EXCEPTION
-    WHEN duplicate_object THEN NULL;
-  END;
-  BEGIN
-    ALTER PUBLICATION supabase_realtime ADD TABLE public.students;
-  EXCEPTION
-    WHEN duplicate_object THEN NULL;
-  END;
-END $$;
-`;
+/**
+ * Ready-to-execute migration script.
+ *
+ * The text is imported verbatim from `supabase/01_security_core.sql`, so the
+ * repository, this constant and the admin console's "Copy SQL" button can
+ * never drift apart. It:
+ *   - hashes student PINs (`pin_hash`) and drops the plaintext `pin` column,
+ *   - creates the `admins` allow-list + `public.is_admin()`,
+ *   - replaces the old `USING (true)` RLS policies with least-privilege ones,
+ *   - removes `students` from the Realtime publication.
+ */
+export const SUPABASE_SETUP_SQL: string = SECURITY_CORE_SQL;
 
 // Get credentials from environment or fallback
 const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || DEFAULT_SUPABASE_URL;
@@ -117,17 +59,64 @@ export const isSupabaseConfigured = (): boolean => {
 
 export const SUPABASE_PROJECT_URL = supabaseUrl;
 
+
+/* ========================================================================== */
+/*  STUDENT PROFILES                                                           */
+/* ========================================================================== */
+/*  Two rules apply to every function in this section:                       */
+/*    * a raw PIN is never accepted, returned or persisted — only the         */
+/*      PBKDF2-SHA256 credential produced by `hashPin()` (see lib/crypto.ts); */
+/*    * writes go through the `upsert_student_profile` RPC, which validates    */
+/*      the hash shape server-side and cannot touch `is_blocked`.             */
+/* ========================================================================== */
+
+const PIN_HASH_COLUMN = 'pin_hash';
+
+/** True when a Postgres error means "this object does not exist yet". */
+function isMissingSchemaObject(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  if (!e) return false;
+  // 42P01 undefined_table, 42883 undefined_function, 42703 undefined_column
+  if (e.code === '42P01' || e.code === '42883' || e.code === '42703') return true;
+  return /does not exist/i.test(e.message || '');
+}
+
+/** True when a Postgres error is a Row Level Security rejection. */
+function isRowLevelSecurityError(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  if (!e) return false;
+  if (e.code === '42501') return true;
+  return /row-level security|row level security/i.test(e.message || '');
+}
+
+export interface CloudStudentRow {
+  phone: string;
+  name: string;
+  email?: string;
+  student_id?: string;
+  gender?: string;
+  target_exam?: string;
+  /** PBKDF2-SHA256 credential. NEVER a plaintext PIN. */
+  pin_hash?: string;
+  is_blocked?: boolean;
+  created_at?: string;
+  last_active?: string;
+}
+
 /**
- * Fetch Student profile from Supabase by phone number (Auto-fill on return)
+ * Look up a student by phone for the "welcome back" auto-fill.
+ *
+ * Prefers the `lookup_student_by_phone` RPC, which is SECURITY DEFINER and
+ * deliberately omits the e-mail address and the PIN hash. Falls back to a
+ * direct select on pre-migration projects, but never asks for the credential
+ * column.
  */
 export async function fetchStudentByPhone(phone: string): Promise<{
   name: string;
   phone: string;
-  email?: string;
   studentId?: string;
   gender?: string;
   targetExam?: string;
-  pin?: string;
   isBlocked?: boolean;
 } | null> {
   try {
@@ -135,9 +124,40 @@ export async function fetchStudentByPhone(phone: string): Promise<{
     if (!client || !phone.trim()) return null;
 
     const cleanPhone = phone.trim().replace(/\D/g, '');
+
+    const rpc = await client.rpc('lookup_student_by_phone', { p_phone: cleanPhone });
+    if (!rpc.error) {
+      const row = (Array.isArray(rpc.data) ? rpc.data[0] : rpc.data) as
+        | {
+            name?: string;
+            phone?: string;
+            student_id?: string;
+            gender?: string;
+            target_exam?: string;
+            is_blocked?: boolean;
+          }
+        | null
+        | undefined;
+      if (!row || !row.phone) return null;
+      return {
+        name: row.name || 'Registered Student',
+        phone: row.phone,
+        studentId: row.student_id || undefined,
+        gender: row.gender || 'male',
+        targetExam: row.target_exam || undefined,
+        isBlocked: Boolean(row.is_blocked),
+      };
+    }
+
+    if (!isMissingSchemaObject(rpc.error) && !isRowLevelSecurityError(rpc.error)) {
+      console.warn('Supabase lookup_student_by_phone error:', rpc.error.message);
+      return null;
+    }
+
+    // Legacy fallback (RPC not deployed yet).
     const { data, error } = await client
       .from('students')
-      .select('*')
+      .select('name, phone, student_id, gender, target_exam, is_blocked')
       .or(`phone.eq.${phone.trim()},phone.eq.${cleanPhone}`)
       .maybeSingle();
 
@@ -146,11 +166,9 @@ export async function fetchStudentByPhone(phone: string): Promise<{
     return {
       name: data.name,
       phone: data.phone,
-      email: data.email || undefined,
       studentId: data.student_id || undefined,
       gender: data.gender || 'male',
       targetExam: data.target_exam || undefined,
-      pin: data.pin || undefined,
       isBlocked: Boolean(data.is_blocked),
     };
   } catch (err) {
@@ -160,7 +178,10 @@ export async function fetchStudentByPhone(phone: string): Promise<{
 }
 
 /**
- * Backup / Sync Student profile to Supabase database by Phone number
+ * Backup / sync a student profile to Supabase, keyed by phone number.
+ *
+ * `pinHash` must already be hashed — passing a raw PIN here is a bug and the
+ * database will reject it with the `students_pin_hash_format_chk` constraint.
  */
 export async function syncStudentToCloud(student: {
   name: string;
@@ -169,13 +190,32 @@ export async function syncStudentToCloud(student: {
   studentId?: string;
   gender?: string;
   targetExam?: string;
-  pin?: string;
+  pinHash?: string;
   isBlocked?: boolean;
 }): Promise<{ success: boolean; error?: unknown }> {
   try {
     const client = getSupabase();
     if (!client) return { success: false };
 
+    // Preferred path: validated, SECURITY DEFINER RPC.
+    const rpc = await client.rpc('upsert_student_profile', {
+      p_name: student.name,
+      p_phone: student.phone,
+      p_email: student.email || null,
+      p_student_id: student.studentId || null,
+      p_gender: student.gender || 'male',
+      p_target_exam: student.targetExam || null,
+      p_pin_hash: student.pinHash || null,
+    });
+
+    if (!rpc.error) return { success: true };
+
+    if (!isMissingSchemaObject(rpc.error) && !isRowLevelSecurityError(rpc.error)) {
+      console.warn('Supabase upsert_student_profile error:', rpc.error.message);
+      return { success: false, error: rpc.error };
+    }
+
+    // Legacy fallback for projects that have not run the migration yet.
     const { error } = await client.from('students').upsert(
       {
         phone: student.phone,
@@ -184,7 +224,7 @@ export async function syncStudentToCloud(student: {
         student_id: student.studentId || null,
         gender: student.gender || 'male',
         target_exam: student.targetExam || null,
-        pin: student.pin || null,
+        [PIN_HASH_COLUMN]: student.pinHash || null,
         is_blocked: Boolean(student.isBlocked),
         last_active: new Date().toISOString(),
       },
@@ -204,38 +244,183 @@ export async function syncStudentToCloud(student: {
 }
 
 /**
- * Fetch all registered students from Supabase (for Admin Directory)
+ * Update only the stored credential for one student (admin PIN reset).
  */
-export async function fetchAllStudentsFromCloud(): Promise<Array<{
-  phone: string;
-  name: string;
-  email?: string;
-  student_id?: string;
-  gender?: string;
-  target_exam?: string;
-  pin?: string;
-  is_blocked?: boolean;
-  created_at?: string;
-  last_active?: string;
-}>> {
+export async function updateStudentPinHash(
+  phone: string,
+  pinHash: string | null
+): Promise<{ success: boolean; error?: unknown }> {
+  try {
+    const client = getSupabase();
+    if (!client) return { success: false };
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+
+    const { error } = await client
+      .from('students')
+      .update({ [PIN_HASH_COLUMN]: pinHash, last_active: new Date().toISOString() })
+      .or(`phone.eq.${cleanPhone},phone.eq.${phone.trim()}`);
+
+    if (error) {
+      if (isRowLevelSecurityError(error)) {
+        console.warn(
+          'Supabase refused the PIN update: the signed-in account is not in the `admins` table.'
+        );
+      } else {
+        console.warn('Supabase updateStudentPinHash error:', error.message);
+      }
+      return { success: false, error };
+    }
+    return { success: true };
+  } catch (err) {
+    console.warn('Supabase updateStudentPinHash exception:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Fetch all registered students from Supabase (Admin Directory only).
+ *
+ * After the security migration this is gated by RLS: only a JWT whose e-mail
+ * is present in the `admins` table gets any rows back.
+ */
+export async function fetchAllStudentsFromCloud(): Promise<CloudStudentRow[]> {
   try {
     const client = getSupabase();
     if (!client) return [];
 
     const { data, error } = await client
       .from('students')
-      .select('*')
+      .select(
+        'phone, name, email, student_id, gender, target_exam, pin_hash, is_blocked, created_at, last_active'
+      )
       .order('created_at', { ascending: false });
 
-    if (error || !data) {
+    if (error) {
+      if (isRowLevelSecurityError(error)) {
+        console.warn('Supabase students directory is admin-only (RLS).');
+      } else if (!isMissingSchemaObject(error)) {
+        console.warn('Supabase fetchAllStudents error:', error.message);
+      }
       return [];
     }
-    return data;
+    return (data || []) as CloudStudentRow[];
   } catch (err) {
     console.warn('Supabase fetchAllStudents error:', err);
     return [];
   }
 }
+
+/* ========================================================================== */
+/*  SERVER-SIDE ADMIN AUTHORIZATION                                            */
+/* ========================================================================== */
+/*  The decision "is this user an administrator?" is made by Postgres, not by  */
+/*  this bundle. The browser presents a Supabase-signed JWT, and the RLS       */
+/*  policy on `admins` only returns a row when that JWT's e-mail matches.      */
+/*  Editing `localStorage` or a variable in DevTools cannot produce a valid    */
+/*  signature, so it can no longer grant admin access.                         */
+/* ========================================================================== */
+
+export interface AdminRecord {
+  email: string;
+  name: string | null;
+  role: 'admin' | 'superadmin';
+  branch_access: string;
+}
+
+export type AdminCheckResult =
+  | { status: 'granted'; admin: AdminRecord }
+  | { status: 'denied'; message: string }
+  | { status: 'not_configured'; message: string }
+  | { status: 'no_session'; message: string };
+
+/**
+ * Ask the database whether the *currently signed-in* Supabase user is an
+ * administrator.
+ */
+export async function checkAdminAccess(email?: string | null): Promise<AdminCheckResult> {
+  const client = getSupabase();
+  if (!client) {
+    return { status: 'no_session', message: 'Supabase is not configured.' };
+  }
+
+  try {
+    const { data: sessionData } = await client.auth.getSession();
+    const sessionEmail = (sessionData?.session?.user?.email || email || '').trim().toLowerCase();
+    if (!sessionEmail) {
+      return {
+        status: 'no_session',
+        message: 'Sign in with an administrator account first.',
+      };
+    }
+
+    const { data, error } = await client
+      .from('admins')
+      .select('email, name, role, branch_access')
+      .ilike('email', sessionEmail)
+      .maybeSingle();
+
+    if (error) {
+      if (isMissingSchemaObject(error)) {
+        return {
+          status: 'not_configured',
+          message:
+            'The `admins` table does not exist yet. Run supabase/01_security_core.sql in the Supabase SQL editor.',
+        };
+      }
+      return { status: 'denied', message: error.message };
+    }
+
+    // RLS returned no row => this JWT's e-mail is not on the allow-list.
+    if (!data) {
+      return {
+        status: 'denied',
+        message: 'This account is not on the administrator allow-list.',
+      };
+    }
+
+    return {
+      status: 'granted',
+      admin: {
+        email: String(data.email || sessionEmail).toLowerCase(),
+        name: (data.name as string | null) ?? null,
+        role: data.role === 'superadmin' ? 'superadmin' : 'admin',
+        branch_access: (data.branch_access as string) || 'all',
+      },
+    };
+  } catch (err) {
+    return {
+      status: 'denied',
+      message: err instanceof Error ? err.message : 'Administrator check failed.',
+    };
+  }
+}
+
+/**
+ * Password sign-in against Supabase Auth. The password is never compared in
+ * this bundle and there is no client-side password list any more.
+ */
+export async function signInWithEmail(
+  email: string,
+  password: string
+): Promise<{ user: SupabaseUser | null; error: string | null }> {
+  const client = getSupabase();
+  if (!client) return { user: null, error: 'Supabase is not configured.' };
+
+  try {
+    const { data, error } = await client.auth.signInWithPassword({
+      email: email.trim().toLowerCase(),
+      password,
+    });
+    if (error) return { user: null, error: error.message };
+    return { user: data.user, error: null };
+  } catch (err) {
+    return {
+      user: null,
+      error: err instanceof Error ? err.message : 'Sign-in failed.',
+    };
+  }
+}
+
 
 let realtimeChannel: ReturnType<SupabaseClient['channel']> | null = null;
 let realtimeChannelStatus: string = 'DISCONNECTED';
@@ -336,6 +521,16 @@ export interface SupabaseDiagnosticReport {
     studentsTableAccessible: boolean;
     studentsCount: number;
   };
+  /**
+   * Is server-side authorization in place, and does it accept this session?
+   * `configured: false` means the `admins` table is missing, i.e. the security
+   * migration has not been run yet.
+   */
+  adminAuthorization: {
+    configured: boolean;
+    granted: boolean;
+    status: string;
+  };
   renderedStateComparison?: {
     localSeatsCount: number;
     localOccupiedCount: number;
@@ -367,6 +562,11 @@ export async function runSupabaseDiagnostics(localRooms?: unknown[], localSeats?
       cloudOccupiedSeatsCount: 0,
       studentsTableAccessible: false,
       studentsCount: 0,
+    },
+    adminAuthorization: {
+      configured: false,
+      granted: false,
+      status: 'Checking...',
     },
   };
 
@@ -404,7 +604,30 @@ export async function runSupabaseDiagnostics(localRooms?: unknown[], localSeats?
     report.tables.systemConfigStatus = `Exception: ${err instanceof Error ? err.message : String(err)}`;
   }
 
-  // 2. Test students table
+  // 2. Is server-side admin authorization active for this session?
+  try {
+    const adminCheck = await checkAdminAccess();
+    report.adminAuthorization = {
+      configured: adminCheck.status !== 'not_configured',
+      granted: adminCheck.status === 'granted',
+      status:
+        adminCheck.status === 'granted'
+          ? `Server-verified admin (${adminCheck.admin.email})`
+          : adminCheck.status === 'not_configured'
+            ? 'admins table missing - run 01_security_core.sql'
+            : adminCheck.status === 'no_session'
+              ? 'No signed-in Supabase session'
+              : 'Signed in, but not on the admins allow-list',
+    };
+  } catch (err) {
+    report.adminAuthorization = {
+      configured: true,
+      granted: false,
+      status: `Check failed: ${err instanceof Error ? err.message : String(err)}`,
+    };
+  }
+
+  // 3. Test students table
   try {
     const { data: studentsData, error: studentsError } = await client
       .from('students')
@@ -418,7 +641,7 @@ export async function runSupabaseDiagnostics(localRooms?: unknown[], localSeats?
     report.tables.studentsTableAccessible = false;
   }
 
-  // 3. Compare with currently rendered local state
+  // 4. Compare with currently rendered local state
   if (Array.isArray(localRooms) && Array.isArray(localSeats)) {
     const localOccupied = (localSeats as Array<{ status?: string }>).filter(
       (s) => s.status === 'occupied' || s.status === 'away'

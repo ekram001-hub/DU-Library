@@ -51,6 +51,7 @@ import {
 import { useLibrary } from '../context/LibraryContext';
 import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig, WifiNetwork } from '../types';
 import { SupabaseDiagnosticReport, SUPABASE_SETUP_SQL } from '../lib/supabase';
+import { describePinHash, pinHashFingerprint, needsHashUpgrade } from '../lib/crypto';
 
 interface AdminPageProps {
   onBackToPortal: () => void;
@@ -80,6 +81,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     adminToggleMaintenance,
     adminManuallyAssignSeat,
     adminResetStudentPin,
+    adminVerifyStudentPin,
     adminToggleBlockStudent,
     adminAddCustomSeat,
     adminDeleteSeat,
@@ -108,6 +110,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     resetToDefaultData,
     attendanceRecords,
     isAdminLoggedIn,
+    adminCheckPending,
+    adminSetupRequired,
     adminUser,
     loginAdmin,
     logoutAdmin,
@@ -143,6 +147,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [isRefreshingUsers, setIsRefreshingUsers] = useState(false);
   const [editingPinPhone, setEditingPinPhone] = useState<string | null>(null);
   const [newPinValue, setNewPinValue] = useState('');
+  const [verifyPinPhone, setVerifyPinPhone] = useState<string | null>(null);
+  const [verifyPinValue, setVerifyPinValue] = useState('');
+  const [pinNotice, setPinNotice] = useState<string | null>(null);
 
   // Manual Seat Assign State
   const [assignSeatId, setAssignSeatId] = useState('');
@@ -275,12 +282,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const femaleReservedSeats = branchSeats.filter((s) => s.isFemaleReserved).length;
 
   // Handle Admin Manual Login
-  const handleAdminFormLogin = (e: React.FormEvent) => {
+  const handleAdminFormLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    const success = loginAdmin(adminEmailOrPin, adminPassword);
-    if (!success) {
-      setAuthError('Invalid credentials. Only an authorized administrator account can sign in.');
+    setIsLoggingIn(true);
+    try {
+      // Both the password check and the "is this an admin?" check happen on
+      // the server (Supabase Auth + the RLS-protected `admins` table).
+      const result = await loginAdmin(adminEmailOrPin, adminPassword);
+      if (!result.ok) {
+        setAuthError(
+          result.message ||
+            'Invalid credentials. Only an authorized administrator account can sign in.'
+        );
+      }
+    } finally {
+      setIsLoggingIn(false);
     }
   };
 
@@ -376,11 +393,30 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     setIsRefreshingUsers(false);
   };
 
-  const handleSavePin = (phone: string) => {
+  const handleSavePin = async (phone: string) => {
     if (!newPinValue.trim()) return;
-    adminResetStudentPin(phone, newPinValue.trim());
-    setEditingPinPhone(null);
-    setNewPinValue('');
+    // The raw PIN is handed straight to the hashing layer; only the PBKDF2
+    // digest is kept in state, localStorage and Supabase.
+    const result = await adminResetStudentPin(phone, newPinValue);
+    setPinNotice(result.message);
+    if (result.success) {
+      setEditingPinPhone(null);
+      setNewPinValue('');
+    }
+  };
+
+  const handleVerifyPin = async (phone: string) => {
+    if (!verifyPinValue.trim()) return;
+    const outcome = await adminVerifyStudentPin(phone, verifyPinValue);
+    setVerifyPinValue('');
+    setVerifyPinPhone(null);
+    setPinNotice(
+      outcome === null
+        ? 'That student has no PIN set yet.'
+        : outcome
+          ? 'PIN matches the stored hash.'
+          : 'PIN does not match.'
+    );
   };
 
   // Handle Manual Seat Assign
@@ -800,12 +836,48 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               <p className="text-xs text-slate-400 max-w-xs mx-auto">
                 Sign in with your administrator credentials or authorized Google email to manage rooms, seats, students, and cloud backups.
               </p>
+              <p className="text-[10px] text-slate-500 max-w-xs mx-auto flex items-center justify-center gap-1.5">
+                <ShieldCheck className="w-3 h-3 text-emerald-500" />
+                Access is verified by Supabase against the <code className="text-slate-400">admins</code> table — not by this browser.
+              </p>
             </div>
 
             {authError && (
               <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-800/80 text-rose-300 text-xs flex items-start gap-2">
                 <AlertTriangle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
                 <span>{authError}</span>
+              </div>
+            )}
+
+            {adminSetupRequired && (
+              <div className="p-3.5 rounded-xl bg-amber-950/50 border border-amber-700/60 text-amber-200 text-xs space-y-2.5">
+                <div className="flex items-start gap-2">
+                  <Database className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
+                  <div>
+                    <div className="font-bold text-amber-100">Database security setup required</div>
+                    <p className="text-amber-200/80 mt-1 leading-relaxed">
+                      The <code className="text-amber-100">admins</code> table is missing, so nobody can be
+                      authorized yet. Run the migration once and this console unlocks.
+                    </p>
+                  </div>
+                </div>
+                <ol className="list-decimal list-inside space-y-1 text-amber-200/80 pl-1">
+                  <li>Supabase Dashboard → SQL Editor → New query.</li>
+                  <li>Paste the script below and click RUN.</li>
+                  <li>
+                    Authentication → Users → <span className="text-amber-100">Add user</span> for each admin
+                    e-mail (tick “Auto Confirm User”).
+                  </li>
+                  <li>Sign in here with that e-mail and password.</li>
+                </ol>
+                <button
+                  type="button"
+                  onClick={handleCopySql}
+                  className="w-full py-2 rounded-xl bg-amber-500 hover:bg-amber-400 text-amber-950 font-bold text-xs flex items-center justify-center gap-2 transition-colors cursor-pointer"
+                >
+                  {copiedSql ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copiedSql ? 'SQL copied to clipboard' : 'Copy 01_security_core.sql'}</span>
+                </button>
               </div>
             )}
 
@@ -879,9 +951,10 @@ export const AdminPage: React.FC<AdminPageProps> = ({
 
                 <button
                   type="submit"
-                  className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg transition-all cursor-pointer"
+                  disabled={isLoggingIn || adminCheckPending}
+                  className="w-full py-2.5 rounded-xl bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs shadow-lg transition-all cursor-pointer disabled:opacity-60"
                 >
-                  Unlock Admin Dashboard
+                  {isLoggingIn || adminCheckPending ? 'Verifying with server…' : 'Unlock Admin Dashboard'}
                 </button>
               </form>
             </div>
@@ -1758,6 +1831,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   </h3>
                   <p className="text-xs text-slate-500">
                     Search students, reset security PINs, manage block lists, and refresh records from the cloud database.
+                    PINs are stored as salted PBKDF2-SHA256 digests — the original number cannot be read back here.
                   </p>
                 </div>
 
@@ -1783,6 +1857,23 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   className="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-slate-900 text-xs focus:outline-none focus:bg-white focus:border-blue-500 transition-all"
                 />
               </div>
+
+              {pinNotice && (
+                <div className="flex items-start justify-between gap-3 p-3 rounded-xl bg-blue-50 border border-blue-200 text-blue-800 text-xs">
+                  <span className="flex items-start gap-2">
+                    <ShieldCheck className="w-4 h-4 text-blue-600 shrink-0 mt-0.5" />
+                    <span>{pinNotice}</span>
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setPinNotice(null)}
+                    className="text-blue-500 hover:text-blue-800 cursor-pointer"
+                    aria-label="Dismiss"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
+              )}
 
               {/* Users Table */}
               <div className="overflow-x-auto rounded-2xl border border-slate-200">
@@ -1829,47 +1920,121 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               {editingPinPhone === student.phone ? (
                                 <div className="flex items-center gap-1.5">
                                   <input
-                                    type="text"
-                                    maxLength={6}
+                                    type="password"
+                                    inputMode="numeric"
+                                    autoComplete="new-password"
+                                    maxLength={8}
                                     placeholder="New PIN"
                                     value={newPinValue}
-                                    onChange={(e) => setNewPinValue(e.target.value)}
-                                    className="w-20 px-2 py-1 border border-blue-400 rounded-lg text-xs font-mono"
+                                    onChange={(e) => setNewPinValue(e.target.value.replace(/\D/g, ''))}
+                                    className="w-24 px-2 py-1 border border-blue-400 rounded-lg text-xs font-mono"
                                   />
                                   <button
                                     type="button"
-                                    onClick={() => handleSavePin(student.phone)}
+                                    onClick={() => void handleSavePin(student.phone)}
                                     className="px-2 py-1 bg-blue-600 text-white rounded-lg text-xs font-semibold cursor-pointer"
                                   >
                                     Save
                                   </button>
                                   <button
                                     type="button"
-                                    onClick={() => setEditingPinPhone(null)}
+                                    onClick={() => {
+                                      setEditingPinPhone(null);
+                                      setNewPinValue('');
+                                    }}
+                                    className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
+                                  >
+                                    X
+                                  </button>
+                                </div>
+                              ) : verifyPinPhone === student.phone ? (
+                                <div className="flex items-center gap-1.5">
+                                  <input
+                                    type="password"
+                                    inputMode="numeric"
+                                    autoComplete="off"
+                                    maxLength={8}
+                                    placeholder="PIN to check"
+                                    value={verifyPinValue}
+                                    onChange={(e) => setVerifyPinValue(e.target.value.replace(/\D/g, ''))}
+                                    className="w-24 px-2 py-1 border border-amber-400 rounded-lg text-xs font-mono"
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => void handleVerifyPin(student.phone)}
+                                    className="px-2 py-1 bg-amber-500 text-white rounded-lg text-xs font-semibold cursor-pointer"
+                                  >
+                                    Check
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setVerifyPinPhone(null);
+                                      setVerifyPinValue('');
+                                    }}
                                     className="px-2 py-1 bg-slate-200 text-slate-700 rounded-lg text-xs cursor-pointer"
                                   >
                                     X
                                   </button>
                                 </div>
                               ) : (
-                                <div className="flex items-center gap-2">
-                                  <span className={`px-2 py-0.5 rounded-md text-xs font-mono font-semibold ${
-                                    student.pin ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-slate-100 text-slate-500'
-                                  }`}>
-                                    {student.pin ? `PIN: ${student.pin}` : 'No PIN'}
+                                <div className="flex flex-wrap items-center gap-2">
+                                  {/* The PIN itself is never rendered: only its
+                                      hash fingerprint and the algorithm used. */}
+                                  <span
+                                    title={student.pinHash ? describePinHash(student.pinHash) : 'No credential stored'}
+                                    className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-xs font-semibold ${
+                                      student.pinHash
+                                        ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                        : 'bg-slate-100 text-slate-500'
+                                    }`}
+                                  >
+                                    {student.pinHash ? <Key className="w-3 h-3" /> : null}
+                                    {student.pinHash ? 'PIN set' : 'No PIN'}
                                   </span>
-                                  {!isSuperAdmin && (
-                                    <button
-                                      type="button"
-                                      onClick={() => {
-                                        setEditingPinPhone(student.phone);
-                                        setNewPinValue(student.pin || '1234');
-                                      }}
-                                      className="text-blue-600 hover:underline text-xs font-medium cursor-pointer"
-                                      title="Reset PIN"
+                                  {student.pinHash && (
+                                    <code
+                                      className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-500 text-[10px]"
+                                      title={`Stored credential fingerprint (not the PIN). ${describePinHash(student.pinHash)}`}
                                     >
-                                      Reset
-                                    </button>
+                                      {pinHashFingerprint(student.pinHash)}
+                                    </code>
+                                  )}
+                                  {student.pinHash && needsHashUpgrade(student.pinHash) && (
+                                    <span
+                                      className="px-1.5 py-0.5 rounded bg-amber-50 text-amber-700 border border-amber-200 text-[10px] font-semibold"
+                                      title="Legacy unsalted digest — it is re-hashed automatically on the next successful check."
+                                    >
+                                      upgrade pending
+                                    </span>
+                                  )}
+                                  {!isSuperAdmin && (
+                                    <>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setEditingPinPhone(student.phone);
+                                          // Never pre-filled: the stored value
+                                          // is a hash and cannot be reversed.
+                                          setNewPinValue('');
+                                        }}
+                                        className="text-blue-600 hover:underline text-xs font-medium cursor-pointer"
+                                        title="Set a new PIN (stored hashed)"
+                                      >
+                                        Reset
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={() => {
+                                          setVerifyPinPhone(student.phone);
+                                          setVerifyPinValue('');
+                                        }}
+                                        className="text-amber-600 hover:underline text-xs font-medium cursor-pointer"
+                                        title="Check a PIN against the stored hash"
+                                      >
+                                        Verify
+                                      </button>
+                                    </>
                                   )}
                                 </div>
                               )}
@@ -3025,6 +3190,24 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                           />
                           <span className="font-bold text-white truncate">
                             {diagnosticReport.tables.systemConfigAccessible ? 'Accessible & Ready' : 'Permission / Table Error'}
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="p-3 rounded-xl bg-slate-800/80 border border-slate-700 space-y-1">
+                        <div className="text-[11px] text-slate-400 uppercase">Server-Side Admin Auth</div>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`w-2.5 h-2.5 rounded-full ${
+                              diagnosticReport.adminAuthorization.granted
+                                ? 'bg-emerald-400'
+                                : diagnosticReport.adminAuthorization.configured
+                                  ? 'bg-amber-400'
+                                  : 'bg-rose-400'
+                            }`}
+                          />
+                          <span className="font-bold text-white truncate" title={diagnosticReport.adminAuthorization.status}>
+                            {diagnosticReport.adminAuthorization.status}
                           </span>
                         </div>
                       </div>

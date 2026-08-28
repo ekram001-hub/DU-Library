@@ -120,7 +120,15 @@ export interface StudentProfile {
   avatar?: string;
   institution?: string;
   targetExam?: string; // e.g., 47th BCS, Bank PO, Primary, Medical
-  pin?: string; // 4-6 digit security PIN for phone login
+  /**
+   * Security PIN credential, stored ONLY as a salted PBKDF2-SHA256 digest
+   * (`pbkdf2$sha256$<iterations>$<salt>$<hash>`).
+   *
+   * The plaintext PIN is never written to this object, to localStorage or to
+   * Supabase — see `src/lib/crypto.ts`. Legacy rows may still hold a
+   * `sha256$<hex>` digest, which is upgraded on the next successful check.
+   */
+  pinHash?: string;
   isProfileComplete?: boolean; // True once student completes dedicated information submission page
   isBlocked?: boolean;
   registeredAt?: string;
