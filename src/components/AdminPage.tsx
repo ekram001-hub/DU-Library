@@ -278,9 +278,9 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const handleAdminFormLogin = (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    const success = loginAdmin(adminEmailOrPin, adminPassword || adminEmailOrPin);
+    const success = loginAdmin(adminEmailOrPin, adminPassword);
     if (!success) {
-      setAuthError('Invalid Admin credentials. Use admin password (01581624202 or admin123) or authorized Google account.');
+      setAuthError('Invalid credentials. Only an authorized administrator account can sign in.');
     }
   };
 
@@ -856,7 +856,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   <input
                     type="text"
                     required
-                    placeholder="e.g. 01581624202 or admin"
+                    placeholder="Authorized admin email or phone"
                     value={adminEmailOrPin}
                     onChange={(e) => setAdminEmailOrPin(e.target.value)}
                     className="w-full px-3 py-2 bg-slate-900 border border-slate-700 rounded-xl text-white text-xs placeholder-slate-500 focus:outline-none focus:border-rose-500 transition-colors"

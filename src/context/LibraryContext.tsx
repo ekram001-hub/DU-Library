@@ -61,7 +61,10 @@ export const isSuperAdminPhone = (phone?: string): boolean => {
 
 export const isSuperAdminUserCheck = (user?: { email?: string; phone?: string; role?: string } | null): boolean => {
   if (!user) return false;
-  if (user.role === 'superadmin') return true;
+  // NOTE: `role` is intentionally NOT trusted here. Admin access is granted
+  // ONLY when the email or phone matches the whitelist. Relying on a persisted
+  // `role` value allowed a stale "superadmin" flag in localStorage to leak
+  // admin access to any account logged in on the same browser.
   if (user.email && isSuperAdminEmail(user.email)) return true;
   if (user.phone && isSuperAdminPhone(user.phone)) return true;
   return false;
@@ -480,6 +483,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             role: 'superadmin',
             branchAccess: 'all',
           });
+        } else {
+          // A non-admin session must never inherit a stale admin session.
+          setAdminUser(null);
         }
       }
     });
@@ -521,6 +527,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             role: 'superadmin',
             branchAccess: 'all',
           });
+        } else {
+          // A non-admin session must never inherit a stale admin session.
+          setAdminUser(null);
         }
       }
     });
@@ -533,11 +542,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   useEffect(() => {
     if (currentStudent) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_STUDENT, JSON.stringify(currentStudent));
-      // Auto-grant super admin access if phone matches 01581624202 OR email in whitelist
-      const isSuper = isSuperAdminEmail(currentStudent.email) || isSuperAdminPhone(currentStudent.phone) || currentStudent.role === 'superadmin';
+      // Admin access is granted ONLY when the email/phone matches the whitelist.
+      const isSuper = isSuperAdminEmail(currentStudent.email) || isSuperAdminPhone(currentStudent.phone);
       if (isSuper) {
         setAdminUser((prev) => {
-          if (prev?.role === 'superadmin') return prev;
+          if (prev && (isSuperAdminEmail(prev.email) || isSuperAdminPhone(prev.email))) return prev;
           return {
             id: `admin_master_${currentStudent.email || currentStudent.phone || '01581624202'}`,
             name: currentStudent.name || 'Library Super Admin',
@@ -546,6 +555,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
             branchAccess: 'all',
           };
         });
+      } else {
+        // Non-admin student: revoke any lingering admin session.
+        setAdminUser(null);
       }
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_STUDENT);
@@ -562,8 +574,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (
           parsedStudent &&
           (isSuperAdminEmail(parsedStudent.email) ||
-            isSuperAdminPhone(parsedStudent.phone) ||
-            parsedStudent.role === 'superadmin')
+            isSuperAdminPhone(parsedStudent.phone))
         ) {
           return {
             id: `admin_master_${parsedStudent.email || parsedStudent.phone || '01581624202'}`,
@@ -581,7 +592,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
     if (saved) {
       try {
-        return JSON.parse(saved);
+        const parsed = JSON.parse(saved);
+        // Re-validate the persisted admin against the whitelist. Previously any
+        // stale admin object was trusted, so a non-admin account could inherit
+        // admin access on a browser that had once been used by an admin.
+        if (parsed && (isSuperAdminEmail(parsed.email) || isSuperAdminPhone(parsed.phone))) {
+          return parsed;
+        }
       } catch (e) {
         console.error('Failed to parse saved admin', e);
       }
@@ -1319,12 +1336,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   const logoutStudent = useCallback(() => {
-    if (adminUser?.id === 'admin_master_01581624202') {
-      setAdminUser(null);
-    }
+    // Always revoke admin on sign-out so a different account can't inherit it.
+    setAdminUser(null);
     setCurrentStudent(null);
     supabaseSignOut().catch(() => {});
-  }, [adminUser]);
+  }, []);
 
   const signInWithGoogleAuth = useCallback(async () => {
     return await supabaseSignInGoogle();
@@ -1422,12 +1438,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loginAdmin = useCallback((email: string, pass: string): boolean => {
     const normalizedEmail = email.trim().toLowerCase();
     const isWhitelistedEmail = ADMIN_EMAILS.includes(normalizedEmail);
-    const isValidUsername =
-      isWhitelistedEmail ||
-      normalizedEmail === 'admin@studycenter.com' ||
-      normalizedEmail === 'admin' ||
-      normalizedEmail === 'bcsadmin' ||
-      normalizedEmail === '01581624202';
+    // Manual admin login is allowed ONLY for whitelisted emails or the master
+    // admin phone. The old hardcoded fallback usernames (admin@studycenter.com,
+    // "admin", "bcsadmin") are removed — they let ANYONE sign in as admin since
+    // they were readable directly in the client bundle.
+    const isAllowedIdentity = isWhitelistedEmail || isSuperAdminPhone(normalizedEmail);
+
+    if (!isAllowedIdentity) return false;
 
     // A password is ALWAYS required. Previously a whitelisted email accepted
     // any (even empty) password — that was a trivial superadmin bypass.
@@ -1443,7 +1460,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     // NOTE: this is demo-grade, client-only authentication. It should be
     // replaced with Supabase Auth + server-side (RLS / Edge Function)
     // enforcement before production use.
-    if (isValidUsername && isValidPassword) {
+    if (isValidPassword) {
       const admin: AdminUser = {
         id: `admin_master_${normalizedEmail}`,
         name: isWhitelistedEmail ? `Admin (${normalizedEmail})` : 'Library Super Admin',
