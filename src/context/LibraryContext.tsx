@@ -1422,28 +1422,37 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const loginAdmin = useCallback((email: string, pass: string): boolean => {
     const normalizedEmail = email.trim().toLowerCase();
     const isWhitelistedEmail = ADMIN_EMAILS.includes(normalizedEmail);
-    if (
+    const isValidUsername =
       isWhitelistedEmail ||
-      (normalizedEmail === 'admin@studycenter.com' || normalizedEmail === 'admin' || normalizedEmail === 'bcsadmin' || normalizedEmail === '01581624202')
-    ) {
-      if (
-        pass === 'admin123' ||
-        pass === 'admin' ||
-        pass === 'study123' ||
-        pass === '01581624202' ||
-        pass === '123456' ||
-        isWhitelistedEmail
-      ) {
-        const admin: AdminUser = {
-          id: `admin_master_${normalizedEmail}`,
-          name: isWhitelistedEmail ? `Admin (${normalizedEmail})` : 'Library Super Admin',
-          email: normalizedEmail.includes('@') ? normalizedEmail : 'admin@studycenter.com',
-          role: 'superadmin',
-          branchAccess: 'all',
-        };
-        setAdminUser(admin);
-        return true;
-      }
+      normalizedEmail === 'admin@studycenter.com' ||
+      normalizedEmail === 'admin' ||
+      normalizedEmail === 'bcsadmin' ||
+      normalizedEmail === '01581624202';
+
+    // A password is ALWAYS required. Previously a whitelisted email accepted
+    // any (even empty) password — that was a trivial superadmin bypass.
+    if (!pass) return false;
+
+    const isValidPassword =
+      pass === 'admin123' ||
+      pass === 'admin' ||
+      pass === 'study123' ||
+      pass === '01581624202' ||
+      pass === '123456';
+
+    // NOTE: this is demo-grade, client-only authentication. It should be
+    // replaced with Supabase Auth + server-side (RLS / Edge Function)
+    // enforcement before production use.
+    if (isValidUsername && isValidPassword) {
+      const admin: AdminUser = {
+        id: `admin_master_${normalizedEmail}`,
+        name: isWhitelistedEmail ? `Admin (${normalizedEmail})` : 'Library Super Admin',
+        email: normalizedEmail.includes('@') ? normalizedEmail : 'admin@studycenter.com',
+        role: 'superadmin',
+        branchAccess: 'all',
+      };
+      setAdminUser(admin);
+      return true;
     }
     return false;
   }, []);

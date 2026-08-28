@@ -1,6 +1,13 @@
 import { createClient, SupabaseClient, User as SupabaseUser } from '@supabase/supabase-js';
 
-// Default Supabase project URL & Public Anon Key from user configuration
+// Default Supabase project URL & Public Anon Key from user configuration.
+//
+// SECURITY NOTE: the "anon" key is designed to be public — it ships in the
+// browser bundle by design and is NOT a secret. Real security comes from
+// Supabase Row Level Security (RLS) policies, NOT from hiding the anon key.
+// Prefer setting VITE_SUPABASE_URL / VITE_SUPABASE_ANON_KEY via environment
+// variables (see .env.example) so you can rotate the project without editing
+// source code.
 const DEFAULT_SUPABASE_URL = 'https://mqrpjhyxfngngegetflb.supabase.co';
 const DEFAULT_SUPABASE_ANON_KEY =
   'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im1xcnBqaHl4Zm5nbmdlZ2V0ZmxiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODcyMjg4MTEsImV4cCI6MjEwMjgwNDgxMX0.n0qjKmDlFO9beIh2R2Gv_SjYppmijlvPp2h-YehCOiM';
