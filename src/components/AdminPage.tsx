@@ -930,24 +930,30 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               <button
                 type="button"
                 onClick={() => setCurrentBranchId('science_library')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                title="Science Library"
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   currentBranchId === 'science_library'
                     ? 'bg-orange-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Science Library
+                <Building2 className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Science Library</span>
+                <span className="sm:hidden">Science</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentBranchId('central_library')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                title="Central Library"
+                className={`flex items-center gap-1.5 px-2.5 sm:px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   currentBranchId === 'central_library'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
               >
-                Central Library
+                <BookOpen className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Central Library</span>
+                <span className="sm:hidden">Central</span>
               </button>
             </div>
           </div>
@@ -972,7 +978,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               title="Return to Public Home Portal"
             >
               <Home className="w-3.5 h-3.5 text-slate-400" />
-              <span>Home Portal</span>
+              <span className="hidden md:inline">Home Portal</span>
             </button>
 
             <button
@@ -982,7 +988,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
               title="Open Live Student Grid View"
             >
               <Grid className="w-3.5 h-3.5" />
-              <span>Live Seat Grid</span>
+              <span className="hidden md:inline">Live Seat Grid</span>
             </button>
 
             <button
@@ -1069,118 +1075,127 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           <button
             id="tab-admin-rooms"
             onClick={() => setActiveTab('rooms')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title={`Rooms & Serial Order (${branchRooms.length})`}
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'rooms'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Layers className="w-4 h-4" />
-            <span>Rooms & Serial Order ({branchRooms.length})</span>
+            <span className="hidden md:inline">Rooms & Serial Order ({branchRooms.length})</span>
           </button>
 
           <button
             id="tab-admin-seats"
             onClick={() => setActiveTab('seats')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title="Live Seat Management"
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'seats'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Armchair className="w-4 h-4" />
-            <span>Live Seat Management</span>
+            <span className="hidden md:inline">Live Seat Management</span>
           </button>
 
           <button
             id="tab-admin-users"
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title={`Student Registry (${registeredStudents.length})`}
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Users className="w-4 h-4" />
-            <span>Student Registry ({registeredStudents.length})</span>
+            <span className="hidden md:inline">Student Registry ({registeredStudents.length})</span>
           </button>
 
           <button
             id="tab-admin-guidelines"
             onClick={() => setActiveTab('guidelines')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title={`Guidelines & Code of Conduct (${rules.length})`}
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'guidelines'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <BookOpen className="w-4 h-4" />
-            <span>Guidelines & Code of Conduct ({rules.length})</span>
+            <span className="hidden md:inline">Guidelines & Code of Conduct ({rules.length})</span>
           </button>
 
           <button
             id="tab-admin-wifi"
             onClick={() => setActiveTab('wifi')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title="Wi-Fi & Amenities"
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'wifi'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Wifi className="w-4 h-4" />
-            <span>Wi-Fi & Amenities</span>
+            <span className="hidden md:inline">Wi-Fi & Amenities</span>
           </button>
 
           <button
             id="tab-admin-notices"
             onClick={() => setActiveTab('notices')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title={`Notice Board (${notices.length})`}
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'notices'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Bell className="w-4 h-4" />
-            <span>Notice Board ({notices.length})</span>
+            <span className="hidden md:inline">Notice Board ({notices.length})</span>
           </button>
 
           <button
             id="tab-admin-backup"
             onClick={() => setActiveTab('backup')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title="Cloud Sync & Backup"
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'backup'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Database className="w-4 h-4" />
-            <span>Cloud Sync & Backup</span>
+            <span className="hidden md:inline">Cloud Sync & Backup</span>
           </button>
 
           <button
             id="tab-admin-attendance"
             onClick={() => setActiveTab('attendance')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title={`Attendance Logs (${attendanceRecords.length})`}
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'attendance'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <FileText className="w-4 h-4" />
-            <span>Attendance Logs ({attendanceRecords.length})</span>
+            <span className="hidden md:inline">Attendance Logs ({attendanceRecords.length})</span>
           </button>
 
           <button
             id="tab-admin-settings"
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            title="Branch Settings"
+            className={`flex items-center gap-2 py-2 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'settings'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
           >
             <Settings className="w-4 h-4" />
-            <span>Branch Settings</span>
+            <span className="hidden md:inline">Branch Settings</span>
           </button>
         </div>
 
