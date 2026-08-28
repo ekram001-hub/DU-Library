@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
+import React, { createContext, useContext, useState, useEffect, useMemo, useCallback, useRef } from 'react';
+import type { User as SupabaseUser } from '@supabase/supabase-js';
 import {
   BranchId,
   BranchConfig,
@@ -28,18 +29,42 @@ import {
 import {
   getSupabase,
   signInWithGoogle as supabaseSignInGoogle,
+  signInWithEmail as supabaseSignInWithEmail,
   signOutSupabase as supabaseSignOut,
   isSupabaseConfigured,
   syncStudentToCloud,
+  updateStudentPinHash,
   fetchAllStudentsFromCloud,
   syncLibraryStateToCloud,
   fetchLibraryStateFromCloud,
   subscribeToSupabaseRealtime,
   broadcastStateViaSupabase,
   runSupabaseDiagnostics,
+  checkAdminAccess,
   SupabaseDiagnosticReport,
 } from '../lib/supabase';
+import {
+  hashPin,
+  verifyPin,
+  needsHashUpgrade,
+  pinValidationError,
+  normalizePin,
+  isHashedPin,
+} from '../lib/crypto';
 
+/**
+ * ────────────────────────────────────────────────────────────────────────────
+ *  OWNER IDENTITY — LABELS ONLY, NEVER AUTHORIZATION
+ * ────────────────────────────────────────────────────────────────────────────
+ *  Everything a browser can read, a browser can rewrite. These constants used
+ *  to *grant* admin access, which meant anyone could open DevTools, set
+ *  `currentStudent.phone = '01581624202'` and own the library.
+ *
+ *  They are kept only so the UI can still render a "Project Owner" label.
+ *  Authorization now comes exclusively from the `admins` table in Postgres,
+ *  checked against the Supabase-signed JWT — see `verifyAdminSession()`.
+ *  Never call these functions to decide whether an action is allowed.
+ */
 export const ADMIN_PHONE_NUMBER = '01581624202';
 
 export const ADMIN_EMAILS = [
@@ -47,28 +72,40 @@ export const ADMIN_EMAILS = [
   'ryanekram001@gmail.com',
 ];
 
+/** @deprecated Label only. Use `verifyAdminSession()` / `isSuperAdminUser`. */
 export const isSuperAdminEmail = (email?: string): boolean => {
   if (!email) return false;
   const normalized = email.trim().toLowerCase();
   return ADMIN_EMAILS.includes(normalized);
 };
 
+/** @deprecated Label only. Use `verifyAdminSession()` / `isSuperAdminUser`. */
 export const isSuperAdminPhone = (phone?: string): boolean => {
   if (!phone) return false;
   const digits = phone.replace(/\D/g, '');
-  return digits === ADMIN_PHONE_NUMBER || digits.endsWith('01581624202');
+  return digits === ADMIN_PHONE_NUMBER;
 };
 
+/**
+ * @deprecated Label only — a whitelisted e-mail or phone on a client-side
+ * object proves nothing. Kept so existing call sites keep compiling; it must
+ * not be used to gate any feature.
+ */
 export const isSuperAdminUserCheck = (user?: { email?: string; phone?: string; role?: string } | null): boolean => {
   if (!user) return false;
-  // NOTE: `role` is intentionally NOT trusted here. Admin access is granted
-  // ONLY when the email or phone matches the whitelist. Relying on a persisted
-  // `role` value allowed a stale "superadmin" flag in localStorage to leak
-  // admin access to any account logged in on the same browser.
-  if (user.email && isSuperAdminEmail(user.email)) return true;
-  if (user.phone && isSuperAdminPhone(user.phone)) return true;
-  return false;
+  return isSuperAdminEmail(user.email) || isSuperAdminPhone(user.phone);
 };
+
+export interface AdminLoginResult {
+  ok: boolean;
+  /** Why the login failed, safe to render. */
+  message?: string;
+  /**
+   * `server_not_configured` means the database has not been migrated yet: the
+   * admin console shows the SQL script instead of a generic "wrong password".
+   */
+  reason?: 'invalid_credentials' | 'not_an_admin' | 'server_not_configured' | 'no_session' | 'error';
+}
 
 interface LibraryContextType {
   currentBranchId: BranchId;
@@ -97,7 +134,6 @@ interface LibraryContextType {
       studentId?: string;
       gender: Gender;
       targetHours: number;
-      pin?: string;
     }
   ) => { success: boolean; message: string; passCode?: string };
   leaveSeatTemporarily: (seatId: string, durationMinutes: number, reason: AwayReason, customReason?: string) => void;
@@ -140,7 +176,16 @@ interface LibraryContextType {
     durationHours: number,
     gender: Gender
   ) => void;
-  adminResetStudentPin: (phone: string, newPin: string) => void;
+  /**
+   * Hash `rawPin` and store the credential. The plaintext is discarded as soon
+   * as this function returns — nothing downstream ever sees it.
+   */
+  adminResetStudentPin: (phone: string, rawPin: string) => Promise<{ success: boolean; message: string }>;
+  /**
+   * Desk-side check: does `rawPin` match the credential stored for `phone`?
+   * Returns `null` when the student has no PIN set.
+   */
+  adminVerifyStudentPin: (phone: string, rawPin: string) => Promise<boolean | null>;
   adminToggleBlockStudent: (phone: string) => void;
   adminAddCustomSeat: (seatData: Omit<Seat, 'id'>) => void;
   adminDeleteSeat: (seatId: string) => void;
@@ -169,7 +214,11 @@ interface LibraryContextType {
   adminUser: AdminUser | null;
   isAdminLoggedIn: boolean;
   isSuperAdminUser: boolean;
-  loginAdmin: (email: string, pass: string) => boolean;
+  /** True while the very first server-side admin check is still in flight. */
+  adminCheckPending: boolean;
+  /** Set when Postgres says the `admins` table is missing. */
+  adminSetupRequired: boolean;
+  loginAdmin: (email: string, pass: string) => Promise<AdminLoginResult>;
   logoutAdmin: () => void;
 
   // Notices
@@ -439,180 +488,201 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return null;
   });
 
-  // Supabase Auth Integration & Session Listener
+  // ==========================================================================
+  // 6. ADMIN SESSION
+  // ==========================================================================
+  // Deliberately NOT initialised from localStorage. A persisted
+  // `{ "role": "superadmin" }` blob is exactly what used to let any visitor
+  // open the dashboard; the browser can write anything it likes there. The
+  // only durable credential is the Supabase session token, which the server
+  // signs, and it is re-checked against the `admins` table on every load.
+  const [adminUser, setAdminUser] = useState<AdminUser | null>(null);
+  const [adminCheckPending, setAdminCheckPending] = useState<boolean>(true);
+  const [adminSetupRequired, setAdminSetupRequired] = useState<boolean>(false);
+
+  const registeredStudentsRef = useRef<StudentProfile[]>([]);
+  useEffect(() => {
+    registeredStudentsRef.current = registeredStudents;
+  }, [registeredStudents]);
+
+  /** Remove anything older builds left behind in localStorage. */
+  useEffect(() => {
+    localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
+  }, []);
+
+  /**
+   * The single authority for "is this account an administrator?".
+   *
+   * It asks Postgres, which matches the e-mail inside the *signed* Supabase
+   * JWT against the `admins` allow-list. No client-side value can influence
+   * the answer, so DevTools edits no longer work.
+   */
+  const verifyAdminSession = useCallback(
+    async (email?: string | null): Promise<AdminUser | null> => {
+      try {
+        const result = await checkAdminAccess(email);
+
+        if (result.status === 'granted') {
+          setAdminSetupRequired(false);
+          const admin: AdminUser = {
+            id: `admin_${result.admin.email}`,
+            name: result.admin.name || result.admin.email.split('@')[0] || 'Library Admin',
+            email: result.admin.email,
+            role: result.admin.role,
+            branchAccess:
+              result.admin.branch_access === 'science_library' ||
+              result.admin.branch_access === 'central_library'
+                ? result.admin.branch_access
+                : 'all',
+          };
+          setAdminUser(admin);
+          return admin;
+        }
+
+        setAdminSetupRequired(result.status === 'not_configured');
+        setAdminUser(null);
+        return null;
+      } catch (err) {
+        console.warn('[Admin] Server-side authorization check failed:', err);
+        setAdminUser(null);
+        return null;
+      }
+    },
+    []
+  );
+
+  // Supabase Auth integration & session listener
   useEffect(() => {
     const supabase = getSupabase();
-    if (!supabase) return;
+    if (!supabase) {
+      setAdminCheckPending(false);
+      return;
+    }
 
-    // Check existing Supabase session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      if (session?.user) {
-        const user = session.user;
-        const meta = user.user_metadata || {};
-        const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
-        const userPhone = meta.phone || '';
-        const isAdmin = isSuperAdminEmail(user.email) || isSuperAdminPhone(userPhone);
+    let cancelled = false;
 
-        // Check if student profile exists locally in registered students
-        const existingLocal = registeredStudents.find(
-          (s) => (user.email && s.email?.toLowerCase() === user.email.toLowerCase()) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
-        );
-
-        const loadedStudent: StudentProfile = {
-          id: user.id,
-          name: existingLocal?.name || fullName,
-          email: user.email || existingLocal?.email || '',
-          phone: existingLocal?.phone || userPhone,
-          studentId: existingLocal?.studentId || `DU-${user.id.slice(0, 6).toUpperCase()}`,
-          gender: existingLocal?.gender || 'male',
-          role: isAdmin ? 'superadmin' : 'student',
-          avatar: meta.avatar_url || meta.picture || existingLocal?.avatar,
-          targetExam: existingLocal?.targetExam || 'Competitive Exam / BCS',
-          institution: existingLocal?.institution,
-          isProfileComplete: Boolean(existingLocal?.isProfileComplete || (existingLocal?.phone && existingLocal?.name)),
-          registeredAt: existingLocal?.registeredAt || new Date().toISOString(),
-        };
-
-        setCurrentStudent(loadedStudent);
-
-        if (isAdmin) {
-          setAdminUser({
-            id: `admin_master_${user.email || userPhone || 'master'}`,
-            name: fullName || 'Library Super Admin',
-            email: user.email || 'admin@studycenter.com',
-            role: 'superadmin',
-            branchAccess: 'all',
-          });
-        } else {
-          // A non-admin session must never inherit a stale admin session.
-          setAdminUser(null);
-        }
+    const handleSessionUser = async (user: SupabaseUser | null) => {
+      if (!user) {
+        if (cancelled) return;
+        setAdminUser(null);
+        setAdminCheckPending(false);
+        return;
       }
-    });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      if (session?.user) {
-        const user = session.user;
-        const meta = user.user_metadata || {};
-        const fullName = meta.full_name || meta.name || user.email?.split('@')[0] || 'Ekram Bhuiyan';
-        const userPhone = meta.phone || '';
-        const isAdmin = isSuperAdminEmail(user.email) || isSuperAdminPhone(userPhone);
+      // Authorization first: the local profile is only cosmetics.
+      const admin = await verifyAdminSession(user.email);
+      if (cancelled) return;
 
-        const existingLocal = registeredStudents.find(
-          (s) => (user.email && s.email?.toLowerCase() === user.email.toLowerCase()) || (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
-        );
+      const meta = user.user_metadata || {};
+      const fullName =
+        (meta.full_name as string) ||
+        (meta.name as string) ||
+        user.email?.split('@')[0] ||
+        'Library Member';
+      const userPhone = String(meta.phone || '');
 
-        const loadedStudent: StudentProfile = {
-          id: user.id,
-          name: existingLocal?.name || fullName,
-          email: user.email || existingLocal?.email || '',
-          phone: existingLocal?.phone || userPhone,
-          studentId: existingLocal?.studentId || `DU-${user.id.slice(0, 6).toUpperCase()}`,
-          gender: existingLocal?.gender || 'male',
-          role: isAdmin ? 'superadmin' : 'student',
-          avatar: meta.avatar_url || meta.picture || existingLocal?.avatar,
-          targetExam: existingLocal?.targetExam || 'Competitive Exam / BCS',
-          institution: existingLocal?.institution,
-          isProfileComplete: Boolean(existingLocal?.isProfileComplete || (existingLocal?.phone && existingLocal?.name)),
-          registeredAt: existingLocal?.registeredAt || new Date().toISOString(),
-        };
+      const existingLocal = registeredStudentsRef.current.find(
+        (s) =>
+          (user.email && s.email?.toLowerCase() === user.email.toLowerCase()) ||
+          (userPhone && s.phone.replace(/\D/g, '') === userPhone.replace(/\D/g, ''))
+      );
 
-        setCurrentStudent(loadedStudent);
+      const loadedStudent: StudentProfile = {
+        id: user.id,
+        name: existingLocal?.name || fullName,
+        email: user.email || existingLocal?.email || '',
+        phone: existingLocal?.phone || userPhone,
+        studentId: existingLocal?.studentId || `DU-${user.id.slice(0, 6).toUpperCase()}`,
+        gender: existingLocal?.gender || 'male',
+        // `role` is a display label only; `adminUser` carries the real access.
+        role: admin ? admin.role : existingLocal?.role || 'student',
+        avatar: meta.avatar_url || meta.picture || existingLocal?.avatar,
+        targetExam: existingLocal?.targetExam || 'Competitive Exam / BCS',
+        institution: existingLocal?.institution,
+        pinHash: existingLocal?.pinHash,
+        isProfileComplete: Boolean(
+          existingLocal?.isProfileComplete || (existingLocal?.phone && existingLocal?.name)
+        ),
+        registeredAt: existingLocal?.registeredAt || new Date().toISOString(),
+      };
 
-        if (isAdmin) {
-          setAdminUser({
-            id: `admin_master_${user.email || userPhone || 'master'}`,
-            name: fullName || 'Library Super Admin',
-            email: user.email || 'admin@studycenter.com',
-            role: 'superadmin',
-            branchAccess: 'all',
-          });
-        } else {
-          // A non-admin session must never inherit a stale admin session.
-          setAdminUser(null);
-        }
-      }
+      setCurrentStudent(loadedStudent);
+      setAdminCheckPending(false);
+    };
+
+    supabase.auth
+      .getSession()
+      .then(({ data: { session } }) => handleSessionUser(session?.user ?? null))
+      .catch(() => setAdminCheckPending(false));
+
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((_event, session) => {
+      void handleSessionUser(session?.user ?? null);
     });
 
     return () => {
+      cancelled = true;
       subscription.unsubscribe();
     };
-  }, []);
+  }, [verifyAdminSession]);
 
+  // Persist the *student* profile only. Admin access is never written here.
   useEffect(() => {
     if (currentStudent) {
       localStorage.setItem(STORAGE_KEYS.CURRENT_STUDENT, JSON.stringify(currentStudent));
-      // Admin access is granted ONLY when the email/phone matches the whitelist.
-      const isSuper = isSuperAdminEmail(currentStudent.email) || isSuperAdminPhone(currentStudent.phone);
-      if (isSuper) {
-        setAdminUser((prev) => {
-          if (prev && (isSuperAdminEmail(prev.email) || isSuperAdminPhone(prev.email))) return prev;
-          return {
-            id: `admin_master_${currentStudent.email || currentStudent.phone || '01581624202'}`,
-            name: currentStudent.name || 'Library Super Admin',
-            email: currentStudent.email || 'admin@studycenter.com',
-            role: 'superadmin',
-            branchAccess: 'all',
-          };
-        });
-      } else {
-        // Non-admin student: revoke any lingering admin session.
-        setAdminUser(null);
-      }
     } else {
       localStorage.removeItem(STORAGE_KEYS.CURRENT_STUDENT);
     }
   }, [currentStudent]);
 
-
-  // 6. Admin User
-  const [adminUser, setAdminUser] = useState<AdminUser | null>(() => {
-    const savedStudentStr = localStorage.getItem(STORAGE_KEYS.CURRENT_STUDENT);
-    if (savedStudentStr) {
-      try {
-        const parsedStudent = JSON.parse(savedStudentStr);
-        if (
-          parsedStudent &&
-          (isSuperAdminEmail(parsedStudent.email) ||
-            isSuperAdminPhone(parsedStudent.phone))
-        ) {
-          return {
-            id: `admin_master_${parsedStudent.email || parsedStudent.phone || '01581624202'}`,
-            name: parsedStudent.name || 'Library Super Admin',
-            email: parsedStudent.email || 'admin@studycenter.com',
-            role: 'superadmin',
-            branchAccess: 'all',
-          };
-        }
-      } catch (e) {
-        console.error(e);
-      }
-    }
-
-    const saved = localStorage.getItem(STORAGE_KEYS.ADMIN_USER);
-    if (saved) {
-      try {
-        const parsed = JSON.parse(saved);
-        // Re-validate the persisted admin against the whitelist. Previously any
-        // stale admin object was trusted, so a non-admin account could inherit
-        // admin access on a browser that had once been used by an admin.
-        if (parsed && (isSuperAdminEmail(parsed.email) || isSuperAdminPhone(parsed.phone))) {
-          return parsed;
-        }
-      } catch (e) {
-        console.error('Failed to parse saved admin', e);
-      }
-    }
-    return null;
-  });
-
+  // ==========================================================================
+  // One-time migration: any plaintext `pin` left in localStorage by an older
+  // build is converted to a salted PBKDF2-SHA256 credential and the plaintext
+  // is deleted, then pushed to Supabase so the cloud copy is cleaned too.
+  // ==========================================================================
   useEffect(() => {
-    if (adminUser) {
-      localStorage.setItem(STORAGE_KEYS.ADMIN_USER, JSON.stringify(adminUser));
-    } else {
-      localStorage.removeItem(STORAGE_KEYS.ADMIN_USER);
-    }
-  }, [adminUser]);
+    let cancelled = false;
+
+    const migrateLegacyPins = async () => {
+      const legacy = registeredStudentsRef.current.filter(
+        (s) => Boolean((s as StudentProfile & { pin?: string }).pin) || needsHashUpgrade(s.pinHash)
+      );
+      if (legacy.length === 0) return;
+
+      for (const student of legacy) {
+        const legacyPlain = (student as StudentProfile & { pin?: string }).pin;
+        const source = legacyPlain || student.pinHash;
+        if (!source) continue;
+
+        try {
+          // A legacy value cannot be reversed, so the plaintext (if we still
+          // hold one locally) is re-hashed; an old unsalted digest is simply
+          // flagged for upgrade on the student's next successful PIN check.
+          if (!legacyPlain) continue;
+          const pinHash = await hashPin(legacyPlain);
+          if (cancelled) return;
+
+          const cleaned: StudentProfile = { ...student, pinHash };
+          delete (cleaned as StudentProfile & { pin?: string }).pin;
+
+          setRegisteredStudents((prev) =>
+            prev.map((s) => (s.phone === student.phone ? cleaned : s))
+          );
+          setCurrentStudent((prev) => (prev && prev.phone === student.phone ? cleaned : prev));
+          syncStudentToCloud(cleaned).catch(() => {});
+        } catch (err) {
+          console.warn('[Security] Could not migrate a legacy PIN:', err);
+        }
+      }
+    };
+
+    void migrateLegacyPins();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
 
   // 7. Notices
   const [notices, setNotices] = useState<LibraryNotice[]>(() => {
@@ -1323,16 +1393,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Student Auth
   const loginStudent = useCallback((student: StudentProfile) => {
-    setCurrentStudent(student);
-    if (isSuperAdminPhone(student.phone)) {
-      setAdminUser({
-        id: 'admin_master_01581624202',
-        name: student.name || 'Library Super Admin (01581624202)',
-        email: student.email || 'admin@studycenter.com',
-        role: 'superadmin',
-        branchAccess: 'all',
-      });
-    }
+    // Signing in as a student never confers admin rights, whatever phone
+    // number the object carries. Admin access comes from `verifyAdminSession`.
+    setCurrentStudent({ ...student, role: student.role === 'admin' || student.role === 'superadmin' ? student.role : 'student' });
   }, []);
 
   const logoutStudent = useCallback(() => {
@@ -1349,25 +1412,19 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const demoLogin = useCallback((demoStudentId: string) => {
     const student = DEMO_STUDENTS.find((s) => s.id === demoStudentId);
     if (student) {
-      setCurrentStudent(student);
-      if (isSuperAdminPhone(student.phone)) {
-        setAdminUser({
-          id: 'admin_master_01581624202',
-          name: student.name || 'Library Super Admin (01581624202)',
-          email: student.email || 'admin@studycenter.com',
-          role: 'superadmin',
-          branchAccess: 'all',
-        });
-      }
+      // Demo accounts are always plain students — no admin shortcut.
+      setCurrentStudent({ ...student, role: 'student' });
     }
   }, []);
 
   const registerOrUpdateStudent = useCallback((data: Omit<StudentProfile, 'id' | 'role'>) => {
-    const isAdmin = isSuperAdminEmail(data.email) || isSuperAdminPhone(data.phone);
+    // Registering a profile cannot promote anyone: the role is carried over
+    // from the *server-verified* session (or stays `student`), never derived
+    // from the e-mail / phone the visitor just typed into a form.
     const newStudent: StudentProfile = {
       ...data,
       id: currentStudent?.id || `stu_${Date.now()}`,
-      role: isAdmin ? 'superadmin' : 'student',
+      role: adminUser ? adminUser.role : currentStudent?.role || 'student',
       avatar: currentStudent?.avatar || data.avatar,
       isProfileComplete: true,
       registeredAt: currentStudent?.registeredAt || new Date().toISOString(),
@@ -1375,25 +1432,16 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     };
     setCurrentStudent(newStudent);
 
-    if (isAdmin) {
-      setAdminUser({
-        id: `admin_master_${data.email || data.phone || '01581624202'}`,
-        name: data.name || 'Library Super Admin',
-        email: data.email || 'admin@studycenter.com',
-        role: 'superadmin',
-        branchAccess: 'all',
-      });
-    }
-
     setRegisteredStudents((prev) => {
       const cleanPhone = data.phone.replace(/\D/g, '');
       const filtered = prev.filter((s) => s.phone.replace(/\D/g, '') !== cleanPhone);
       return [newStudent, ...filtered];
     });
 
-    // Automatically backup & sync to Supabase cloud
+    // Automatically backup & sync to Supabase cloud. Only a hashed credential
+    // is ever sent; a raw PIN never reaches the network.
     syncStudentToCloud(data).catch(() => {});
-  }, [currentStudent]);
+  }, [currentStudent, adminUser]);
 
   const deleteRegisteredStudent = useCallback((phone: string) => {
     const clean = phone.replace(/\D/g, '');
@@ -1424,6 +1472,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
               targetExam: cs.target_exam || existing?.targetExam || 'Competitive Exam',
               registeredAt: cs.created_at || existing?.registeredAt || new Date().toISOString(),
               lastActive: cs.last_active || existing?.lastActive,
+              // Credential only — the plaintext PIN no longer exists anywhere.
+              pinHash: cs.pin_hash || existing?.pinHash,
             });
           });
           return Array.from(studentMap.values());
@@ -1434,48 +1484,90 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
   }, []);
 
-  // Admin Auth
-  const loginAdmin = useCallback((email: string, pass: string): boolean => {
-    const normalizedEmail = email.trim().toLowerCase();
-    const isWhitelistedEmail = ADMIN_EMAILS.includes(normalizedEmail);
-    // Manual admin login is allowed ONLY for whitelisted emails or the master
-    // admin phone. The old hardcoded fallback usernames (admin@studycenter.com,
-    // "admin", "bcsadmin") are removed — they let ANYONE sign in as admin since
-    // they were readable directly in the client bundle.
-    const isAllowedIdentity = isWhitelistedEmail || isSuperAdminPhone(normalizedEmail);
+  // ==========================================================================
+  // ADMIN AUTH — decided by Supabase Auth + the `admins` table in Postgres
+  // ==========================================================================
+  // There is no password list and no whitelist in this bundle any more. The
+  // password is checked by Supabase Auth, and "is this account an admin?" is
+  // answered by an RLS-filtered query against `admins` using the signed JWT.
+  const loginAdmin = useCallback(
+    async (email: string, pass: string): Promise<AdminLoginResult> => {
+      const normalizedEmail = email.trim().toLowerCase();
+      if (!normalizedEmail || !pass) {
+        return {
+          ok: false,
+          reason: 'invalid_credentials',
+          message: 'Enter the administrator e-mail and password.',
+        };
+      }
 
-    if (!isAllowedIdentity) return false;
+      setAdminCheckPending(true);
 
-    // A password is ALWAYS required. Previously a whitelisted email accepted
-    // any (even empty) password — that was a trivial superadmin bypass.
-    if (!pass) return false;
+      // Step 1 — authenticate with Supabase Auth (server-side password check).
+      const { user, error } = await supabaseSignInWithEmail(normalizedEmail, pass);
+      if (error || !user) {
+        setAdminCheckPending(false);
+        return {
+          ok: false,
+          reason: 'invalid_credentials',
+          message:
+            error ||
+            'Sign-in failed. Use the e-mail and password created in Supabase → Authentication → Users.',
+        };
+      }
 
-    const isValidPassword =
-      pass === 'admin123' ||
-      pass === 'admin' ||
-      pass === 'study123' ||
-      pass === '01581624202' ||
-      pass === '123456';
+      // Step 2 — authorize against the `admins` allow-list in Postgres.
+      const result = await checkAdminAccess(user.email);
+      setAdminCheckPending(false);
 
-    // NOTE: this is demo-grade, client-only authentication. It should be
-    // replaced with Supabase Auth + server-side (RLS / Edge Function)
-    // enforcement before production use.
-    if (isValidPassword) {
-      const admin: AdminUser = {
-        id: `admin_master_${normalizedEmail}`,
-        name: isWhitelistedEmail ? `Admin (${normalizedEmail})` : 'Library Super Admin',
-        email: normalizedEmail.includes('@') ? normalizedEmail : 'admin@studycenter.com',
-        role: 'superadmin',
-        branchAccess: 'all',
+      if (result.status === 'granted') {
+        setAdminSetupRequired(false);
+        setAdminUser({
+          id: `admin_${result.admin.email}`,
+          name: result.admin.name || result.admin.email.split('@')[0] || 'Library Admin',
+          email: result.admin.email,
+          role: result.admin.role,
+          branchAccess:
+            result.admin.branch_access === 'science_library' ||
+            result.admin.branch_access === 'central_library'
+              ? result.admin.branch_access
+              : 'all',
+        });
+        return { ok: true };
+      }
+
+      if (result.status === 'not_configured') {
+        setAdminSetupRequired(true);
+        // Signing in worked, but the database has no allow-list yet. Sign the
+        // session back out so a half-authenticated state is never left behind.
+        void supabaseSignOut().catch(() => {});
+        return {
+          ok: false,
+          reason: 'server_not_configured',
+          message:
+            'Database security setup is missing: the `admins` table does not exist. Run supabase/01_security_core.sql in the Supabase SQL editor, then sign in again.',
+        };
+      }
+
+      void supabaseSignOut().catch(() => {});
+      return {
+        ok: false,
+        reason: 'not_an_admin',
+        message:
+          result.status === 'no_session'
+            ? result.message
+            : 'That account is signed in, but its e-mail is not on the administrator allow-list.',
       };
-      setAdminUser(admin);
-      return true;
-    }
-    return false;
-  }, []);
+    },
+    []
+  );
 
   const logoutAdmin = useCallback(() => {
+    // Clearing local state is not enough — the Supabase session would simply
+    // re-authorize on the next reload, so end it at the source.
     setAdminUser(null);
+    setCurrentStudent(null);
+    void supabaseSignOut().catch(() => {});
   }, []);
 
   // Rooms CRUD & Ordering
@@ -1638,22 +1730,102 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [seats, notices, allBranches, broadcastSync]);
 
   // Admin Custom Seats and Student Control Actions
-  const adminResetStudentPin = useCallback((phone: string, newPin: string) => {
-    const clean = phone.replace(/\D/g, '');
-    setRegisteredStudents((prev) =>
-      prev.map((s) => {
-        if (s.phone.replace(/\D/g, '') === clean) {
-          const updated = { ...s, pin: newPin };
-          syncStudentToCloud(updated).catch(() => {});
+  /**
+   * Admin PIN reset.
+   *
+   * The raw PIN exists only as a local variable inside this function. It is
+   * hashed (PBKDF2-SHA256, random per-PIN salt, 210k rounds) before it touches
+   * React state, localStorage or the network.
+   */
+  const adminResetStudentPin = useCallback(
+    async (phone: string, rawPin: string): Promise<{ success: boolean; message: string }> => {
+      const clean = phone.replace(/\D/g, '');
+      const pin = normalizePin(rawPin);
+
+      const validationError = pinValidationError(pin);
+      if (validationError) return { success: false, message: validationError };
+
+      let pinHash: string;
+      try {
+        pinHash = await hashPin(pin);
+      } catch (err) {
+        return {
+          success: false,
+          message: err instanceof Error ? err.message : 'Could not hash the PIN.',
+        };
+      }
+
+      let matched = false;
+      setRegisteredStudents((prev) =>
+        prev.map((s) => {
+          if (s.phone.replace(/\D/g, '') === clean) {
+            matched = true;
+            const updated: StudentProfile = { ...s, pinHash };
+            delete (updated as StudentProfile & { pin?: string }).pin;
+            syncStudentToCloud(updated).catch(() => {});
+            return updated;
+          }
+          return s;
+        })
+      );
+
+      if (currentStudent?.phone.replace(/\D/g, '') === clean) {
+        setCurrentStudent((prev) => {
+          if (!prev) return prev;
+          const updated: StudentProfile = { ...prev, pinHash };
+          delete (updated as StudentProfile & { pin?: string }).pin;
           return updated;
+        });
+      }
+
+      // Best effort: also patch the cloud row directly so the change survives
+      // even if the profile sync above is rejected by RLS.
+      void updateStudentPinHash(phone, pinHash).catch(() => {});
+
+      return matched
+        ? { success: true, message: 'PIN updated. Only the hash is stored.' }
+        : { success: false, message: 'No local record found for that phone number.' };
+    },
+    [currentStudent]
+  );
+
+  /**
+   * Desk-side verification: an admin can confirm a PIN a student quotes over
+   * the phone without the PIN ever being displayed or stored.
+   * Returns `null` when the student has no credential yet.
+   */
+  const adminVerifyStudentPin = useCallback(
+    async (phone: string, rawPin: string): Promise<boolean | null> => {
+      const clean = phone.replace(/\D/g, '');
+      const student = registeredStudentsRef.current.find(
+        (s) => s.phone.replace(/\D/g, '') === clean
+      );
+      if (!student || !student.pinHash) return null;
+
+      const pin = normalizePin(rawPin);
+      if (!pin) return false;
+
+      const ok = await verifyPin(pin, student.pinHash);
+
+      // Transparently upgrade legacy credentials on a successful check.
+      if (ok && needsHashUpgrade(student.pinHash)) {
+        try {
+          const upgraded: StudentProfile = { ...student, pinHash: await hashPin(pin) };
+          delete (upgraded as StudentProfile & { pin?: string }).pin;
+          setRegisteredStudents((prev) =>
+            prev.map((s) => (s.phone.replace(/\D/g, '') === clean ? upgraded : s))
+          );
+          syncStudentToCloud(upgraded).catch(() => {});
+          void updateStudentPinHash(phone, upgraded.pinHash || null).catch(() => {});
+        } catch (err) {
+          console.warn('[Security] PIN hash upgrade failed:', err);
         }
-        return s;
-      })
-    );
-    if (currentStudent?.phone.replace(/\D/g, '') === clean) {
-      setCurrentStudent((prev) => (prev ? { ...prev, pin: newPin } : null));
-    }
-  }, [currentStudent]);
+      }
+
+      return ok;
+    },
+    []
+  );
 
   const adminToggleBlockStudent = useCallback((phone: string) => {
     const clean = phone.replace(/\D/g, '');
@@ -2104,15 +2276,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const branchStats = useMemo(() => calculateStats(branchSeats), [calculateStats, branchSeats]);
   const overallStats = useMemo(() => calculateStats(seats), [calculateStats, seats]);
 
-  const isSuperAdminUser = useMemo(() => {
-    if (adminUser?.role === 'superadmin') return true;
-    if (currentStudent && isSuperAdminUserCheck(currentStudent)) return true;
-    return false;
-  }, [adminUser, currentStudent]);
+  // Both flags derive from `adminUser`, which only `verifyAdminSession()` /
+  // `loginAdmin()` can set — i.e. only a server-verified `admins` row.
+  const isSuperAdminUser = useMemo(() => adminUser?.role === 'superadmin', [adminUser]);
 
-  const isAdminLoggedIn = useMemo(() => {
-    return !!adminUser || isSuperAdminUser;
-  }, [adminUser, isSuperAdminUser]);
+  const isAdminLoggedIn = useMemo(() => Boolean(adminUser), [adminUser]);
 
   const value = useMemo(
     () => ({
@@ -2158,6 +2326,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminToggleMaintenance,
       adminManuallyAssignSeat,
       adminResetStudentPin,
+      adminVerifyStudentPin,
       adminToggleBlockStudent,
       adminAddCustomSeat,
       adminDeleteSeat,
@@ -2183,6 +2352,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminUser,
       isAdminLoggedIn,
       isSuperAdminUser,
+      adminCheckPending,
+      adminSetupRequired,
       loginAdmin,
       logoutAdmin,
 
@@ -2239,6 +2410,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminToggleMaintenance,
       adminManuallyAssignSeat,
       adminResetStudentPin,
+      adminVerifyStudentPin,
       adminToggleBlockStudent,
       adminAddCustomSeat,
       adminDeleteSeat,
@@ -2260,6 +2432,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       adminUser,
       isAdminLoggedIn,
       isSuperAdminUser,
+      adminCheckPending,
+      adminSetupRequired,
       loginAdmin,
       logoutAdmin,
       notices,
