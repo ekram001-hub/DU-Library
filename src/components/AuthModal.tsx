@@ -64,8 +64,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({
   const [isEditingExisting, setIsEditingExisting] = useState(false);
 
   // Admin login states
-  const [adminEmail, setAdminEmail] = useState('admin@studycenter.com');
-  const [adminPass, setAdminPass] = useState('admin123');
+  // NOTE: intentionally left empty — never hardcode or pre-fill admin
+  // credentials into the client bundle, as they would be visible to anyone.
+  const [adminEmail, setAdminEmail] = useState('');
+  const [adminPass, setAdminPass] = useState('');
   const [adminError, setAdminError] = useState<string | null>(null);
 
   // Sync state when currentStudent changes or modal opens
@@ -218,7 +220,7 @@ export const AuthModal: React.FC<AuthModalProps> = ({
     if (success) {
       onClose();
     } else {
-      setAdminError('Invalid email or password (Credentials: admin@studycenter.com / admin123)');
+      setAdminError('Invalid email or password. Please contact the library administrator if you need access.');
     }
   };
 
