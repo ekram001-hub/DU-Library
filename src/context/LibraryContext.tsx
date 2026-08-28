@@ -1070,7 +1070,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         targetHours: number;
       }
     ) => {
-      const seat = seats.find((s) => s.id === seatId);
+      // Availability MUST be checked against seatsRef.current — the same
+      // fresh source the write below uses. Reading the closure's `seats`
+      // made this check run on data captured when the callback was created
+      // (`seats` is not in the dep array), so two students could both book
+      // the same seat and the later write silently overwrote the first.
+      const seat = seatsRef.current.find((s) => s.id === seatId);
       if (!seat) {
         return { success: false, message: 'Seat not found' };
       }
@@ -1280,6 +1285,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Release Seat
   const releaseSeat = useCallback((seatId: string) => {
     const now = Date.now();
+    // Capture the booking that is being released BEFORE the seat record is
+    // wiped, so the matching attendance row can be identified.
+    const releasedSeat = seatsRef.current.find((s) => s.id === seatId);
     const updatedSeats = seatsRef.current.map((s) => {
       if (s.id === seatId) {
         return {
@@ -1314,19 +1322,33 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     setSeats(updatedSeats);
     pushStateToCloudNow(updatedSeats);
 
-    // Update attendance checkout time
-    setAttendanceRecords((prev) =>
-      prev.map((record) => {
-        if (record.seatNumber && !record.checkOutTime) {
+    // Close ONLY the attendance record that belongs to this booking —
+    // matched by seat number + branch + occupant phone. The previous
+    // condition (`record.seatNumber && !record.checkOutTime`) checked out
+    // every open record in the whole log whenever anyone released any seat.
+    if (releasedSeat) {
+      const cleanPhone = (releasedSeat.occupantPhone || '').replace(/\D/g, '');
+      setAttendanceRecords((prev) => {
+        // Records are stored newest-first (`[newAttendance, ...prev]`), so
+        // the first match is the most recent open check-in for this booking.
+        const openIdx = prev.findIndex(
+          (record) =>
+            !record.checkOutTime &&
+            record.seatNumber === releasedSeat.seatNumber &&
+            record.branchId === releasedSeat.branchId &&
+            (!cleanPhone || record.studentPhone.replace(/\D/g, '') === cleanPhone)
+        );
+        if (openIdx === -1) return prev;
+        return prev.map((record, idx) => {
+          if (idx !== openIdx) return record;
           return {
             ...record,
             checkOutTime: now,
             durationMinutes: Math.round((now - record.checkInTime) / 60000),
           };
-        }
-        return record;
-      })
-    );
+        });
+      });
+    }
   }, [pushStateToCloudNow]);
 
   // Admin Actions
