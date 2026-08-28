@@ -46,6 +46,7 @@ import {
   Key,
   Signal,
   Radio,
+  FlaskConical,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
 import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig, WifiNetwork } from '../types';
@@ -900,109 +901,113 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   return (
     <div className="min-h-screen bg-slate-100 text-slate-900 flex flex-col font-['Poppins',_sans-serif] selection:bg-rose-500 selection:text-white">
       
-      {/* Top Fixed Admin Header */}
-      <header className="sticky top-0 z-40 bg-slate-900 text-white shadow-md border-b border-slate-800 px-3 sm:px-6 py-3">
-        <div className="max-w-7xl mx-auto flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+      {/* Top Fixed Admin Header - Iconized & Mobile-Optimized */}
+      <header className="sticky top-0 z-40 bg-slate-900 text-white shadow-md border-b border-slate-800 px-3 sm:px-6 py-2.5 sm:py-3 w-full max-w-full overflow-hidden">
+        <div className="max-w-7xl mx-auto flex flex-col md:flex-row md:items-center justify-between gap-2.5">
           
-          {/* Brand & Branch Selector */}
-          <div className="flex items-center justify-between sm:justify-start gap-3">
-            <div className="flex items-center gap-2.5">
-              <div className="w-9 h-9 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-sm">
-                <ShieldCheck className="w-5 h-5" />
+          {/* Brand & Branch Switcher */}
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 sm:w-9 sm:w-9 rounded-xl bg-rose-600 flex items-center justify-center text-white shadow-sm shrink-0">
+                <ShieldCheck className="w-4 h-4 sm:w-5 sm:h-5" />
               </div>
               <div>
-                <div className="flex items-center gap-2">
-                  <h1 className="text-sm sm:text-base font-bold tracking-tight text-white flex items-center gap-1.5">
-                    Admin Master Panel
+                <div className="flex items-center gap-1.5">
+                  <h1 className="text-xs sm:text-sm font-bold tracking-tight text-white flex items-center gap-1">
+                    Admin Panel
                   </h1>
-                  <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                  <span className="px-1.5 py-0.2 rounded-md text-[9px] sm:text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
                     Super Admin
                   </span>
                 </div>
-                <p className="text-xs text-slate-400 hidden sm:block">
+                <p className="text-[10px] sm:text-[11px] text-slate-400 hidden sm:block truncate max-w-[280px]">
                   {branchConfig.name} • Full System Layout & Access Control
                 </p>
               </div>
             </div>
 
-            {/* Branch Switcher Selector */}
-            <div className="flex items-center p-0.5 bg-slate-800 rounded-xl border border-slate-700">
+            {/* Branch Switcher Selector (Iconized & Compact) */}
+            <div className="flex items-center p-0.5 bg-slate-800 rounded-xl border border-slate-700 shrink-0">
               <button
                 type="button"
                 onClick={() => setCurrentBranchId('science_library')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   currentBranchId === 'science_library'
                     ? 'bg-orange-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
+                title="Switch to Science Library"
               >
-                Science Library
+                <FlaskConical className="w-3 h-3 text-orange-200" />
+                <span>Science</span>
               </button>
               <button
                 type="button"
                 onClick={() => setCurrentBranchId('central_library')}
-                className={`px-3 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
+                className={`flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold transition-all cursor-pointer ${
                   currentBranchId === 'central_library'
                     ? 'bg-rose-600 text-white shadow-xs'
                     : 'text-slate-400 hover:text-white'
                 }`}
+                title="Switch to Central Library"
               >
-                Central Library
+                <BookOpen className="w-3 h-3 text-rose-200" />
+                <span>Central</span>
               </button>
             </div>
           </div>
 
-          {/* Action Buttons: Return to Portal, Live Seats, Sign Out */}
-          <div className="flex items-center gap-2 self-end sm:self-auto">
+          {/* Action Buttons: Cloud Sync, Home Portal, Live Seats, Exit Admin */}
+          <div className="flex items-center justify-end gap-1.5 sm:gap-2 flex-wrap">
             <button
               type="button"
               onClick={handleManualCloudSync}
               disabled={isSyncingCloud}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition-all cursor-pointer disabled:opacity-60"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition-all cursor-pointer disabled:opacity-60 shrink-0"
               title="Sync with Supabase Cloud Realtime"
             >
               <RefreshCw className={`w-3.5 h-3.5 text-blue-400 ${isSyncingCloud ? 'animate-spin' : ''}`} />
-              <span className="hidden md:inline">{isSyncingCloud ? 'Syncing...' : 'Cloud Sync'}</span>
+              <span>{isSyncingCloud ? 'Syncing...' : 'Sync'}</span>
             </button>
 
             <button
               type="button"
               onClick={onBackToPortal}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition-all cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 border border-slate-700 text-slate-200 text-xs font-medium transition-all cursor-pointer shrink-0"
               title="Return to Public Home Portal"
             >
               <Home className="w-3.5 h-3.5 text-slate-400" />
-              <span>Home Portal</span>
+              <span>Portal</span>
             </button>
 
             <button
               type="button"
               onClick={onOpenSeats}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-emerald-700 hover:bg-emerald-600 text-white text-xs font-semibold transition-all shadow-xs cursor-pointer shrink-0"
               title="Open Live Student Grid View"
             >
               <Grid className="w-3.5 h-3.5" />
-              <span>Live Seat Grid</span>
+              <span>Seats</span>
             </button>
 
             <button
               type="button"
               onClick={logoutAdmin}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-200 text-xs font-semibold transition-all cursor-pointer"
+              className="flex items-center gap-1 px-2.5 sm:px-3 py-1.5 rounded-xl bg-rose-950/80 hover:bg-rose-900 border border-rose-800 text-rose-200 text-xs font-semibold transition-all cursor-pointer shrink-0"
               title="Sign Out of Admin Mode"
             >
               <LogOut className="w-3.5 h-3.5" />
-              <span className="hidden sm:inline">Exit Admin</span>
+              <span>Exit</span>
             </button>
           </div>
         </div>
       </header>
 
       {/* Main Content Area */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-5">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 py-4 sm:py-6 space-y-4 sm:space-y-5">
         
         {/* Top Summary Metrics Bar */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 sm:gap-3">
           <div className="bg-white border border-slate-200 rounded-2xl p-3 shadow-xs flex items-center justify-between">
             <div>
               <p className="text-[11px] font-semibold text-slate-500">Rooms</p>
@@ -1064,123 +1069,132 @@ export const AdminPage: React.FC<AdminPageProps> = ({
           </div>
         </div>
 
-        {/* Tab Navigation Pill Bar */}
-        <div className="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-xs flex items-center gap-1 overflow-x-auto">
+        {/* Tab Navigation Pill Bar - Iconized & Mobile Optimized */}
+        <div className="bg-white border border-slate-200 rounded-2xl p-1.5 shadow-xs flex items-center gap-1.5 overflow-x-auto scrollbar-none w-full max-w-full">
           <button
             id="tab-admin-rooms"
             onClick={() => setActiveTab('rooms')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'rooms'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title={`Rooms & Serial Order (${branchRooms.length})`}
           >
-            <Layers className="w-4 h-4" />
-            <span>Rooms & Serial Order ({branchRooms.length})</span>
+            <Layers className="w-3.5 h-3.5" />
+            <span>Rooms ({branchRooms.length})</span>
           </button>
 
           <button
             id="tab-admin-seats"
             onClick={() => setActiveTab('seats')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'seats'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title="Live Seat Management"
           >
-            <Armchair className="w-4 h-4" />
-            <span>Live Seat Management</span>
+            <Armchair className="w-3.5 h-3.5" />
+            <span>Live Seats</span>
           </button>
 
           <button
             id="tab-admin-users"
             onClick={() => setActiveTab('users')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'users'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title={`Student Registry (${registeredStudents.length})`}
           >
-            <Users className="w-4 h-4" />
-            <span>Student Registry ({registeredStudents.length})</span>
+            <Users className="w-3.5 h-3.5" />
+            <span>Students ({registeredStudents.length})</span>
           </button>
 
           <button
             id="tab-admin-guidelines"
             onClick={() => setActiveTab('guidelines')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'guidelines'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title={`Guidelines & Code of Conduct (${rules.length})`}
           >
-            <BookOpen className="w-4 h-4" />
-            <span>Guidelines & Code of Conduct ({rules.length})</span>
+            <BookOpen className="w-3.5 h-3.5" />
+            <span>Guidelines ({rules.length})</span>
           </button>
 
           <button
             id="tab-admin-wifi"
             onClick={() => setActiveTab('wifi')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'wifi'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title="Wi-Fi & Amenities"
           >
-            <Wifi className="w-4 h-4" />
-            <span>Wi-Fi & Amenities</span>
+            <Wifi className="w-3.5 h-3.5" />
+            <span>Wi-Fi</span>
           </button>
 
           <button
             id="tab-admin-notices"
             onClick={() => setActiveTab('notices')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'notices'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title={`Notice Board (${notices.length})`}
           >
-            <Bell className="w-4 h-4" />
-            <span>Notice Board ({notices.length})</span>
+            <Bell className="w-3.5 h-3.5" />
+            <span>Notices ({notices.length})</span>
           </button>
 
           <button
             id="tab-admin-backup"
             onClick={() => setActiveTab('backup')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'backup'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title="Cloud Sync & Backup"
           >
-            <Database className="w-4 h-4" />
-            <span>Cloud Sync & Backup</span>
+            <Database className="w-3.5 h-3.5" />
+            <span>Cloud Backup</span>
           </button>
 
           <button
             id="tab-admin-attendance"
             onClick={() => setActiveTab('attendance')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'attendance'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title={`Attendance Logs (${attendanceRecords.length})`}
           >
-            <FileText className="w-4 h-4" />
-            <span>Attendance Logs ({attendanceRecords.length})</span>
+            <FileText className="w-3.5 h-3.5" />
+            <span>Attendance ({attendanceRecords.length})</span>
           </button>
 
           <button
             id="tab-admin-settings"
             onClick={() => setActiveTab('settings')}
-            className={`flex items-center gap-2 py-2 px-3.5 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
+            className={`flex items-center gap-1.5 py-1.5 px-3 rounded-xl text-xs font-semibold transition-all shrink-0 cursor-pointer ${
               activeTab === 'settings'
                 ? 'bg-blue-600 text-white shadow-xs'
                 : 'text-slate-600 hover:text-slate-900 hover:bg-slate-100'
             }`}
+            title="Branch Settings"
           >
-            <Settings className="w-4 h-4" />
-            <span>Branch Settings</span>
+            <Settings className="w-3.5 h-3.5" />
+            <span>Settings</span>
           </button>
         </div>
 

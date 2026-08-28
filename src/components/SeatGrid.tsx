@@ -1,11 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import {
   Search,
-  Armchair,
-  User,
   Coffee,
-  Users,
-  BarChart2,
   Building2,
   X,
   FileText,
@@ -13,6 +9,8 @@ import {
   ShieldCheck,
   FlaskConical,
   BookOpen,
+  LayoutGrid,
+  DoorOpen,
 } from 'lucide-react';
 import { Seat, Room } from '../types';
 import { useLibrary } from '../context/LibraryContext';
@@ -156,56 +154,73 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         </div>
       </div>
 
-      {/* 2. Room Tabs & Search Bar */}
-      <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 bg-white border border-slate-200/90 rounded-2xl p-2.5 shadow-xs">
-        {/* Room Navigation Tabs */}
-        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 sm:pb-0 scrollbar-none">
-          {/* All Rooms Tab */}
+      {/* 2. Room Tabs, Single Break Stat, and Search Bar */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white border border-slate-200/90 rounded-2xl p-2.5 shadow-xs w-full max-w-full overflow-hidden">
+        {/* Left Side: Room Navigation Tabs + Single Break Stat */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto shrink min-w-0">
+          {/* All Rooms Tab (Icon + Number) */}
           <button
             type="button"
             onClick={() => setSelectedRoomTab('all')}
-            className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
               selectedRoomTab === 'all'
                 ? 'bg-emerald-700 text-white shadow-xs'
                 : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
             }`}
+            title={`All Rooms (${occupiedCount + awayCount}/${totalCount})`}
           >
-            All Rooms ({occupiedCount + awayCount}/{totalCount})
+            <LayoutGrid className="w-3.5 h-3.5" />
+            <span>All ({occupiedCount + awayCount}/{totalCount})</span>
           </button>
 
-          {/* Individual Room Tabs */}
+          {/* Individual Room Tabs (Room Icon + Room Number) */}
           {branchRooms.map((room) => {
             const roomSeats = branchSeats.filter((s) => s.roomId === room.id);
             const bookedInRoom = roomSeats.filter(
               (s) => s.status === 'occupied' || s.status === 'away'
             ).length;
 
+            // Extract room number if like "Room 1", "Room 2"
+            const roomNumMatch = room.name.match(/\d+/);
+            const roomDisplay = roomNumMatch ? roomNumMatch[0] : room.name;
+
             return (
               <button
                 key={room.id}
                 type="button"
                 onClick={() => setSelectedRoomTab(room.id)}
-                className={`shrink-0 px-3.5 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
                   selectedRoomTab === room.id
                     ? 'bg-emerald-700 text-white shadow-xs font-semibold'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
+                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70 font-medium'
                 }`}
+                title={`${room.name} (${bookedInRoom}/${roomSeats.length})`}
               >
-                {room.name} ({bookedInRoom}/{roomSeats.length})
+                <DoorOpen className="w-3.5 h-3.5" />
+                <span>{roomDisplay} ({bookedInRoom}/${roomSeats.length})</span>
               </button>
             );
           })}
+
+          {/* Single Button Size Break Statistics Card */}
+          <div className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold shadow-2xs">
+            <Coffee className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+            <span>Break</span>
+            <span className="font-mono font-bold text-emerald-950 bg-emerald-200/70 px-1.5 py-0.5 rounded-md border border-emerald-300 text-[11px]">
+              {awayCount}
+            </span>
+          </div>
         </div>
 
         {/* Search Input */}
-        <div className="relative min-w-[200px] sm:w-64">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="relative w-full md:w-56 lg:w-64 shrink-0">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
           <input
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            placeholder="Search seat number or student..."
-            className="w-full pl-9 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
+            placeholder="Search seat or student..."
+            className="w-full pl-8 pr-7 py-1.5 bg-slate-50 border border-slate-200 rounded-xl text-xs text-slate-900 placeholder-slate-400 focus:outline-none focus:border-emerald-500 focus:bg-white transition-colors"
           />
           {searchQuery && (
             <button
@@ -218,89 +233,31 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
         </div>
       </div>
 
-      {/* 3. 5 Quick Metric Summary Cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5">
-        {/* Available */}
-        <div className="bg-emerald-50/80 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-emerald-800">
-            <Armchair className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-semibold">Available</span>
-          </div>
-          <span className="text-sm font-bold text-emerald-900 font-mono">
-            {availableCount}
-          </span>
-        </div>
-
-        {/* Occupied */}
-        <div className="bg-rose-50/90 border border-rose-200/80 rounded-xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-rose-800">
-            <User className="w-4 h-4 text-rose-600" />
-            <span className="text-xs font-semibold">Occupied (Red)</span>
-          </div>
-          <span className="text-sm font-bold text-rose-900 font-mono">
-            {occupiedCount}
-          </span>
-        </div>
-
-        {/* Away */}
-        <div className="bg-emerald-50/90 border border-emerald-200/80 rounded-xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-emerald-900">
-            <Coffee className="w-4 h-4 text-emerald-600" />
-            <span className="text-xs font-semibold">Break (Green)</span>
-          </div>
-          <span className="text-sm font-bold text-emerald-950 font-mono">
-            {awayCount}
-          </span>
-        </div>
-
-        {/* Female / Reserved */}
-        <div className="bg-purple-50/90 border border-purple-200/80 rounded-xl p-3 flex items-center justify-between">
-          <div className="flex items-center gap-2 text-purple-900">
-            <Users className="w-4 h-4 text-purple-600" />
-            <span className="text-xs font-semibold">Female Zone</span>
-          </div>
-          <span className="text-sm font-bold text-purple-900 font-mono">
-            {reservedCount}
-          </span>
-        </div>
-
-        {/* Total */}
-        <div className="bg-teal-50/90 border border-teal-200/80 rounded-xl p-3 flex items-center justify-between col-span-2 sm:col-span-1">
-          <div className="flex items-center gap-2 text-teal-900">
-            <BarChart2 className="w-4 h-4 text-teal-700" />
-            <span className="text-xs font-semibold">Total Seats</span>
-          </div>
-          <span className="text-sm font-bold text-teal-950 font-mono">
-            {totalCount}
-          </span>
-        </div>
-      </div>
-
-      {/* Visual Status Legend */}
-      <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-700 shadow-2xs">
-        <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5">
+      {/* Visual Status Legend (English Only, Clean & Mobile Optimized) */}
+      <div className="bg-white border border-slate-200/90 rounded-xl p-2.5 flex flex-wrap items-center justify-between gap-2 text-[11px] font-medium text-slate-700 shadow-2xs w-full max-w-full overflow-hidden">
+        <span className="font-bold text-slate-900 text-xs flex items-center gap-1.5 shrink-0">
           <span className="w-2 h-2 rounded-full bg-slate-900" /> Seat Status Colors:
         </span>
-        <div className="flex flex-wrap items-center gap-2 sm:gap-4">
-          <div className="flex items-center gap-1.5">
+        <div className="flex flex-wrap items-center gap-2.5 sm:gap-4">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-white border border-slate-300 shadow-2xs inline-block" />
-            <span>Available (সাদা)</span>
+            <span>Available</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-red-600 shadow-2xs inline-block" />
-            <span className="font-semibold text-red-700">Occupied (লাল)</span>
+            <span className="font-semibold text-red-700">Occupied</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-emerald-600 shadow-2xs inline-block" />
-            <span className="font-semibold text-emerald-700">On Break (গ্রিন + টাইমার)</span>
+            <span className="font-semibold text-emerald-700">On Break</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-blue-600 shadow-2xs inline-block" />
-            <span className="font-semibold text-blue-700">2nd Booking (নীল)</span>
+            <span className="font-semibold text-blue-700">2nd Booking</span>
           </div>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-teal-800 ring-2 ring-amber-300 shadow-2xs inline-block" />
-            <span className="font-semibold text-teal-900">My Seat (গোল্ডেন রিং)</span>
+            <span className="font-semibold text-teal-900">My Seat</span>
           </div>
         </div>
       </div>
