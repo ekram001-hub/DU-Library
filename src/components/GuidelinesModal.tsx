@@ -18,6 +18,7 @@ import {
   Signal,
 } from 'lucide-react';
 import { useLibrary } from '../context/LibraryContext';
+import { WifiFacilityConfig } from '../types';
 
 interface GuidelinesModalProps {
   isOpen: boolean;
@@ -49,10 +50,11 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
     setTimeout(() => setCopiedId(null), 2500);
   };
 
-  const wifiConfig = wifiFacilities?.[currentBranchId] || {
+  const wifiConfig: WifiFacilityConfig = wifiFacilities?.[currentBranchId] || {
     branchId: currentBranchId,
     ssid: currentBranchId === 'science_library' ? 'SCIENCE_LIB_5G_FAST' : 'CENTRAL_LIB_5G_PLUS',
     password: 'study@2026#pass',
+    speed: '100 Mbps Dedicated Fiber',
     notes: 'Optimized for online video lectures and research. High-volume torrents and unapproved downloads are restricted.',
     amenities: [
       'Individual desk LED lamps and power sockets',
@@ -61,6 +63,7 @@ export const GuidelinesModal: React.FC<GuidelinesModalProps> = ({ isOpen, onClos
       'Coffee and tea refreshment lounge',
       '24/7 IPS and generator power backup',
     ],
+    helpdeskPhone: branchConfig.phone || '01581624202',
   };
 
   return (

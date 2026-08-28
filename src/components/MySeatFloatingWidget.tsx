@@ -56,19 +56,34 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
     ) {
       return null;
     }
-    const elapsedMs = currentTime.getTime() - currentStudentSeat.awaySince;
-    const totalMs = currentStudentSeat.awayDurationMinutes * 60 * 1000;
+    const rawAwaySince = currentStudentSeat.awaySince;
+    let awaySinceMs = 0;
+    if (typeof rawAwaySince === 'number') {
+      awaySinceMs = rawAwaySince;
+    } else if (typeof rawAwaySince === 'string') {
+      awaySinceMs = new Date(rawAwaySince).getTime();
+    }
+
+    if (!awaySinceMs || isNaN(awaySinceMs)) {
+      awaySinceMs = currentTime.getTime();
+    }
+
+    const durationMins = Number(currentStudentSeat.awayDurationMinutes) || 30;
+    const totalMs = durationMins * 60 * 1000;
+    const elapsedMs = Math.max(0, currentTime.getTime() - awaySinceMs);
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: 'Expired' };
+      return { expired: true, text: 'Expired', hmText: '0h 00m' };
     }
     const totalSecs = Math.floor(remainingMs / 1000);
-    const mins = Math.floor(totalSecs / 60);
+    const hours = Math.floor(totalSecs / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
     const secs = totalSecs % 60;
     return {
       expired: false,
-      text: `${mins}m ${secs < 10 ? '0' : ''}${secs}s`,
+      text: `${hours > 0 ? `${hours}h ` : ''}${mins}m ${secs < 10 ? '0' : ''}${secs}s`,
+      hmText: `${hours}h ${mins < 10 ? '0' : ''}${mins}m`,
     };
   }, [currentStudentSeat, currentTime]);
 

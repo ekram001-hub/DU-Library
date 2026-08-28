@@ -64,57 +64,91 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
 
   if (!isOpen || !seat) return null;
 
-  const isMySeat =
+  const isMySeat = Boolean(
     currentStudent &&
     (seat.status === 'occupied' || seat.status === 'away') &&
-    ((seat.studentId && seat.studentId === currentStudent.studentId) ||
-      (seat.occupantPhone && seat.occupantPhone === currentStudent.phone) ||
-      (seat.occupantName && seat.occupantName.toLowerCase() === currentStudent.name.toLowerCase()));
+    ((seat.studentId && currentStudent.studentId && seat.studentId === currentStudent.studentId) ||
+      (seat.occupantPhone && currentStudent.phone && seat.occupantPhone === currentStudent.phone) ||
+      (seat.occupantName && currentStudent.name && seat.occupantName.toLowerCase() === currentStudent.name.toLowerCase()))
+  );
 
-  const isMySecondarySeat =
+  const isMySecondarySeat = Boolean(
     currentStudent &&
     seat.isSecondaryBooked &&
-    ((seat.secondaryOccupantPhone && seat.secondaryOccupantPhone === currentStudent.phone) ||
-      (seat.secondaryOccupantStudentId && seat.secondaryOccupantStudentId === currentStudent.studentId));
+    ((seat.secondaryOccupantPhone && currentStudent.phone && seat.secondaryOccupantPhone === currentStudent.phone) ||
+      (seat.secondaryOccupantStudentId && currentStudent.studentId && seat.secondaryOccupantStudentId === currentStudent.studentId))
+  );
 
-  // Calculate live countdown
+  // Calculate live countdown in H:M format
   const awayCountdown = useMemo(() => {
-    if (seat.status !== 'away' || !seat.awaySince || !seat.awayDurationMinutes) {
+    if (seat.status !== 'away') {
       return null;
     }
-    const elapsedMs = currentTime.getTime() - seat.awaySince;
-    const totalMs = seat.awayDurationMinutes * 60 * 1000;
+    const rawAwaySince = seat.awaySince;
+    let awaySinceMs = 0;
+    if (typeof rawAwaySince === 'number') {
+      awaySinceMs = rawAwaySince;
+    } else if (typeof rawAwaySince === 'string') {
+      awaySinceMs = new Date(rawAwaySince).getTime();
+    }
+
+    if (!awaySinceMs || isNaN(awaySinceMs)) {
+      awaySinceMs = currentTime.getTime();
+    }
+
+    const durationMins = Number(seat.awayDurationMinutes) || 30;
+    const totalMs = durationMins * 60 * 1000;
+    const elapsedMs = Math.max(0, currentTime.getTime() - awaySinceMs);
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: 'Time Up' };
+      return { expired: true, text: '00:00', hmText: '0h 00m' };
     }
 
     const totalSeconds = Math.floor(remainingMs / 1000);
-    const mins = Math.floor(totalSeconds / 60);
+    const hours = Math.floor(totalSeconds / 3600);
+    const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
 
     return {
       expired: false,
-      text: `${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`,
+      text: `${hours > 0 ? `${hours}:` : ''}${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`,
+      hmText: `${hours}h ${mins < 10 ? '0' : ''}${mins}m`,
+      hours,
+      mins,
+      secs,
     };
-  }, [seat, currentTime]);
+  }, [seat.status, seat.awaySince, seat.awayDurationMinutes, currentTime]);
 
-  const bookedTimeFormatted = seat.bookedAt
-    ? new Date(seat.bookedAt).toLocaleTimeString('en-US', {
+  const bookedTimeFormatted = useMemo(() => {
+    if (!seat.bookedAt) return 'N/A';
+    try {
+      const d = new Date(seat.bookedAt);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
-      })
-    : 'N/A';
+      });
+    } catch {
+      return 'N/A';
+    }
+  }, [seat.bookedAt]);
 
-  const expectedLeaveFormatted = seat.expectedLeaveAt
-    ? new Date(seat.expectedLeaveAt).toLocaleTimeString('en-US', {
+  const expectedLeaveFormatted = useMemo(() => {
+    if (!seat.expectedLeaveAt) return 'N/A';
+    try {
+      const d = new Date(seat.expectedLeaveAt);
+      if (isNaN(d.getTime())) return 'N/A';
+      return d.toLocaleTimeString('en-US', {
         hour: '2-digit',
         minute: '2-digit',
         hour12: true,
-      })
-    : 'N/A';
+      });
+    } catch {
+      return 'N/A';
+    }
+  }, [seat.expectedLeaveAt]);
 
   const handleRelease = () => {
     if (window.confirm('Are you sure you want to release this seat?')) {
@@ -237,10 +271,13 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             <div className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center space-y-1.5 shadow-2xs">
               <div className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
                 <Timer className="w-4 h-4 text-emerald-600" />
-                <span>Away Remaining Time (Live Countdown)</span>
+                <span>Away Remaining Time (H:M Live Countdown)</span>
               </div>
               <div className="text-3xl sm:text-4xl font-['Poppins',_sans-serif] font-black text-emerald-700 tracking-wider animate-pulse my-1">
-                {awayCountdown ? awayCountdown.text : '30:00'}
+                {awayCountdown ? awayCountdown.hmText : '0h 30m'}
+              </div>
+              <div className="text-xs font-mono font-bold text-emerald-600">
+                ({awayCountdown ? awayCountdown.text : '30:00'} remaining)
               </div>
               <div className="text-xs text-emerald-800 font-semibold">
                 Reason: {seat.awayReason === 'Prayer' ? 'Prayer Break 🕌' : seat.awayReason === 'Lunch' ? 'Meal Break 🍱' : seat.awayReason === 'Tea' ? 'Tea & Snack ☕' : seat.awayReason === 'Rest' ? 'Rest & Refresh 🛋️' : 'Emergency Break ⚡'}

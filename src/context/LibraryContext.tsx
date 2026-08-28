@@ -1768,12 +1768,23 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     if (newNetwork.isActive) {
-      updateWifiFacility(newNetwork.branchId, {
-        ssid: newNetwork.ssid,
-        password: newNetwork.password,
-        speed: newNetwork.speed,
-        notes: newNetwork.notes,
-      });
+      if (newNetwork.branchId === 'all') {
+        (['science_library', 'central_library'] as BranchId[]).forEach((bid) => {
+          updateWifiFacility(bid, {
+            ssid: newNetwork.ssid,
+            password: newNetwork.password,
+            speed: newNetwork.speed,
+            notes: newNetwork.notes,
+          });
+        });
+      } else {
+        updateWifiFacility(newNetwork.branchId, {
+          ssid: newNetwork.ssid,
+          password: newNetwork.password,
+          speed: newNetwork.speed,
+          notes: newNetwork.notes,
+        });
+      }
     }
   }, [rooms, seats, notices, allBranches, rules, wifiFacilities, broadcastSync, updateWifiFacility]);
 
@@ -1793,12 +1804,23 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const updatedNet = next.find((n) => n.id === networkId);
       if (updatedNet && updatedNet.isActive && (updates.password || updates.ssid || updates.speed || updates.notes)) {
-        updateWifiFacility(updatedNet.branchId, {
-          ssid: updatedNet.ssid,
-          password: updatedNet.password,
-          speed: updatedNet.speed,
-          notes: updatedNet.notes,
-        });
+        if (updatedNet.branchId === 'all') {
+          (['science_library', 'central_library'] as BranchId[]).forEach((bid) => {
+            updateWifiFacility(bid, {
+              ssid: updatedNet.ssid,
+              password: updatedNet.password,
+              speed: updatedNet.speed,
+              notes: updatedNet.notes,
+            });
+          });
+        } else {
+          updateWifiFacility(updatedNet.branchId, {
+            ssid: updatedNet.ssid,
+            password: updatedNet.password,
+            speed: updatedNet.speed,
+            notes: updatedNet.notes,
+          });
+        }
       }
       return next;
     });

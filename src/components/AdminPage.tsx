@@ -224,7 +224,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [editingWifiId, setEditingWifiId] = useState<string | null>(null);
   const [wifiNetSsid, setWifiNetSsid] = useState('');
   const [wifiNetPassword, setWifiNetPassword] = useState('');
-  const [wifiNetBranchId, setWifiNetBranchId] = useState<BranchId>(currentBranchId);
+  const [wifiNetBranchId, setWifiNetBranchId] = useState<BranchId | 'all'>(currentBranchId);
   const [wifiNetSpeed, setWifiNetSpeed] = useState('100 Mbps Dedicated Fiber');
   const [wifiNetNotes, setWifiNetNotes] = useState('High-speed connection for video lectures and research.');
   const [wifiNetBand, setWifiNetBand] = useState<'5 GHz' | '2.4 GHz' | 'Dual Band'>('5 GHz');
@@ -405,11 +405,13 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     e.preventDefault();
     if (!customSeatRoomId || !customSeatNumber.trim()) return;
 
-    adminAddCustomSeat(
-      customSeatRoomId,
-      customSeatNumber.trim().toUpperCase(),
-      customSeatFemale
-    );
+    adminAddCustomSeat({
+      branchId: currentBranchId,
+      roomId: customSeatRoomId,
+      seatNumber: customSeatNumber.trim().toUpperCase(),
+      status: 'available',
+      isFemaleReserved: customSeatFemale,
+    });
 
     setCustomSeatNumber('');
     setCustomSeatFemale(false);
@@ -704,7 +706,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   // Handle Save Settings
   const handleSaveSettings = (e: React.FormEvent) => {
     e.preventDefault();
-    updateBranchConfig({
+    updateBranchConfig(currentBranchId, {
       facebookUrl: fbUrl,
       facebookPageName: fbPageName,
       facebookFollowers: fbFollowers,
@@ -2309,10 +2311,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                       </label>
                       <select
                         value={wifiNetBranchId}
-                        onChange={(e) => setWifiNetBranchId(e.target.value as BranchId)}
+                        onChange={(e) => setWifiNetBranchId(e.target.value as BranchId | 'all')}
                         className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
                       >
-                        {allBranches.map((b) => (
+                        <option value="all">🌐 All Branches</option>
+                        {Object.values(allBranches).map((b) => (
                           <option key={b.id} value={b.id}>
                             {b.id === 'science_library' ? '🔬 Science Library' : '🏛️ Central Library'} ({b.name})
                           </option>
@@ -2410,7 +2413,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   >
                     🌐 All Branches ({wifiNetworks.length})
                   </button>
-                  {allBranches.map((b) => {
+                  {Object.values(allBranches).map((b) => {
                     const count = wifiNetworks.filter((n) => n.branchId === b.id).length;
                     return (
                       <button
@@ -2442,7 +2445,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     const isVisible = !!showPasswordMap[net.id];
                     const isCopied = copiedPasswordId === net.id;
                     const isQuickEditing = quickChangePassId === net.id;
-                    const branch = allBranches.find((b) => b.id === net.branchId);
+                    const branch = net.branchId === 'all' ? null : allBranches[net.branchId];
 
                     return (
                       <div
