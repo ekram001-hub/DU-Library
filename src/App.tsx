@@ -1,5 +1,6 @@
 import React, { useState, useEffect, Component, ErrorInfo, ReactNode } from 'react';
 import { LibraryProvider, useLibrary } from './context/LibraryContext';
+import { getSupabase } from './lib/supabase';
 import { PortalHome } from './components/PortalHome';
 import { SeatGrid } from './components/SeatGrid';
 import { AdminPage } from './components/AdminPage';
@@ -281,6 +282,60 @@ function MainApp() {
 }
 
 export default function App() {
+  // The Google OAuth button (AuthModal -> signInWithGoogle) opens this exact
+  // SPA in a popup so the flow survives sandboxed/iframed previews. Google
+  // redirects the popup back to this same origin, Supabase's client picks
+  // the new session out of the URL, and the token lands in localStorage.
+  // But nothing ever told the ORIGINAL window to look again, so a real admin
+  // sign-in (e.g. mohammad.001ekram@gmail.com / ryanekram001@gmail.com)
+  // would silently leave the Admin Panel button hidden until a manual full
+  // reload, and the popup itself never closed. This intercepts that case
+  // before the full app (and its polling, seat state, etc.) mounts in the
+  // throwaway popup: once a session shows up, it notifies the opener and
+  // closes itself.
+  const isOAuthPopup = typeof window !== 'undefined' && !!window.opener && window.opener !== window;
+  const [popupDone, setPopupDone] = useState(false);
+
+  useEffect(() => {
+    if (!isOAuthPopup) return;
+
+    let cancelled = false;
+    const supabase = getSupabase();
+
+    const notifyOpenerAndClose = () => {
+      if (cancelled) return;
+      cancelled = true;
+      try {
+        window.opener?.postMessage({ type: 'library_oauth_popup_done' }, window.location.origin);
+      } catch {
+        // ignore — opener may already be gone
+      }
+      setPopupDone(true);
+      window.close();
+    };
+
+    // Give Supabase a moment to finish `detectSessionInUrl` after the OAuth
+    // redirect, then close either way so the popup never lingers open.
+    const unsub = supabase.auth.onAuthStateChange((event) => {
+      if (event === 'SIGNED_IN') notifyOpenerAndClose();
+    });
+    const fallbackTimer = setTimeout(notifyOpenerAndClose, 6000);
+
+    return () => {
+      cancelled = true;
+      unsub.data.subscription.unsubscribe();
+      clearTimeout(fallbackTimer);
+    };
+  }, [isOAuthPopup]);
+
+  if (isOAuthPopup) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-slate-50 text-slate-500 text-sm font-['Poppins',_sans-serif]">
+        {popupDone ? 'Signed in — you can close this window.' : 'Finishing sign-in…'}
+      </div>
+    );
+  }
+
   return (
     <ErrorBoundary>
       <LibraryProvider>

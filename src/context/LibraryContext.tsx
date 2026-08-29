@@ -621,9 +621,29 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       void handleSessionUser(session?.user ?? null);
     });
 
+    // The Google OAuth button opens a POPUP window (see signInWithGoogle) so the
+    // flow works inside sandboxed/iframed previews. That popup completes the
+    // OAuth redirect and writes the new session to localStorage, but nothing
+    // told *this* window to look again — onAuthStateChange only fires from
+    // this window's own actions, not another window's. Without this listener
+    // the popup closes itself (see App.tsx) after a successful sign-in but the
+    // main window's admin/session state never updates, so a real admin login
+    // silently fails to show the Admin Panel button until the next full
+    // reload. The popup posts this message right before closing.
+    const handleOAuthPopupMessage = (event: MessageEvent) => {
+      if (event.origin !== window.location.origin) return;
+      if (event.data?.type !== 'library_oauth_popup_done') return;
+      supabase.auth
+        .getSession()
+        .then(({ data: { session } }) => handleSessionUser(session?.user ?? null))
+        .catch(() => {});
+    };
+    window.addEventListener('message', handleOAuthPopupMessage);
+
     return () => {
       cancelled = true;
       subscription.unsubscribe();
+      window.removeEventListener('message', handleOAuthPopupMessage);
     };
   }, [verifyAdminSession]);
 
