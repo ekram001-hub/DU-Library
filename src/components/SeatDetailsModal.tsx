@@ -534,7 +534,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer animate-pulse"
                       >
                         <RotateCcw className="w-4 h-4" />
-                        <span>I'm Back (ব্রেক শেষ)</span>
+                        <span>I'm Back</span>
                       </button>
                     )
                   ) : (

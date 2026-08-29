@@ -199,14 +199,14 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm font-black text-emerald-100 tracking-tight leading-tight drop-shadow-2xs">
             {seat.seatNumber}
           </span>
-          <div className="whitespace-nowrap text-xs sm:text-sm md:text-base font-black font-mono text-white tracking-tight leading-tight drop-shadow-xs mt-0.5">
+          <div className="whitespace-nowrap text-xs sm:text-sm font-black font-mono text-white tracking-tight leading-tight drop-shadow-xs mt-0.5">
             {awayCountdown ? awayCountdown.hmText : '0h 30m'}
           </div>
         </div>
       ) : seat.status === 'occupied' ? (
         /* OCCUPIED (RED) SEAT: Clean seat number & Occupant Name */
         <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif] px-0.5">
-          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm md:text-base font-['Poppins',_sans-serif] font-black text-white tracking-tight leading-tight drop-shadow-2xs">
+          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm font-['Poppins',_sans-serif] font-black text-white tracking-tight leading-tight drop-shadow-2xs">
             {seat.seatNumber}
           </span>
           <span className="text-[8px] sm:text-[9px] font-bold text-red-100 uppercase tracking-wider mt-0.5">
@@ -216,7 +216,7 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       ) : seat.status === 'available' ? (
         /* AVAILABLE SEAT: Prominent clean Seat Number (Never wraps onto two lines) */
         <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif] px-0.5">
-          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm md:text-base font-['Poppins',_sans-serif] font-black text-slate-800 group-hover:text-emerald-700 group-hover:scale-105 transition-all tracking-tight leading-tight">
+          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm font-['Poppins',_sans-serif] font-black text-slate-800 group-hover:text-emerald-700 transition-all tracking-tight leading-tight">
             {seat.seatNumber}
           </span>
         </div>

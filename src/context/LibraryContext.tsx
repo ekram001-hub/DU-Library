@@ -851,9 +851,15 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     broadcastStateViaSupabase(payload);
   }, []);
 
+  // Timestamp of the most recent LOCAL write (booking, release, break, admin
+  // action, etc). The periodic cloud poll below reads this before applying
+  // anything it fetches — see CLOUD_POLL_GRACE_MS for why.
+  const lastLocalMutationAtRef = React.useRef<number>(0);
+
   // Instant Cloud Push for interactive user seat actions (Booking, Break, Release)
   const pushStateToCloudNow = useCallback(
     (customSeats?: Seat[], customRooms?: Room[]) => {
+      lastLocalMutationAtRef.current = Date.now();
       const payload = {
         rooms: customRooms || roomsRef.current,
         seats: customSeats || seatsRef.current,
@@ -936,8 +942,22 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // Supabase initial cloud load tracker
   const isCloudLoadedRef = React.useRef(false);
 
+  // How long a poll defers to a just-made local write. Supabase's write and
+  // this poll's read are two independent round-trips, so a poll can land
+  // between "we wrote the booking" and "the write is actually visible on
+  // read", fetch the still-old row, and silently flip a freshly booked/
+  // released/break seat back to its previous status for a few seconds —
+  // reported as "booking status sometimes disappears on its own". Skipping
+  // polls inside this window lets the optimistic local state stand until
+  // the write has definitely landed, at which point the next poll (or the
+  // realtime broadcast, which is immediate) picks up the confirmed value.
+  const CLOUD_POLL_GRACE_MS = 6000;
+
   // Helper to load and apply cloud state
   const loadCloudState = useCallback(async () => {
+    if (Date.now() - lastLocalMutationAtRef.current < CLOUD_POLL_GRACE_MS) {
+      return;
+    }
     try {
       const cloudState = await fetchLibraryStateFromCloud();
       if (cloudState) {
@@ -997,6 +1017,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
 
     const timer = setTimeout(() => {
+      lastLocalMutationAtRef.current = Date.now();
       broadcastSync({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities });
       syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
     }, 300);

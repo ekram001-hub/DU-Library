@@ -115,7 +115,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
                 </span>
               </div>
               <p className="text-xs text-slate-600">
-                Your seat will turn <strong className="text-emerald-700">Green (সবুজ)</strong> with a live countdown timer
+                Your seat will turn <strong className="text-emerald-700">Green</strong> with a live countdown timer
               </p>
             </div>
           </div>
@@ -136,7 +136,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
           <div className="p-3 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs flex items-start gap-2.5 shadow-2xs">
             <Lock className="w-4 h-4 text-amber-700 shrink-0 mt-0.5" />
             <div>
-              <div className="font-bold text-amber-950">লক ব্রেক রুল (No Early Cancel):</div>
+              <div className="font-bold text-amber-950">No Early Cancel:</div>
               <div className="text-[11px] text-amber-800 leading-relaxed mt-0.5">
                 একবার ব্রেক শুরু করলে নির্ধারিত সময় শেষ হওয়ার আগে ব্রেক বাতিল বা সিটে রিটার্ন করা যাবে না। আপনি যতক্ষণ ইচ্ছা ব্রেক নিতে পারেন।
               </div>
@@ -148,7 +148,7 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
             <label className="block text-xs font-bold text-slate-800 flex items-center justify-between">
               <span className="flex items-center gap-1.5">
                 <Clock className="w-4 h-4 text-emerald-600" />
-                <span>Select Break Duration (সীমাহীন সময়)</span>
+                <span>Select Break Duration</span>
               </span>
               <span className="text-xs font-mono font-bold text-emerald-800 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200">
                 {durationMinutes >= 60 ? `${Math.floor(durationMinutes / 60)}h ${durationMinutes % 60 ? (durationMinutes % 60) + 'm' : ''}` : `${durationMinutes} Mins`} ({durationMinutes}m)
@@ -186,9 +186,9 @@ export const AwayTimerModal: React.FC<AwayTimerModalProps> = ({
             {/* Custom Minutes Input Section (Unlimited) */}
             <div className="p-3 rounded-xl bg-emerald-50/60 border border-emerald-200/80 space-y-2">
               <div className="flex items-center justify-between text-xs font-semibold text-slate-800">
-                <span>Custom Duration (যতক্ষণ ইচ্ছা মিনিট লিখুন):</span>
+                <span>Custom Duration:</span>
                 <span className="text-[11px] text-emerald-700 font-medium">
-                  যেকোনো সময়
+                  Any time
                 </span>
               </div>
 

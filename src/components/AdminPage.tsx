@@ -167,9 +167,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [isAddingRule, setIsAddingRule] = useState(false);
   const [editingRuleId, setEditingRuleId] = useState<string | null>(null);
   const [ruleTitle, setRuleTitle] = useState('');
-  const [ruleBengaliTitle, setRuleBengaliTitle] = useState('');
   const [ruleDescription, setRuleDescription] = useState('');
-  const [ruleBengaliDesc, setRuleBengaliDesc] = useState('');
   const [ruleCategory, setRuleCategory] = useState<LibraryRule['category']>('general');
   const [ruleIcon, setRuleIcon] = useState('📌');
   const [ruleBranchTarget, setRuleBranchTarget] = useState<'all' | BranchId>('all');
@@ -462,9 +460,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     if (editingRuleId) {
       updateRule(editingRuleId, {
         title: ruleTitle.trim(),
-        bengaliTitle: ruleBengaliTitle.trim() || ruleTitle.trim(),
         description: ruleDescription.trim(),
-        bengaliDescription: ruleBengaliDesc.trim() || ruleDescription.trim(),
         category: ruleCategory,
         icon: ruleIcon || '📌',
         branchId: ruleBranchTarget,
@@ -474,9 +470,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     } else {
       addRule({
         title: ruleTitle.trim(),
-        bengaliTitle: ruleBengaliTitle.trim() || ruleTitle.trim(),
         description: ruleDescription.trim(),
-        bengaliDescription: ruleBengaliDesc.trim() || ruleDescription.trim(),
         category: ruleCategory,
         icon: ruleIcon || '📌',
         branchId: ruleBranchTarget,
@@ -485,9 +479,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     }
 
     setRuleTitle('');
-    setRuleBengaliTitle('');
     setRuleDescription('');
-    setRuleBengaliDesc('');
     setRuleCategory('general');
     setRuleIcon('📌');
     setRuleBranchTarget('all');
@@ -498,9 +490,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const handleStartEditRule = (rule: LibraryRule) => {
     setEditingRuleId(rule.id);
     setRuleTitle(rule.title);
-    setRuleBengaliTitle(rule.bengaliTitle || '');
     setRuleDescription(rule.description);
-    setRuleBengaliDesc(rule.bengaliDescription || '');
     setRuleCategory(rule.category || 'general');
     setRuleIcon(rule.icon || '📌');
     setRuleBranchTarget(rule.branchId || 'all');
@@ -511,9 +501,7 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const handleCancelRuleEdit = () => {
     setEditingRuleId(null);
     setRuleTitle('');
-    setRuleBengaliTitle('');
     setRuleDescription('');
-    setRuleBengaliDesc('');
     setRuleCategory('general');
     setRuleIcon('📌');
     setRuleBranchTarget('all');
@@ -2154,62 +2142,32 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                     )}
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <div className="sm:col-span-2">
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Rule Title (English) *
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        placeholder="e.g. Absolute Silence & Phone Etiquette"
-                        value={ruleTitle}
-                        onChange={(e) => setRuleTitle(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Rule Title (বাংলা)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="যেমন: পূর্ণ নীরবতা ও মোবাইল শিষ্টাচার"
-                        value={ruleBengaliTitle}
-                        onChange={(e) => setRuleBengaliTitle(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Rule Title *
+                    </label>
+                    <input
+                      type="text"
+                      required
+                      placeholder="e.g. Absolute Silence & Phone Etiquette"
+                      value={ruleTitle}
+                      onChange={(e) => setRuleTitle(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Detailed Description (English) *
-                      </label>
-                      <textarea
-                        rows={3}
-                        required
-                        placeholder="Mobile phones must strictly be set to silent or vibration mode inside study chambers..."
-                        value={ruleDescription}
-                        onChange={(e) => setRuleDescription(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-600 mb-1">
-                        Detailed Description (বাংলা)
-                      </label>
-                      <textarea
-                        rows={3}
-                        placeholder="স্টাডি রুমের ভেতর মোবাইল ফোন সম্পূর্ণ সাইলেন্ট বা ভাইব্রেশন মোডে রাখতে হবে..."
-                        value={ruleBengaliDesc}
-                        onChange={(e) => setRuleBengaliDesc(e.target.value)}
-                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
-                      />
-                    </div>
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-600 mb-1">
+                      Detailed Description *
+                    </label>
+                    <textarea
+                      rows={3}
+                      required
+                      placeholder="Mobile phones must strictly be set to silent or vibration mode inside study chambers..."
+                      value={ruleDescription}
+                      onChange={(e) => setRuleDescription(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl text-slate-900 text-xs focus:outline-none focus:border-blue-500"
+                    />
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -2316,11 +2274,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                               <span className="font-bold text-slate-900 text-sm">
                                 {idx + 1}. {rule.title}
                               </span>
-                              {rule.bengaliTitle && (
-                                <span className="text-xs text-slate-500 font-medium">
-                                  ({rule.bengaliTitle})
-                                </span>
-                              )}
                               {rule.category && (
                                 <span className="px-2 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-600 border border-slate-200">
                                   {rule.category}
@@ -2338,12 +2291,6 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                             <p className="text-xs text-slate-600 leading-relaxed pl-7">
                               {rule.description}
                             </p>
-
-                            {rule.bengaliDescription && (
-                              <p className="text-xs text-slate-500 leading-relaxed pl-7 italic">
-                                {rule.bengaliDescription}
-                              </p>
-                            )}
                           </div>
 
                           <div className="flex items-center gap-1.5 self-end sm:self-center shrink-0">
