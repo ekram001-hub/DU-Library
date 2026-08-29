@@ -57,6 +57,19 @@ create table if not exists public.students (
   last_active timestamptz not null default timezone('utc'::text, now())
 );
 
+-- Backfill any column this table predates. `create table if not exists`
+-- above is a no-op on a project whose `students` table was created by an
+-- older build of the app, so a fresh install and a years-old project both
+-- end up with the exact same schema after this block runs.
+alter table public.students add column if not exists email       text;
+alter table public.students add column if not exists student_id  text;
+alter table public.students add column if not exists gender      text default 'male';
+alter table public.students add column if not exists target_exam text;
+alter table public.students add column if not exists is_blocked  boolean default false;
+alter table public.students add column if not exists created_at  timestamptz not null default timezone('utc'::text, now());
+alter table public.students add column if not exists last_active timestamptz not null default timezone('utc'::text, now());
+update public.students set is_blocked = false where is_blocked is null;
+
 -- =========================================================================
 --  2. PIN HASHING  —  plaintext column -> hashed column
 -- =========================================================================
