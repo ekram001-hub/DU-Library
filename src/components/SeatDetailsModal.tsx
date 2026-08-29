@@ -62,26 +62,19 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     }
   }, [currentStudent, isOpen]);
 
-  if (!isOpen || !seat) return null;
-
-  const isMySeat = Boolean(
-    currentStudent &&
-    (seat.status === 'occupied' || seat.status === 'away') &&
-    ((seat.studentId && currentStudent.studentId && seat.studentId === currentStudent.studentId) ||
-      (seat.occupantPhone && currentStudent.phone && seat.occupantPhone === currentStudent.phone) ||
-      (seat.occupantName && currentStudent.name && seat.occupantName.toLowerCase() === currentStudent.name.toLowerCase()))
-  );
-
-  const isMySecondarySeat = Boolean(
-    currentStudent &&
-    seat.isSecondaryBooked &&
-    ((seat.secondaryOccupantPhone && currentStudent.phone && seat.secondaryOccupantPhone === currentStudent.phone) ||
-      (seat.secondaryOccupantStudentId && currentStudent.studentId && seat.secondaryOccupantStudentId === currentStudent.studentId))
-  );
+  // Rules of Hooks: every hook below MUST run before the early return.
+  // This modal starts out hidden (isOpen=false / seat=null), so the early
+  // "if (!isOpen || !seat) return null" used to sit ABOVE these useMemo
+  // calls. The moment a student clicked a booked/away seat, isOpen and seat
+  // both became truthy and render suddenly executed 3 extra hooks it hadn't
+  // called on the previous (hidden) render — React throws "Rendered more
+  // hooks than during the previous render" and the app's ErrorBoundary
+  // catches it, showing "Something went wrong". (Same bug class already
+  // fixed once in MySeatFloatingWidget — see commit 7333911.)
 
   // Calculate live countdown in H:M format
   const awayCountdown = useMemo(() => {
-    if (seat.status !== 'away') {
+    if (!seat || seat.status !== 'away') {
       return null;
     }
     const rawAwaySince = seat.awaySince;
@@ -118,10 +111,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
       mins,
       secs,
     };
-  }, [seat.status, seat.awaySince, seat.awayDurationMinutes, currentTime]);
+  }, [seat, currentTime]);
 
   const bookedTimeFormatted = useMemo(() => {
-    if (!seat.bookedAt) return 'N/A';
+    if (!seat?.bookedAt) return 'N/A';
     try {
       const d = new Date(seat.bookedAt);
       if (isNaN(d.getTime())) return 'N/A';
@@ -133,10 +126,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     } catch {
       return 'N/A';
     }
-  }, [seat.bookedAt]);
+  }, [seat?.bookedAt]);
 
   const expectedLeaveFormatted = useMemo(() => {
-    if (!seat.expectedLeaveAt) return 'N/A';
+    if (!seat?.expectedLeaveAt) return 'N/A';
     try {
       const d = new Date(seat.expectedLeaveAt);
       if (isNaN(d.getTime())) return 'N/A';
@@ -148,7 +141,24 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     } catch {
       return 'N/A';
     }
-  }, [seat.expectedLeaveAt]);
+  }, [seat?.expectedLeaveAt]);
+
+  if (!isOpen || !seat) return null;
+
+  const isMySeat = Boolean(
+    currentStudent &&
+    (seat.status === 'occupied' || seat.status === 'away') &&
+    ((seat.studentId && currentStudent.studentId && seat.studentId === currentStudent.studentId) ||
+      (seat.occupantPhone && currentStudent.phone && seat.occupantPhone === currentStudent.phone) ||
+      (seat.occupantName && currentStudent.name && seat.occupantName.toLowerCase() === currentStudent.name.toLowerCase()))
+  );
+
+  const isMySecondarySeat = Boolean(
+    currentStudent &&
+    seat.isSecondaryBooked &&
+    ((seat.secondaryOccupantPhone && currentStudent.phone && seat.secondaryOccupantPhone === currentStudent.phone) ||
+      (seat.secondaryOccupantStudentId && currentStudent.studentId && seat.secondaryOccupantStudentId === currentStudent.studentId))
+  );
 
   const handleRelease = () => {
     if (window.confirm('Are you sure you want to release this seat?')) {
