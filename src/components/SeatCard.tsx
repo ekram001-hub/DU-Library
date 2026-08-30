@@ -243,9 +243,8 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
             {seat.occupantName ? seat.occupantName.split(' ')[0] : 'Booked'}
           </span>
         ) : seat.status === 'available' ? (
-          <span className="text-[8px] sm:text-[9px] text-emerald-700 group-hover:text-emerald-800 font-bold uppercase tracking-wider">
-            Available
-          </span>
+          /* Empty spacer to keep center body perfectly balanced */
+          <span className="h-0.5" />
         ) : (
           <span className="text-[8px] sm:text-[9px] text-slate-400">Maintenance</span>
         )}
