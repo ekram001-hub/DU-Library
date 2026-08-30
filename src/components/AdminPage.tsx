@@ -271,6 +271,22 @@ export const AdminPage: React.FC<AdminPageProps> = ({
   const [memoUrl, setMemoUrl] = useState(branchConfig.memorizerAppUrl);
   const [settingsSaved, setSettingsSaved] = useState(false);
 
+  // These only ever initialized once (their useState default), so switching
+  // the branch tab left every field showing the PREVIOUS branch's values —
+  // and clicking Save would then write that stale data into the newly
+  // selected branch's config, silently overwriting it. Re-sync whenever the
+  // selected branch changes. Deliberately not depending on `branchConfig`
+  // itself: that would also fire on every remote/cloud sync tick and wipe
+  // out whatever the admin is actively typing.
+  useEffect(() => {
+    setFbUrl(branchConfig.facebookUrl);
+    setFbPageName(branchConfig.facebookPageName);
+    setFbFollowers(branchConfig.facebookFollowers);
+    setPhoneContact(branchConfig.phone);
+    setMemoUrl(branchConfig.memorizerAppUrl);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentBranchId]);
+
   // Metrics
   const totalBranchSeats = branchSeats.length;
   const occupiedBranchSeats = branchSeats.filter((s) => s.status === 'occupied').length;
@@ -3017,7 +3033,11 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                         </button>
                         <button
                           type="button"
-                          onClick={() => deleteNotice(n.id)}
+                          onClick={() => {
+                            if (window.confirm(`Delete notice "${n.title}"?`)) {
+                              deleteNotice(n.id);
+                            }
+                          }}
                           className="p-1.5 rounded-lg text-slate-400 hover:text-rose-600 hover:bg-rose-50 cursor-pointer"
                           title="Delete Notice"
                         >

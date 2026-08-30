@@ -34,6 +34,8 @@ import {
   isSupabaseConfigured,
   syncStudentToCloud,
   updateStudentPinHash,
+  updateStudentBlockedStatus,
+  deleteStudentFromCloud,
   fetchAllStudentsFromCloud,
   syncLibraryStateToCloud,
   fetchLibraryStateFromCloud,
@@ -396,6 +398,25 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         },
       };
       localStorage.setItem(STORAGE_KEYS.BRANCHES_CONFIG, JSON.stringify(next));
+      // Without this, Settings-tab edits (Facebook link, contact phone,
+      // memorizer app URL) only ever reached this admin's own browser/
+      // localStorage — other devices and a fresh visitor's browser kept
+      // showing the old values forever. broadcastSync/roomsRef/etc. are
+      // declared further down this same component function but are already
+      // initialized by the time a person can actually click "Save" (they're
+      // set on every render, well before any click handler runs), so this
+      // closure sees their current values just like their own callers do.
+      lastLocalMutationAtRef.current = Date.now();
+      broadcastSync({ branchesConfig: next });
+      syncLibraryStateToCloud({
+        rooms: roomsRef.current,
+        seats: seatsRef.current,
+        notices: noticesRef.current,
+        branchesConfig: next,
+        rules: rulesRef.current,
+        wifiFacilities: wifiFacilitiesRef.current,
+        wifiNetworks: wifiNetworksRef.current,
+      }).catch(() => {});
       return next;
     });
   }, []);
@@ -1509,6 +1530,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   const deleteRegisteredStudent = useCallback((phone: string) => {
     const clean = phone.replace(/\D/g, '');
     setRegisteredStudents((prev) => prev.filter((s) => s.phone.replace(/\D/g, '') !== clean));
+    // Without this, only the admin's own local list lost the student — the
+    // row stayed in Postgres and reappeared on the next cloud refresh.
+    void deleteStudentFromCloud(phone).catch(() => {});
   }, []);
 
   const refreshStudentsFromCloud = useCallback(async () => {
@@ -1892,11 +1916,18 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const adminToggleBlockStudent = useCallback((phone: string) => {
     const clean = phone.replace(/\D/g, '');
+    let nextBlocked = false;
     setRegisteredStudents((prev) =>
       prev.map((s) => {
         if (s.phone.replace(/\D/g, '') === clean) {
-          const updated = { ...s, isBlocked: !s.isBlocked };
+          nextBlocked = !s.isBlocked;
+          const updated = { ...s, isBlocked: nextBlocked };
           syncStudentToCloud(updated).catch(() => {});
+          // syncStudentToCloud's preferred path is the upsert_student_profile
+          // RPC, which deliberately never writes is_blocked (so a student
+          // can't clear their own block by re-registering) — but that also
+          // means it silently drops THIS toggle. Write it directly too.
+          void updateStudentBlockedStatus(phone, nextBlocked).catch(() => {});
           return updated;
         }
         return s;

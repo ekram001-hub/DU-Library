@@ -278,6 +278,82 @@ export async function updateStudentPinHash(
 }
 
 /**
+ * Admin block/unblock. `upsert_student_profile` deliberately never writes
+ * `is_blocked` (see 01_security_core.sql) so a student can't clear their own
+ * block by re-registering — but that also means routing this through the
+ * same RPC silently drops the admin's toggle. This talks to the `students`
+ * table directly instead, which the `students_admin_update` RLS policy
+ * already allows for a signed-in admin (`public.is_admin()`).
+ */
+export async function updateStudentBlockedStatus(
+  phone: string,
+  isBlocked: boolean
+): Promise<{ success: boolean; error?: unknown }> {
+  try {
+    const client = getSupabase();
+    if (!client) return { success: false };
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+
+    const { error } = await client
+      .from('students')
+      .update({ is_blocked: isBlocked, last_active: new Date().toISOString() })
+      .or(`phone.eq.${cleanPhone},phone.eq.${phone.trim()}`);
+
+    if (error) {
+      if (isRowLevelSecurityError(error)) {
+        console.warn(
+          'Supabase refused the block/unblock: the signed-in account is not in the `admins` table.'
+        );
+      } else {
+        console.warn('Supabase updateStudentBlockedStatus error:', error.message);
+      }
+      return { success: false, error };
+    }
+    return { success: true };
+  } catch (err) {
+    console.warn('Supabase updateStudentBlockedStatus exception:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
+ * Admin "delete student" from the registry. Without this, deleteRegisteredStudent
+ * only ever touched the admin's own local/localStorage list — the row stayed
+ * in Postgres and `refreshStudentsFromCloud()` (or a fresh browser) would
+ * bring the "deleted" student straight back. The `students_admin_delete` RLS
+ * policy already permits this for a signed-in admin (`public.is_admin()`).
+ */
+export async function deleteStudentFromCloud(
+  phone: string
+): Promise<{ success: boolean; error?: unknown }> {
+  try {
+    const client = getSupabase();
+    if (!client) return { success: false };
+    const cleanPhone = phone.trim().replace(/\D/g, '');
+
+    const { error } = await client
+      .from('students')
+      .delete()
+      .or(`phone.eq.${cleanPhone},phone.eq.${phone.trim()}`);
+
+    if (error) {
+      if (isRowLevelSecurityError(error)) {
+        console.warn(
+          'Supabase refused the delete: the signed-in account is not in the `admins` table.'
+        );
+      } else {
+        console.warn('Supabase deleteStudentFromCloud error:', error.message);
+      }
+      return { success: false, error };
+    }
+    return { success: true };
+  } catch (err) {
+    console.warn('Supabase deleteStudentFromCloud exception:', err);
+    return { success: false, error: err };
+  }
+}
+
+/**
  * Fetch all registered students from Supabase (Admin Directory only).
  *
  * After the security migration this is gated by RLS: only a JWT whose e-mail
