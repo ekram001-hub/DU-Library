@@ -72,34 +72,36 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
       };
     }
 
-    // DIRECTIVE 3: Secondary booked on an orange seat turns completely BLUE
+    // Secondary booking: sky blue for everyone (owner and other students see
+    // the same color — there's nothing to hide here, unlike a primary booking).
     if (seat.isSecondaryBooked) {
       return {
         cardBg:
-          'bg-gradient-to-br from-blue-600 via-indigo-600 to-sky-600 text-white border-2 border-blue-700 shadow-md ring-2 ring-blue-300/60 hover:brightness-105 active:scale-95',
+          'bg-gradient-to-br from-sky-500 via-sky-600 to-blue-600 text-white border-2 border-sky-700 shadow-md ring-2 ring-sky-300/60 hover:brightness-105 active:scale-95',
         numColor: 'text-white font-bold',
       };
     }
 
-    // DIRECTIVE 2: Away seat MUST show in prominent complete GREEN with large live countdown timer in Poppins
+    // Temporary break (away): yellow for everyone — the seat holder and
+    // every other student see the exact same color here.
     if (seat.status === 'away') {
       return {
         cardBg:
-          'bg-gradient-to-br from-emerald-600 via-emerald-700 to-teal-800 text-white border-2 border-emerald-500 shadow-md ring-2 ring-emerald-300/70 hover:brightness-105 active:scale-95',
-        numColor: 'text-white font-bold',
+          'bg-gradient-to-br from-amber-400 via-yellow-500 to-amber-500 text-amber-950 border-2 border-amber-500 shadow-md ring-2 ring-amber-200/70 hover:brightness-105 active:scale-95',
+        numColor: 'text-amber-950 font-bold',
       };
     }
 
-    // My Seat: Glowing Teal / Emerald with Distinct Golden Ring
+    // Booked, and it's MY seat: green.
     if (isMySeat) {
       return {
         cardBg:
-          'bg-gradient-to-br from-teal-700 via-teal-800 to-emerald-900 text-white border-2 border-teal-400 ring-2 ring-amber-300 shadow-md hover:brightness-105',
+          'bg-gradient-to-br from-green-600 via-emerald-600 to-green-700 text-white border-2 border-green-500 ring-2 ring-emerald-200/70 shadow-md hover:brightness-105',
         numColor: 'text-white font-bold',
       };
     }
 
-    // DIRECTIVE 1: Occupied seat turns completely RED for other users
+    // Booked, seen by anyone else: red.
     if (seat.status === 'occupied') {
       return {
         cardBg:
@@ -194,12 +196,12 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           </span>
         </div>
       ) : seat.status === 'away' ? (
-        /* GREEN AWAY DISPLAY: ONLY SEAT NUMBER & CENTERED H:M LIVE COUNTDOWN TIMER (NO OTHER TEXT) */
+        /* YELLOW AWAY DISPLAY: ONLY SEAT NUMBER & CENTERED H:M LIVE COUNTDOWN TIMER (NO OTHER TEXT) */
         <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif] px-0.5 my-auto">
-          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm font-black text-emerald-100 tracking-tight leading-tight drop-shadow-2xs">
+          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm font-black text-amber-900 tracking-tight leading-tight drop-shadow-2xs">
             {seat.seatNumber}
           </span>
-          <div className="whitespace-nowrap text-xs sm:text-sm font-black font-mono text-white tracking-tight leading-tight drop-shadow-xs mt-0.5">
+          <div className="whitespace-nowrap text-xs sm:text-sm font-black font-mono text-amber-950 tracking-tight leading-tight drop-shadow-xs mt-0.5">
             {awayCountdown ? awayCountdown.hmText : '0h 30m'}
           </div>
         </div>

@@ -194,7 +194,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             seat.isSecondaryBooked
               ? 'bg-blue-600 text-white border-blue-700'
               : seat.status === 'away'
-              ? 'bg-emerald-600 text-white border-emerald-700'
+              ? 'bg-amber-400 text-amber-950 border-amber-500'
               : 'bg-slate-50 border-slate-100 text-slate-900'
           }`}
         >
@@ -204,7 +204,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                 seat.isSecondaryBooked
                   ? 'bg-white text-blue-600'
                   : seat.status === 'away'
-                  ? 'bg-white text-emerald-700'
+                  ? 'bg-white text-amber-600'
                   : 'bg-white border border-slate-200 text-slate-800'
               }`}
             >
@@ -216,14 +216,16 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   {seat.isSecondaryBooked
                     ? 'Secondary Active (Temporary Study)'
                     : seat.status === 'away'
-                    ? 'Temporary Break (Green Seat)'
+                    ? 'Temporary Break (Yellow Seat)'
                     : 'Seat Details'}
                 </h3>
                 {isMySeat && (
                   <span
                     className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                      seat.status === 'away' || seat.isSecondaryBooked
+                      seat.isSecondaryBooked
                         ? 'bg-white/20 text-white'
+                        : seat.status === 'away'
+                        ? 'bg-amber-950/15 text-amber-950'
                         : 'bg-emerald-100 text-emerald-800'
                     }`}
                   >
@@ -238,7 +240,11 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               </div>
               <p
                 className={`text-xs ${
-                  seat.status === 'away' || seat.isSecondaryBooked ? 'text-emerald-100' : 'text-slate-500'
+                  seat.isSecondaryBooked
+                    ? 'text-blue-100'
+                    : seat.status === 'away'
+                    ? 'text-amber-900'
+                    : 'text-slate-500'
                 }`}
               >
                 {room ? room.name : 'Study Room'}
@@ -251,8 +257,10 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             type="button"
             onClick={onClose}
             className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-              seat.status === 'away' || seat.isSecondaryBooked
+              seat.isSecondaryBooked
                 ? 'text-white/80 hover:text-white hover:bg-white/10'
+                : seat.status === 'away'
+                ? 'text-amber-950/70 hover:text-amber-950 hover:bg-amber-950/10'
                 : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
             }`}
           >
@@ -277,19 +285,19 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               </div>
             </div>
           ) : seat.status === 'away' ? (
-            /* Away Big Timer Banner in Green (Emerald) in Poppins Font */
-            <div className="p-4 rounded-xl bg-emerald-50 border-2 border-emerald-400 text-center space-y-1.5 shadow-2xs">
-              <div className="text-xs font-bold text-emerald-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
-                <Timer className="w-4 h-4 text-emerald-600" />
+            /* Away Big Timer Banner in Yellow (Amber) in Poppins Font */
+            <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-400 text-center space-y-1.5 shadow-2xs">
+              <div className="text-xs font-bold text-amber-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
+                <Timer className="w-4 h-4 text-amber-600" />
                 <span>Away Remaining Time (H:M Live Countdown)</span>
               </div>
-              <div className="text-3xl sm:text-4xl font-['Poppins',_sans-serif] font-black text-emerald-700 tracking-wider animate-pulse my-1">
+              <div className="text-3xl sm:text-4xl font-['Poppins',_sans-serif] font-black text-amber-700 tracking-wider animate-pulse my-1">
                 {awayCountdown ? awayCountdown.hmText : '0h 30m'}
               </div>
-              <div className="text-xs font-mono font-bold text-emerald-600">
+              <div className="text-xs font-mono font-bold text-amber-600">
                 ({awayCountdown ? awayCountdown.text : '30:00'} remaining)
               </div>
-              <div className="text-xs text-emerald-800 font-semibold">
+              <div className="text-xs text-amber-800 font-semibold">
                 Reason: {seat.awayReason === 'Prayer' ? 'Prayer Break 🕌' : seat.awayReason === 'Lunch' ? 'Meal Break 🍱' : seat.awayReason === 'Tea' ? 'Tea & Snack ☕' : seat.awayReason === 'Rest' ? 'Rest & Refresh 🛋️' : 'Emergency Break ⚡'}
               </div>
               {!awayCountdown?.expired && (
@@ -334,11 +342,11 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs">
               <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-1.5">
                 <span className="flex items-center gap-1.5 text-slate-700">
-                  <User className="w-3.5 h-3.5 text-emerald-600" />
+                  <User className={`w-3.5 h-3.5 ${seat.status === 'away' ? 'text-amber-600' : 'text-emerald-600'}`} />
                   <span>Primary Occupant User Details</span>
                 </span>
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                  {seat.status === 'away' ? '🟢 On Break' : seat.status === 'occupied' ? '🔴 Booked' : '🔵 Booked'}
+                  {seat.status === 'away' ? '🟡 On Break' : seat.status === 'occupied' ? '🔴 Booked' : '🔵 Booked'}
                 </span>
               </div>
 
@@ -545,7 +553,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         onClose();
                         onOpenAwayTimer();
                       }}
-                      className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      className="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
                     >
                       <Timer className="w-4 h-4" />
                       <span>Take Break</span>

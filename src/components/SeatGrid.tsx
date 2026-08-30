@@ -203,10 +203,10 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
           })}
 
           {/* Single Button Size Break Statistics Card */}
-          <div className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 text-xs font-semibold shadow-2xs">
-            <Coffee className="w-3.5 h-3.5 text-emerald-600 animate-pulse" />
+          <div className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold shadow-2xs">
+            <Coffee className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
             <span>Break</span>
-            <span className="font-mono font-bold text-emerald-950 bg-emerald-200/70 px-1.5 py-0.5 rounded-md border border-emerald-300 text-[11px]">
+            <span className="font-mono font-bold text-amber-950 bg-amber-200/70 px-1.5 py-0.5 rounded-md border border-amber-300 text-[11px]">
               {awayCount}
             </span>
           </div>
@@ -244,20 +244,20 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
             <span>Available</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
+            <span className="w-3 h-3 rounded-md bg-green-600 shadow-2xs inline-block" />
+            <span className="font-semibold text-green-700">My Seat (Booked)</span>
+          </div>
+          <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-red-600 shadow-2xs inline-block" />
             <span className="font-semibold text-red-700">Occupied</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
-            <span className="w-3 h-3 rounded-md bg-emerald-600 shadow-2xs inline-block" />
-            <span className="font-semibold text-emerald-700">On Break</span>
+            <span className="w-3 h-3 rounded-md bg-amber-400 shadow-2xs inline-block" />
+            <span className="font-semibold text-amber-700">On Break</span>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <span className="w-3 h-3 rounded-md bg-blue-600 shadow-2xs inline-block" />
             <span className="font-semibold text-blue-700">2nd Booking</span>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            <span className="w-3 h-3 rounded-md bg-teal-800 ring-2 ring-amber-300 shadow-2xs inline-block" />
-            <span className="font-semibold text-teal-900">My Seat</span>
           </div>
         </div>
       </div>

@@ -122,7 +122,7 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
                 <span className="font-semibold text-xs text-slate-900 group-hover:text-teal-700 transition-colors truncate">
                   My Active Seat {currentStudentSeat.status === 'away' && '(On Break)'}
                 </span>
-                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentStudentSeat.status === 'away' ? 'bg-emerald-500 animate-pulse' : 'bg-teal-500'}`}></span>
+                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${currentStudentSeat.status === 'away' ? 'bg-amber-500 animate-pulse' : 'bg-teal-500'}`}></span>
               </div>
               <div className="text-[11px] text-slate-500 truncate">
                 {room ? room.name : 'Study Room'} • {currentStudentSeat.status === 'away' ? `Break: ${awayCountdown?.text || 'Active'}` : elapsedStudyTime}
@@ -158,10 +158,10 @@ export const MySeatFloatingWidget: React.FC<MySeatFloatingWidgetProps> = ({
               <button
                 id="floating-break-btn"
                 onClick={onOpenAwayModal}
-                className="px-2 py-1 rounded-md bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 text-emerald-800 text-[11px] font-medium transition-colors flex items-center gap-1"
-                title="Take a break (turns seat green)"
+                className="px-2 py-1 rounded-md bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 text-[11px] font-medium transition-colors flex items-center gap-1"
+                title="Take a break (turns seat yellow)"
               >
-                <Timer className="w-3 h-3 text-emerald-600" />
+                <Timer className="w-3 h-3 text-amber-600" />
                 <span>Break</span>
               </button>
             )}

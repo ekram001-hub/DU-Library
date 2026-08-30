@@ -1192,6 +1192,29 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
       }
 
+      // A student can only hold one active seat (occupied or on a break) at
+      // a time. Nothing previously checked this here — a student could open
+      // the grid in a second tab (or just click a different seat before
+      // releasing their current one) and end up occupying two seats at
+      // once. Match on phone first (the actual account key), then studentId,
+      // matching the identity checks used everywhere else in this file.
+      const cleanPhone = studentDetails.phone.replace(/\D/g, '');
+      const existingSeat = seatsRef.current.find(
+        (s) =>
+          s.id !== seatId &&
+          (s.status === 'occupied' || s.status === 'away') &&
+          ((s.occupantPhone && cleanPhone && s.occupantPhone.replace(/\D/g, '') === cleanPhone) ||
+            (studentDetails.studentId &&
+              s.studentId &&
+              s.studentId === studentDetails.studentId))
+      );
+      if (existingSeat) {
+        return {
+          success: false,
+          message: `You already have an active seat (${existingSeat.seatNumber}). Please release it before booking another one.`,
+        };
+      }
+
       // Check Female Reserved Area rule
       if (seat.isFemaleReserved && studentDetails.gender !== 'female') {
         return {

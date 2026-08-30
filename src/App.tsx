@@ -108,6 +108,16 @@ function MainApp() {
   const handleSelectSeat = (seat: Seat) => {
     setSelectedSeat(seat);
     if (seat.status === 'available') {
+      // A student can only hold one active seat at a time (see bookSeat's
+      // own check, which is what actually enforces this). Catching it here
+      // too means clicking a different seat while already holding one opens
+      // their existing pass instead of a booking form that would just fail
+      // on submit with an error they didn't expect.
+      if (currentStudentSeat && currentStudentSeat.id !== seat.id) {
+        setPassSeat(currentStudentSeat);
+        setIsPassModalOpen(true);
+        return;
+      }
       setIsBookModalOpen(true);
     } else {
       setIsDetailsModalOpen(true);
