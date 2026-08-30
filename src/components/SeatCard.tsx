@@ -52,11 +52,16 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
     const hours = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
 
     return {
       expired: false,
       text: `${hours > 0 ? `${hours}:` : ''}${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`,
       hmText: `${hours}h ${mins < 10 ? '0' : ''}${mins}m`,
+      // Minutes:seconds, uncapped at 60 minutes — used for the seat card's
+      // own countdown display so a multi-hour break still reads as a single
+      // clean "M:SS" instead of switching to "H:MM:SS" mid-card.
+      mmss: `${totalMinutes}:${secs < 10 ? '0' : ''}${secs}`,
       hours,
       mins,
       secs,
@@ -196,13 +201,13 @@ export const SeatCard: React.FC<SeatCardProps> = ({ seat, room, onSelectSeat }) 
           </span>
         </div>
       ) : seat.status === 'away' ? (
-        /* YELLOW AWAY DISPLAY: ONLY SEAT NUMBER & CENTERED H:M LIVE COUNTDOWN TIMER (NO OTHER TEXT) */
+        /* YELLOW AWAY DISPLAY: small seat number on top, big centered M:SS live countdown */
         <div className="w-full flex-1 flex flex-col items-center justify-center text-center font-['Poppins',_sans-serif] px-0.5 my-auto">
-          <span className="whitespace-nowrap inline-block max-w-full text-xs sm:text-sm font-black text-amber-900 tracking-tight leading-tight drop-shadow-2xs">
+          <span className="whitespace-nowrap inline-block max-w-full text-[7px] sm:text-[8px] font-bold text-amber-900/80 tracking-tight leading-tight">
             {seat.seatNumber}
           </span>
-          <div className="whitespace-nowrap text-xs sm:text-sm font-black font-mono text-amber-950 tracking-tight leading-tight drop-shadow-xs mt-0.5">
-            {awayCountdown ? awayCountdown.hmText : '0h 30m'}
+          <div className="whitespace-nowrap text-xs sm:text-sm font-['Poppins',_sans-serif] font-black font-mono text-amber-950 tracking-tight leading-tight drop-shadow-xs mt-0.5">
+            {awayCountdown ? awayCountdown.mmss : '30:00'}
           </div>
         </div>
       ) : seat.status === 'occupied' ? (
