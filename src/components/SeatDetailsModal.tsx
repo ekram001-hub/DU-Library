@@ -1,19 +1,13 @@
 import React, { useMemo } from 'react';
 import {
   X,
-  Clock,
-  User,
-  Phone,
-  ShieldCheck,
   Timer,
   LogOut,
   Sparkles,
   Ticket,
-  Wrench,
-  AlertTriangle,
   RotateCcw,
-  CheckCircle2,
   Lock,
+  ChevronRight,
 } from 'lucide-react';
 import { Seat, Room } from '../types';
 import { useLibrary } from '../context/LibraryContext';
@@ -68,11 +62,11 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
   // calls. The moment a student clicked a booked/away seat, isOpen and seat
   // both became truthy and render suddenly executed 3 extra hooks it hadn't
   // called on the previous (hidden) render — React throws "Rendered more
-  // hooks than during the previous render" and the app's ErrorBoundary
-  // catches it, showing "Something went wrong". (Same bug class already
-  // fixed once in MySeatFloatingWidget — see commit 7333911.)
+  // hooks than during the previous render" — so every hook stays up here.
 
-  // Calculate live countdown in H:M format
+  // Live remaining-time countdown, expressed as minutes:seconds (uncapped
+  // minutes) so a multi-hour break still reads as one clean number instead
+  // of switching formats mid-countdown — same convention as the seat card.
   const awayCountdown = useMemo(() => {
     if (!seat || seat.status !== 'away') {
       return null;
@@ -95,21 +89,18 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     const remainingMs = totalMs - elapsedMs;
 
     if (remainingMs <= 0) {
-      return { expired: true, text: '00:00', hmText: '0h 00m' };
+      return { expired: true, mmss: '0:00', text: '00:00' };
     }
 
     const totalSeconds = Math.floor(remainingMs / 1000);
-    const hours = Math.floor(totalSeconds / 3600);
     const mins = Math.floor((totalSeconds % 3600) / 60);
     const secs = totalSeconds % 60;
+    const totalMinutes = Math.floor(totalSeconds / 60);
 
     return {
       expired: false,
-      text: `${hours > 0 ? `${hours}:` : ''}${mins < 10 ? '0' : ''}${mins}:${secs < 10 ? '0' : ''}${secs}`,
-      hmText: `${hours}h ${mins < 10 ? '0' : ''}${mins}m`,
-      hours,
-      mins,
-      secs,
+      mmss: `${totalMinutes}:${secs < 10 ? '0' : ''}${secs}`,
+      text: `${mins}:${secs < 10 ? '0' : ''}${secs}`,
     };
   }, [seat, currentTime]);
 
@@ -179,76 +170,65 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
     onClose();
   };
 
+  const reasonLabel =
+    seat.awayReason === 'Prayer'
+      ? 'Prayer Break 🕌'
+      : seat.awayReason === 'Lunch'
+      ? 'Meal Break 🍱'
+      : seat.awayReason === 'Tea'
+      ? 'Tea & Snack ☕'
+      : seat.awayReason === 'Rest'
+      ? 'Rest & Refresh 🛋️'
+      : 'Emergency Break ⚡';
+
+  // Header accent: one color per state, everything else stays neutral.
+  const accent = seat.isSecondaryBooked
+    ? { chip: 'bg-blue-600', text: 'text-blue-600', soft: 'bg-blue-50', softText: 'text-blue-700' }
+    : seat.status === 'away'
+    ? { chip: 'bg-amber-400', text: 'text-amber-600', soft: 'bg-amber-50', softText: 'text-amber-700' }
+    : isMySeat
+    ? { chip: 'bg-green-600', text: 'text-green-600', soft: 'bg-green-50', softText: 'text-green-700' }
+    : seat.status === 'occupied'
+    ? { chip: 'bg-red-600', text: 'text-red-600', soft: 'bg-red-50', softText: 'text-red-700' }
+    : { chip: 'bg-slate-900', text: 'text-slate-900', soft: 'bg-slate-50', softText: 'text-slate-600' };
+
+  const title = seat.isSecondaryBooked
+    ? 'Secondary Session'
+    : seat.status === 'away'
+    ? 'On a Break'
+    : seat.status === 'occupied'
+    ? isMySeat
+      ? 'Your Seat'
+      : 'Occupied'
+    : seat.status === 'maintenance'
+    ? 'Under Maintenance'
+    : 'Available Seat';
+
   return (
     <div
       id="seat-details-modal-overlay"
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-xs animate-fadeIn font-['Poppins',_sans-serif]"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-fadeIn font-['Poppins',_sans-serif]"
     >
       <div
         id="seat-details-modal-card"
-        className="relative w-full max-w-sm rounded-2xl bg-white border border-slate-200 shadow-2xl overflow-hidden animate-slideUp"
+        className="relative w-full max-w-sm rounded-3xl bg-white shadow-2xl overflow-hidden animate-slideUp max-h-[88vh] flex flex-col"
       >
-        {/* Header */}
-        <div
-          className={`p-4 border-b flex items-center justify-between ${
-            seat.isSecondaryBooked
-              ? 'bg-blue-600 text-white border-blue-700'
-              : seat.status === 'away'
-              ? 'bg-amber-400 text-amber-950 border-amber-500'
-              : 'bg-slate-50 border-slate-100 text-slate-900'
-          }`}
-        >
-          <div className="flex items-center gap-3">
-            <div
-              className={`w-10 h-10 rounded-xl flex items-center justify-center font-mono font-black text-sm shadow-xs ${
-                seat.isSecondaryBooked
-                  ? 'bg-white text-blue-600'
-                  : seat.status === 'away'
-                  ? 'bg-white text-amber-600'
-                  : 'bg-white border border-slate-200 text-slate-800'
-              }`}
-            >
+        {/* Header — minimal, no colored block */}
+        <div className="px-5 pt-5 pb-3 flex items-center justify-between shrink-0">
+          <div className="flex items-center gap-3 min-w-0">
+            <div className={`w-10 h-10 rounded-2xl ${accent.chip} flex items-center justify-center shrink-0 text-white font-mono font-black text-sm`}>
               {seat.seatNumber}
             </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-sm font-bold leading-tight">
-                  {seat.isSecondaryBooked
-                    ? 'Secondary Active (Temporary Study)'
-                    : seat.status === 'away'
-                    ? 'Temporary Break (Yellow Seat)'
-                    : 'Seat Details'}
-                </h3>
-                {isMySeat && (
-                  <span
-                    className={`px-1.5 py-0.2 rounded text-[10px] font-bold ${
-                      seat.isSecondaryBooked
-                        ? 'bg-white/20 text-white'
-                        : seat.status === 'away'
-                        ? 'bg-amber-950/15 text-amber-950'
-                        : 'bg-emerald-100 text-emerald-800'
-                    }`}
-                  >
-                    My Seat
-                  </span>
-                )}
-                {isMySecondarySeat && (
-                  <span className="px-1.5 py-0.2 rounded text-[10px] font-bold bg-white/20 text-white">
-                    My Temp Seat
+            <div className="min-w-0">
+              <div className="flex items-center gap-1.5">
+                <h3 className="text-sm font-bold text-slate-900 leading-tight">{title}</h3>
+                {(isMySeat || isMySecondarySeat) && (
+                  <span className={`px-1.5 py-0.5 rounded-full text-[9px] font-bold ${accent.soft} ${accent.softText}`}>
+                    You
                   </span>
                 )}
               </div>
-              <p
-                className={`text-xs ${
-                  seat.isSecondaryBooked
-                    ? 'text-blue-100'
-                    : seat.status === 'away'
-                    ? 'text-amber-900'
-                    : 'text-slate-500'
-                }`}
-              >
-                {room ? room.name : 'Study Room'}
-              </p>
+              <p className="text-[11px] text-slate-400 truncate">{room ? room.name : 'Study Room'}</p>
             </div>
           </div>
 
@@ -256,164 +236,108 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
             id="close-seat-details-btn"
             type="button"
             onClick={onClose}
-            className={`p-1.5 rounded-xl transition-colors cursor-pointer ${
-              seat.isSecondaryBooked
-                ? 'text-white/80 hover:text-white hover:bg-white/10'
-                : seat.status === 'away'
-                ? 'text-amber-950/70 hover:text-amber-950 hover:bg-amber-950/10'
-                : 'text-slate-400 hover:text-slate-600 hover:bg-slate-100'
-            }`}
+            className="p-2 rounded-full text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors cursor-pointer shrink-0"
           >
-            <X className="w-5 h-5" />
+            <X className="w-4.5 h-4.5" />
           </button>
         </div>
 
-        {/* Content */}
-        <div className="p-4 sm:p-5 space-y-3.5 font-['Poppins',_sans-serif]">
-          {/* Secondary Booked Blue Banner */}
+        {/* Content - Scrollable */}
+        <div className="px-5 pb-5 space-y-4 overflow-y-auto">
+          {/* Secondary booking summary */}
           {seat.isSecondaryBooked ? (
-            <div className="p-4 rounded-xl bg-blue-50 border-2 border-blue-400 text-center space-y-1.5 shadow-2xs">
-              <div className="text-xs font-bold text-blue-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
-                <Sparkles className="w-4 h-4 text-blue-600" />
-                <span>Secondary Temporary Session Active (Blue Seat)</span>
-              </div>
-              <div className="text-sm font-semibold text-blue-900">
-                Temp Occupant: <span className="font-bold">{seat.secondaryOccupantName}</span> ({seat.secondaryOccupantStudentId || 'Student'})
-              </div>
-              <div className="text-xs text-blue-700 font-medium">
-                Original Owner on break ({awayCountdown ? awayCountdown.text : 'Away remaining'})
-              </div>
+            <div className="flex flex-col items-center text-center py-2">
+              <span className="text-[11px] font-semibold text-blue-500 uppercase tracking-wide">
+                Temporarily studying here
+              </span>
+              <span className="text-lg font-bold text-slate-900 mt-1">{seat.secondaryOccupantName}</span>
+              <span className="text-xs text-slate-400 mt-0.5">
+                Seat owner back in {awayCountdown ? awayCountdown.text : '—'}
+              </span>
             </div>
           ) : seat.status === 'away' ? (
-            /* Away Big Timer Banner in Yellow (Amber) in Poppins Font */
-            <div className="p-4 rounded-xl bg-amber-50 border-2 border-amber-400 text-center space-y-1.5 shadow-2xs">
-              <div className="text-xs font-bold text-amber-800 flex items-center justify-center gap-1.5 uppercase tracking-wide">
-                <Timer className="w-4 h-4 text-amber-600" />
-                <span>Away Remaining Time (H:M Live Countdown)</span>
-              </div>
-              <div className="text-3xl sm:text-4xl font-['Poppins',_sans-serif] font-black text-amber-700 tracking-wider animate-pulse my-1">
-                {awayCountdown ? awayCountdown.hmText : '0h 30m'}
-              </div>
-              <div className="text-xs font-mono font-bold text-amber-600">
-                ({awayCountdown ? awayCountdown.text : '30:00'} remaining)
-              </div>
-              <div className="text-xs text-amber-800 font-semibold">
-                Reason: {seat.awayReason === 'Prayer' ? 'Prayer Break 🕌' : seat.awayReason === 'Lunch' ? 'Meal Break 🍱' : seat.awayReason === 'Tea' ? 'Tea & Snack ☕' : seat.awayReason === 'Rest' ? 'Rest & Refresh 🛋️' : 'Emergency Break ⚡'}
-              </div>
-              {!awayCountdown?.expired && (
-                <div className="text-[11px] text-amber-800 bg-amber-50 border border-amber-200 rounded-lg p-1.5 flex items-center justify-center gap-1">
-                  <Lock className="w-3.5 h-3.5 text-amber-700 shrink-0" />
-                  <span>টাইম শেষ হওয়ার আগে ব্রেক ক্যান্সেল করা যাবে না</span>
-                </div>
-              )}
+            /* Big centered M:SS countdown, Poppins, minimal chrome */
+            <div className="flex flex-col items-center text-center py-1">
+              <span className="text-[11px] font-semibold text-amber-500 uppercase tracking-wide">
+                Time remaining
+              </span>
+              <span className="text-5xl font-black font-mono text-amber-500 tracking-tight mt-1">
+                {awayCountdown ? awayCountdown.mmss : '30:00'}
+              </span>
+              <span className="text-xs text-slate-400 mt-1.5">{reasonLabel}</span>
             </div>
           ) : (
-            /* Status Banner for other states */
-            <div
-              className={`p-3 rounded-xl border flex items-center justify-between text-xs font-medium ${
-                seat.status === 'available'
-                  ? 'bg-emerald-50/80 border-emerald-200 text-emerald-800'
-                  : seat.status === 'occupied'
-                  ? 'bg-rose-50/80 border-rose-200 text-rose-800'
-                  : 'bg-slate-50 border-slate-200 text-slate-600'
-              }`}
-            >
+            <div className="flex items-center justify-between px-1 py-1">
               <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-current"></span>
-                <span className="font-semibold">
-                  {seat.status === 'available'
-                    ? 'Seat Available'
-                    : seat.status === 'occupied'
-                    ? 'Seat Booked (Occupied - Red)'
-                    : 'Under Maintenance'}
-                </span>
+                <span className={`w-2 h-2 rounded-full ${accent.chip}`} />
+                <span className="text-sm font-semibold text-slate-700">{title}</span>
               </div>
-
               {seat.isFemaleReserved && (
-                <span className="px-2 py-0.5 rounded-md bg-pink-100 text-pink-700 border border-pink-200 text-[10px] font-bold">
+                <span className="px-2 py-0.5 rounded-full bg-pink-50 text-pink-600 text-[10px] font-bold">
                   🌸 Female Reserved
                 </span>
               )}
             </div>
           )}
 
-          {/* Primary Occupant Info Card (Visible for occupied, away, or secondary booked) */}
-          {seat.status !== 'available' && seat.status !== 'maintenance' && (
-            <div className="bg-slate-50 rounded-xl p-3.5 border border-slate-200/80 space-y-2 text-xs">
-              <div className="flex items-center justify-between font-bold text-slate-900 border-b border-slate-200 pb-1.5">
-                <span className="flex items-center gap-1.5 text-slate-700">
-                  <User className={`w-3.5 h-3.5 ${seat.status === 'away' ? 'text-amber-600' : 'text-emerald-600'}`} />
-                  <span>Primary Occupant User Details</span>
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-200 text-slate-700">
-                  {seat.status === 'away' ? '🟡 On Break' : seat.status === 'occupied' ? '🔴 Booked' : '🔵 Booked'}
-                </span>
-              </div>
+          {seat.status === 'away' && !awayCountdown?.expired && (
+            <div className="flex items-center justify-center gap-1.5 text-[11px] text-amber-700">
+              <Lock className="w-3 h-3 shrink-0" />
+              <span>টাইম শেষ হওয়ার আগে ব্রেক ক্যান্সেল করা যাবে না</span>
+            </div>
+          )}
 
-              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                <span className="text-slate-500">Name:</span>
+          {/* Occupant details — clean list, no boxes-within-boxes */}
+          {seat.status !== 'available' && seat.status !== 'maintenance' && (
+            <div className="rounded-2xl bg-slate-50 px-4 py-3.5 space-y-2.5 text-xs">
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Name</span>
                 <span className="font-bold text-slate-900">{seat.occupantName || 'Registered Student'}</span>
               </div>
-
-              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                <span className="text-slate-500">Student ID:</span>
-                <span className="font-mono text-slate-800 font-semibold">{seat.studentId || 'N/A'}</span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Student ID</span>
+                <span className="font-mono font-semibold text-slate-700">{seat.studentId || 'N/A'}</span>
               </div>
-
-              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                <span className="text-slate-500">Contact Phone:</span>
-                <span className="font-mono text-slate-800 font-semibold">
-                  {seat.occupantPhone || 'N/A'}
-                </span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Phone</span>
+                <span className="font-mono font-semibold text-slate-700">{seat.occupantPhone || 'N/A'}</span>
               </div>
-
-              <div className="flex items-center justify-between border-b border-slate-100 pb-1">
-                <span className="text-slate-500">Booking Time:</span>
-                <span className="font-mono text-emerald-700 font-semibold">{bookedTimeFormatted}</span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Booked at</span>
+                <span className="font-mono font-semibold text-slate-700">{bookedTimeFormatted}</span>
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-slate-500">Valid Until:</span>
-                <span className="font-mono text-slate-800 font-semibold">{expectedLeaveFormatted}</span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-slate-400">Valid until</span>
+                <span className="font-mono font-semibold text-slate-700">{expectedLeaveFormatted}</span>
               </div>
             </div>
           )}
 
-          {/* Secondary Occupant Details Card (if seat is secondary booked) */}
+          {/* Secondary occupant details */}
           {seat.isSecondaryBooked && (
-            <div className="bg-blue-50/70 rounded-xl p-3.5 border border-blue-200 space-y-2 text-xs">
-              <div className="flex items-center justify-between font-bold text-blue-900 border-b border-blue-200 pb-1.5">
-                <span className="flex items-center gap-1.5 text-blue-800">
-                  <Sparkles className="w-3.5 h-3.5 text-blue-600" />
-                  <span>Temporary (2nd) Occupant Details</span>
-                </span>
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-blue-200 text-blue-800">
-                  Active Temp Study
-                </span>
+            <div className="rounded-2xl bg-blue-50 px-4 py-3.5 space-y-2.5 text-xs">
+              <div className="flex items-center gap-1.5 text-[11px] font-semibold text-blue-500 uppercase tracking-wide">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Temporary occupant</span>
               </div>
-
-              <div className="flex items-center justify-between border-b border-blue-100 pb-1">
-                <span className="text-blue-700">Name:</span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-blue-400">Name</span>
                 <span className="font-bold text-blue-950">{seat.secondaryOccupantName || '2nd Student'}</span>
               </div>
-
-              <div className="flex items-center justify-between border-b border-blue-100 pb-1">
-                <span className="text-blue-700">Student ID:</span>
-                <span className="font-mono text-blue-950 font-semibold">{seat.secondaryOccupantStudentId || 'N/A'}</span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-blue-400">Student ID</span>
+                <span className="font-mono font-semibold text-blue-900">{seat.secondaryOccupantStudentId || 'N/A'}</span>
               </div>
-
-              <div className="flex items-center justify-between">
-                <span className="text-blue-700">Contact Phone:</span>
-                <span className="font-mono text-blue-950 font-semibold">
-                  {seat.secondaryOccupantPhone || 'N/A'}
-                </span>
+              <div className="flex items-center justify-between text-[11px]">
+                <span className="text-blue-400">Phone</span>
+                <span className="font-mono font-semibold text-blue-900">{seat.secondaryOccupantPhone || 'N/A'}</span>
               </div>
             </div>
           )}
 
           {/* Action Buttons */}
           <div className="space-y-2 pt-1">
-            {/* If seat is available -> Book Button */}
+            {/* Available -> Book */}
             {seat.status === 'available' && (
               <button
                 id="btn-modal-book-now"
@@ -422,13 +346,14 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   onClose();
                   onOpenBook();
                 }}
-                className="w-full py-2.5 px-4 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-all flex items-center justify-center gap-2 shadow-xs cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs transition-all flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Book This Seat</span>
+                <ChevronRight className="w-4 h-4" />
               </button>
             )}
 
-            {/* If seat is on Break (Orange) and not isMySeat and not yet secondary booked -> Option for other student to secondary book */}
+            {/* On someone else's break -> offer secondary booking */}
             {seat.status === 'away' && !isMySeat && !seat.isSecondaryBooked && (
               <div className="space-y-2">
                 {!isSecondaryFormOpen ? (
@@ -436,40 +361,40 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                     id="btn-secondary-book-open"
                     type="button"
                     onClick={() => setIsSecondaryFormOpen(true)}
-                    className="w-full py-2.5 px-3 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                    className="w-full py-3 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Sparkles className="w-4 h-4 text-sky-200" />
-                    <span>Take Temporary Study Seat (Turns Seat Blue)</span>
+                    <Sparkles className="w-4 h-4" />
+                    <span>Study Here Temporarily</span>
                   </button>
                 ) : (
-                  <div className="p-3 bg-blue-50 border border-blue-200 rounded-xl space-y-2 text-xs animate-fadeIn">
-                    <p className="font-bold text-blue-900">Confirm Temporary Study Session</p>
+                  <div className="p-3.5 bg-blue-50 rounded-2xl space-y-2 text-xs animate-fadeIn">
+                    <p className="font-bold text-blue-900 text-[11px]">Confirm your details</p>
                     <input
                       type="text"
                       placeholder="Your Name"
                       value={secName}
                       onChange={(e) => setSecName(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-blue-200 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-xl border border-blue-100 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-blue-400 outline-none"
                     />
                     <input
                       type="tel"
                       placeholder="Phone Number (e.g. 017...)"
                       value={secPhone}
                       onChange={(e) => setSecPhone(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-blue-200 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-xl border border-blue-100 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-blue-400 outline-none"
                     />
                     <input
                       type="text"
                       placeholder="Student ID (Optional)"
                       value={secStudentId}
                       onChange={(e) => setSecStudentId(e.target.value)}
-                      className="w-full px-2.5 py-1.5 rounded-lg border border-blue-200 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-blue-500"
+                      className="w-full px-3 py-2 rounded-xl border border-blue-100 bg-white text-slate-800 text-xs focus:ring-1 focus:ring-blue-400 outline-none"
                     />
-                    <div className="flex gap-2 pt-1">
+                    <div className="flex gap-2 pt-0.5">
                       <button
                         type="button"
                         onClick={() => setIsSecondaryFormOpen(false)}
-                        className="w-1/2 py-1.5 rounded-lg bg-slate-200 text-slate-700 font-medium text-xs hover:bg-slate-300"
+                        className="w-1/2 py-2 rounded-xl bg-white text-slate-600 font-semibold text-xs hover:bg-slate-100 cursor-pointer"
                       >
                         Cancel
                       </button>
@@ -489,9 +414,9 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                           setIsSecondaryFormOpen(false);
                           onClose();
                         }}
-                        className="w-1/2 py-1.5 rounded-lg bg-blue-600 text-white font-bold text-xs hover:bg-blue-700"
+                        className="w-1/2 py-2 rounded-xl bg-blue-600 text-white font-bold text-xs hover:bg-blue-700 cursor-pointer"
                       >
-                        Confirm (Turn Blue)
+                        Confirm
                       </button>
                     </div>
                   </div>
@@ -499,7 +424,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
               </div>
             )}
 
-            {/* If isMySecondarySeat -> Release button */}
+            {/* My secondary booking -> release */}
             {seat.isSecondaryBooked && (isMySecondarySeat || isAdminLoggedIn) && (
               <button
                 id="btn-release-secondary"
@@ -508,14 +433,14 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   releaseSecondaryBooking(seat.id);
                   onClose();
                 }}
-                className="w-full py-2.5 px-3 rounded-xl bg-blue-100 hover:bg-blue-200 border border-blue-300 text-blue-800 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                className="w-full py-3 rounded-2xl bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
               >
                 <LogOut className="w-4 h-4" />
                 <span>Leave Temporary Seat</span>
               </button>
             )}
 
-            {/* If it's my primary seat */}
+            {/* My primary seat */}
             {isMySeat && (
               <div className="space-y-2">
                 <div className="grid grid-cols-2 gap-2">
@@ -525,11 +450,11 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         id="btn-return-break-locked"
                         type="button"
                         disabled
-                        title="ব্রেক টাইম শেষ হওয়ার আগে ক্যান্সেল বা রিটার্ন করা যাবে না"
-                        className="py-2.5 px-3 rounded-xl bg-slate-100 border border-slate-300 text-slate-400 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed opacity-80"
+                        title="ব্রেক টাইম শেষ হওয়ার আগে ক্যান্সেল বা রিটার্ন করা যাবে না"
+                        className="py-3 rounded-2xl bg-slate-50 text-slate-400 font-semibold text-xs flex items-center justify-center gap-1.5 cursor-not-allowed"
                       >
-                        <Lock className="w-4 h-4 text-slate-400" />
-                        <span>Locked ({awayCountdown?.text || 'Away'})</span>
+                        <Lock className="w-4 h-4" />
+                        <span>Locked</span>
                       </button>
                     ) : (
                       <button
@@ -539,7 +464,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                           returnFromAway(seat.id);
                           onClose();
                         }}
-                        className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer animate-pulse"
+                        className="py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-white font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                       >
                         <RotateCcw className="w-4 h-4" />
                         <span>I'm Back</span>
@@ -553,7 +478,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                         onClose();
                         onOpenAwayTimer();
                       }}
-                      className="py-2.5 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-amber-950 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 shadow-xs cursor-pointer"
+                      className="py-3 rounded-2xl bg-amber-400 hover:bg-amber-500 text-amber-950 font-bold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                     >
                       <Timer className="w-4 h-4" />
                       <span>Take Break</span>
@@ -567,16 +492,16 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                       onClose();
                       onOpenPass();
                     }}
-                    className="py-2.5 px-3 rounded-xl bg-slate-800 hover:bg-slate-900 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="py-3 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
-                    <Ticket className="w-4 h-4 text-amber-400" />
-                    <span>View Pass</span>
+                    <Ticket className="w-4 h-4" />
+                    <span>Pass</span>
                   </button>
                 </div>
 
                 {seat.status === 'away' && !awayCountdown?.expired ? (
-                  <div className="p-2 rounded-xl bg-slate-50 border border-slate-200 text-slate-500 text-[11px] text-center flex items-center justify-center gap-1.5">
-                    <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+                  <div className="flex items-center justify-center gap-1.5 text-[11px] text-slate-400 py-1">
+                    <Lock className="w-3 h-3 shrink-0" />
                     <span>ব্রেক চলাকালীন সিট রিলিজ ও রিটার্ন লক করা আছে</span>
                   </div>
                 ) : (
@@ -584,7 +509,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                     id="btn-release-seat"
                     type="button"
                     onClick={handleRelease}
-                    className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
+                    className="w-full py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 text-red-600 font-semibold text-xs transition-colors flex items-center justify-center gap-1.5 cursor-pointer"
                   >
                     <LogOut className="w-3.5 h-3.5" />
                     <span>Release Seat</span>
@@ -595,15 +520,15 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
 
             {/* Admin Override Controls */}
             {isAdminLoggedIn && (
-              <div className="pt-2 border-t border-slate-100 space-y-1.5">
-                <div className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">
-                  Admin Controls
+              <div className="pt-3 mt-1 border-t border-slate-100 space-y-1.5">
+                <div className="text-[10px] font-bold text-slate-300 uppercase tracking-wider">
+                  Admin
                 </div>
                 <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={handleAdminForceRelease}
-                    className="py-1.5 px-2.5 rounded-xl bg-rose-50 hover:bg-rose-100 border border-rose-200 text-rose-700 text-xs font-semibold transition-colors cursor-pointer"
+                    className="py-2 rounded-xl bg-red-50 hover:bg-red-100 text-red-600 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     Force Release
                   </button>
@@ -611,7 +536,7 @@ export const SeatDetailsModal: React.FC<SeatDetailsModalProps> = ({
                   <button
                     type="button"
                     onClick={handleAdminMaintenance}
-                    className="py-1.5 px-2.5 rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 text-slate-700 text-xs font-semibold transition-colors cursor-pointer"
+                    className="py-2 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold transition-colors cursor-pointer"
                   >
                     {seat.status === 'maintenance' ? 'Activate Seat' : 'Set Maintenance'}
                   </button>
