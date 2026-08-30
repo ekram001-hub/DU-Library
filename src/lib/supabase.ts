@@ -869,6 +869,58 @@ export async function fetchLibraryStateFromCloud(): Promise<{
 }
 
 /**
+ * Shared, cloud-side marker for "which calendar day has the daily seat
+ * auto-reset already run for". Stored as its own `system_config` row (NOT
+ * folded into `library_live_state`, since that row gets fully REPLACED by
+ * every unrelated sync — a room edit, a notice post, etc. — which would
+ * silently erase this marker the moment anyone touched anything else).
+ *
+ * Before this existed, each browser tracked "have I run today's reset yet?"
+ * in its OWN localStorage. That meant the reset re-fired — and wiped every
+ * seat status for EVERY connected user — the moment ANY single returning
+ * visitor's browser noticed the calendar date had changed since their last
+ * visit. A visitor with a wrong system clock, or simply the first person to
+ * open the app on a new day, could blank out someone else's active booking
+ * they made minutes earlier. Checking a single cloud-shared marker instead
+ * means the reset can only actually run once per real calendar day, no
+ * matter how many different browsers open the app.
+ */
+export async function fetchDailyResetMarker(): Promise<string | null> {
+  try {
+    const client = getSupabase();
+    if (!client) return null;
+    const { data, error } = await client
+      .from('system_config')
+      .select('value')
+      .eq('key', 'daily_auto_reset_marker')
+      .single();
+    if (error || !data) return null;
+    const value = data.value as { date?: string } | null;
+    return value?.date || null;
+  } catch {
+    return null;
+  }
+}
+
+export async function setDailyResetMarker(dateStr: string): Promise<{ success: boolean }> {
+  try {
+    const client = getSupabase();
+    if (!client) return { success: false };
+    const { error } = await client.from('system_config').upsert(
+      {
+        key: 'daily_auto_reset_marker',
+        value: { date: dateStr },
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
+    return { success: !error };
+  } catch {
+    return { success: false };
+  }
+}
+
+/**
  * Sign In with Google OAuth via Supabase using popup window flow for iframe compatibility
  */
 export async function signInWithGoogle(): Promise<{ error: Error | null; data?: unknown }> {

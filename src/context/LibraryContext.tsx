@@ -39,6 +39,8 @@ import {
   fetchAllStudentsFromCloud,
   syncLibraryStateToCloud,
   fetchLibraryStateFromCloud,
+  fetchDailyResetMarker,
+  setDailyResetMarker,
   subscribeToSupabaseRealtime,
   broadcastStateViaSupabase,
   runSupabaseDiagnostics,
@@ -1076,16 +1078,57 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, []);
 
   // 10. Auto-Reset Checker for night expiry / daily reset
-  useEffect(() => {
-    const todayStr = new Date().toDateString();
-    const lastReset = localStorage.getItem(STORAGE_KEYS.LAST_RESET_DATE);
+  //
+  // This used to compare against a date stamped in THIS BROWSER's own
+  // localStorage. That meant every returning visitor's browser independently
+  // decided "a new day has started" and fired a GLOBAL reset the instant it
+  // loaded — wiping every seat's booking, for every connected user, the
+  // moment any single visitor happened to open the app on a new calendar
+  // day (or simply had a wrong system clock). That's exactly the "seat goes
+  // blank the moment another user opens the page" behaviour that was
+  // reported. It now waits for the cloud state to finish loading and checks
+  // a marker shared by everyone (see fetchDailyResetMarker) so the reset can
+  // only actually fire once per real calendar day, however many browsers
+  // open the app around the day boundary.
+  //
+  // triggerDailyAutoReset itself is declared much further down this same
+  // component function (it needs rooms/notices/etc. that aren't ready yet
+  // at this point), so it's called through a ref that always points at the
+  // latest version instead of being a dependency here — putting it directly
+  // in this effect's dependency array would evaluate the identifier
+  // immediately during this render, before its own declaration has run.
+  const triggerDailyAutoResetRef = React.useRef<(() => void) | null>(null);
 
-    if (lastReset && lastReset !== todayStr) {
-      // Auto-reset overnight bookings
-      console.log('New calendar day detected! Performing nightly seat auto-reset...');
-      triggerDailyAutoReset();
-    }
-    localStorage.setItem(STORAGE_KEYS.LAST_RESET_DATE, todayStr);
+  useEffect(() => {
+    let cancelled = false;
+
+    const checkSharedDailyReset = async () => {
+      // Wait for the initial cloud fetch so we're comparing against the
+      // real current seat state, not this tab's possibly-stale local copy.
+      for (let attempt = 0; attempt < 40 && !isCloudLoadedRef.current; attempt++) {
+        await new Promise((resolve) => setTimeout(resolve, 250));
+      }
+      if (cancelled) return;
+
+      const todayStr = new Date().toDateString();
+      const sharedLastReset = await fetchDailyResetMarker();
+      if (cancelled) return;
+
+      if (sharedLastReset && sharedLastReset !== todayStr) {
+        console.log('New calendar day detected (shared cloud marker) — running daily seat auto-reset once.');
+        triggerDailyAutoResetRef.current?.();
+        void setDailyResetMarker(todayStr);
+      } else if (!sharedLastReset) {
+        // First time this marker has ever been set on this project — record
+        // today without resetting anything (nothing to protect against yet).
+        void setDailyResetMarker(todayStr);
+      }
+    };
+
+    void checkSharedDailyReset();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Computed: Branch Config
@@ -2304,6 +2347,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return next;
     });
   }, [rooms, notices, allBranches, rules, wifiFacilities, broadcastSync]);
+
+  // Keep the ref the auto-reset-checker effect calls always pointed at the
+  // latest triggerDailyAutoReset (see that effect for why a ref is used).
+  useEffect(() => {
+    triggerDailyAutoResetRef.current = triggerDailyAutoReset;
+  }, [triggerDailyAutoReset]);
 
   const resetToDefaultData = useCallback(() => {
     localStorage.clear();
