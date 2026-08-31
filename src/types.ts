@@ -187,3 +187,16 @@ export interface LibraryStats {
   femaleOccupiedCount: number;
   todayCheckIns: number;
 }
+
+/** One weekday's booking window: seats can be booked from start until reset,
+ * at which point every occupied/away seat is automatically released. */
+export interface DaySchedule {
+  startHour: number; // 0-23
+  startMinute: number; // 0-59
+  resetHour: number; // 0-23
+  resetMinute: number; // 0-59
+}
+
+/** Keyed 0 (Sunday) through 6 (Saturday), matching Date#getDay(). */
+export type BookingSchedule = Record<number, DaySchedule>;
+

@@ -921,6 +921,45 @@ export async function setDailyResetMarker(dateStr: string): Promise<{ success: b
 }
 
 /**
+ * Per-weekday booking window (start time + auto-reset time), also its own
+ * `system_config` row for the same reason as the daily-reset marker above —
+ * it must survive every unrelated sync of `library_live_state`.
+ */
+export async function fetchBookingScheduleFromCloud(): Promise<unknown | null> {
+  try {
+    const client = getSupabase();
+    if (!client) return null;
+    const { data, error } = await client
+      .from('system_config')
+      .select('value')
+      .eq('key', 'booking_schedule')
+      .single();
+    if (error || !data) return null;
+    return data.value;
+  } catch {
+    return null;
+  }
+}
+
+export async function saveBookingScheduleToCloud(schedule: unknown): Promise<{ success: boolean }> {
+  try {
+    const client = getSupabase();
+    if (!client) return { success: false };
+    const { error } = await client.from('system_config').upsert(
+      {
+        key: 'booking_schedule',
+        value: schedule,
+        updated_at: new Date().toISOString(),
+      },
+      { onConflict: 'key' }
+    );
+    return { success: !error };
+  } catch {
+    return { success: false };
+  }
+}
+
+/**
  * Sign In with Google OAuth via Supabase using popup window flow for iframe compatibility
  */
 export async function signInWithGoogle(): Promise<{ error: Error | null; data?: unknown }> {

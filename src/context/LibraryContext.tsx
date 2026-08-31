@@ -15,6 +15,8 @@ import {
   LibraryRule,
   WifiFacilityConfig,
   WifiNetwork,
+  BookingSchedule,
+  DaySchedule,
 } from '../types';
 import {
   BRANCHES_DATA,
@@ -24,6 +26,7 @@ import {
   INITIAL_WIFI_CONFIGS,
   INITIAL_WIFI_NETWORKS,
   DEMO_STUDENTS,
+  DEFAULT_BOOKING_SCHEDULE,
   generateInitialSeats,
 } from '../data/initialData';
 import {
@@ -41,6 +44,8 @@ import {
   fetchLibraryStateFromCloud,
   fetchDailyResetMarker,
   setDailyResetMarker,
+  fetchBookingScheduleFromCloud,
+  saveBookingScheduleToCloud,
   subscribeToSupabaseRealtime,
   broadcastStateViaSupabase,
   runSupabaseDiagnostics,
@@ -117,6 +122,9 @@ interface LibraryContextType {
   branchConfig: BranchConfig;
   allBranches: Record<string, BranchConfig>;
   updateBranchConfig: (branchId: BranchId, updates: Partial<BranchConfig>) => void;
+  bookingSchedule: BookingSchedule;
+  updateBookingSchedule: (day: number, updates: Partial<DaySchedule>) => void;
+  isBookingOpenNow: boolean;
 
   rooms: Room[];
   branchRooms: Room[];
@@ -263,6 +271,7 @@ const STORAGE_KEYS = {
   RULES: 'smart_library_rules_v2',
   WIFI_FACILITIES: 'smart_library_wifi_facilities_v2',
   WIFI_NETWORKS: 'smart_library_wifi_networks_v2',
+  BOOKING_SCHEDULE: 'smart_library_booking_schedule_v1',
 };
 
 /**
@@ -357,6 +366,46 @@ export function reconcileSeatsWithRooms(roomsList: Room[], seatsList: Seat[]): S
 
   return result;
 }
+
+// =========================================================================
+// Booking Schedule helpers — pure functions of (date, schedule), used both
+// by bookSeat's window enforcement and by the UI (pass "Valid Till", admin
+// settings preview). Keyed by Date#getDay() (0 = Sunday .. 6 = Saturday).
+// =========================================================================
+
+export function getDaySchedule(date: Date, schedule: BookingSchedule): DaySchedule {
+  return schedule[date.getDay()] || DEFAULT_BOOKING_SCHEDULE[date.getDay()];
+}
+
+function scheduleTimestamp(date: Date, hour: number, minute: number): number {
+  const d = new Date(date);
+  d.setHours(hour, minute, 0, 0);
+  return d.getTime();
+}
+
+export function getTodaysStartTimestamp(date: Date, schedule: BookingSchedule): number {
+  const day = getDaySchedule(date, schedule);
+  return scheduleTimestamp(date, day.startHour, day.startMinute);
+}
+
+export function getTodaysResetTimestamp(date: Date, schedule: BookingSchedule): number {
+  const day = getDaySchedule(date, schedule);
+  return scheduleTimestamp(date, day.resetHour, day.resetMinute);
+}
+
+/** Is the given moment within today's [start, reset) booking window? */
+export function isBookingWindowOpen(date: Date, schedule: BookingSchedule): boolean {
+  const t = date.getTime();
+  return t >= getTodaysStartTimestamp(date, schedule) && t < getTodaysResetTimestamp(date, schedule);
+}
+
+export function formatScheduleTime(hour: number, minute: number): string {
+  const period = hour >= 12 ? 'PM' : 'AM';
+  const h12 = hour % 12 === 0 ? 12 : hour % 12;
+  return `${h12}:${minute < 10 ? '0' : ''}${minute} ${period}`;
+}
+
+export const WEEKDAY_LABELS = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
 export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   // 1. Current Branch
@@ -845,6 +894,46 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     localStorage.setItem(STORAGE_KEYS.WIFI_NETWORKS, JSON.stringify(wifiNetworks));
   }, [wifiNetworks]);
 
+  // 8e. Booking Schedule — per-weekday start/reset times (defaults 8:00 AM
+  // start, 10:00 PM reset every day; admins can override any single day).
+  const [bookingSchedule, setBookingSchedule] = useState<BookingSchedule>(() => {
+    const saved = localStorage.getItem(STORAGE_KEYS.BOOKING_SCHEDULE);
+    if (saved) {
+      try {
+        const parsed = JSON.parse(saved);
+        if (parsed && typeof parsed === 'object' && parsed[0] && parsed[6]) {
+          return { ...DEFAULT_BOOKING_SCHEDULE, ...parsed };
+        }
+      } catch (e) {
+        console.error('Failed to parse saved booking schedule', e);
+      }
+    }
+    return DEFAULT_BOOKING_SCHEDULE;
+  });
+
+  useEffect(() => {
+    localStorage.setItem(STORAGE_KEYS.BOOKING_SCHEDULE, JSON.stringify(bookingSchedule));
+  }, [bookingSchedule]);
+
+  // Admin: update one weekday's start/reset time (Admin Panel > Booking
+  // Schedule). Persists to its own cloud row — see saveBookingScheduleToCloud
+  // for why this can't just ride along with the other admin-edit syncs.
+  // lastLocalMutationAtRef is declared further down this same component
+  // function but, like updateBranchConfig above, is only actually read once
+  // this callback is invoked by a click — long after the whole component has
+  // finished its first render pass and the ref exists.
+  const updateBookingSchedule = useCallback((day: number, updates: Partial<DaySchedule>) => {
+    setBookingSchedule((prev) => {
+      const next: BookingSchedule = {
+        ...prev,
+        [day]: { ...(prev[day] || DEFAULT_BOOKING_SCHEDULE[day]), ...updates },
+      };
+      lastLocalMutationAtRef.current = Date.now();
+      void saveBookingScheduleToCloud(next);
+      return next;
+    });
+  }, []);
+
   // Cloud Sync & Backup State
   const [cloudLastSyncedAt, setCloudLastSyncedAt] = useState<string | null>(null);
 
@@ -869,6 +958,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const wifiNetworksRef = React.useRef(wifiNetworks);
   useEffect(() => { wifiNetworksRef.current = wifiNetworks; }, [wifiNetworks]);
+
+  const bookingScheduleRef = React.useRef(bookingSchedule);
+  useEffect(() => { bookingScheduleRef.current = bookingSchedule; }, [bookingSchedule]);
 
   // Cross-Tab & Supabase Realtime Broadcast
   const broadcastSync = useCallback((payload: {
@@ -1089,7 +1181,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // reported. It now waits for the cloud state to finish loading and checks
   // a marker shared by everyone (see fetchDailyResetMarker) so the reset can
   // only actually fire once per real calendar day, however many browsers
-  // open the app around the day boundary.
+  // open the app around the day boundary. It's also now schedule-aware: the
+  // reset only actually fires once today's configured reset TIME (per
+  // weekday, see bookingSchedule) has actually passed — previously it fired
+  // at whatever time of day the first returning visitor happened to open
+  // the app, even if that was the middle of the afternoon.
   //
   // triggerDailyAutoReset itself is declared much further down this same
   // component function (it needs rooms/notices/etc. that aren't ready yet
@@ -1110,24 +1206,37 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       }
       if (cancelled) return;
 
-      const todayStr = new Date().toDateString();
+      // Pick up any admin-configured schedule from the cloud before judging
+      // whether today's reset time has passed.
+      const cloudSchedule = await fetchBookingScheduleFromCloud();
+      if (!cancelled && cloudSchedule && typeof cloudSchedule === 'object') {
+        const merged = { ...bookingScheduleRef.current, ...(cloudSchedule as BookingSchedule) };
+        bookingScheduleRef.current = merged;
+        setBookingSchedule(merged);
+      }
+      if (cancelled) return;
+
+      const now = new Date();
+      const todayStr = now.toDateString();
+      const resetTimestamp = getTodaysResetTimestamp(now, bookingScheduleRef.current);
       const sharedLastReset = await fetchDailyResetMarker();
       if (cancelled) return;
 
-      if (sharedLastReset && sharedLastReset !== todayStr) {
-        console.log('New calendar day detected (shared cloud marker) — running daily seat auto-reset once.');
+      if (now.getTime() >= resetTimestamp && sharedLastReset !== todayStr) {
+        const day = getDaySchedule(now, bookingScheduleRef.current);
+        console.log(`Reset time (${formatScheduleTime(day.resetHour, day.resetMinute)}) has passed — running daily seat auto-reset once.`);
         triggerDailyAutoResetRef.current?.();
-        void setDailyResetMarker(todayStr);
-      } else if (!sharedLastReset) {
-        // First time this marker has ever been set on this project — record
-        // today without resetting anything (nothing to protect against yet).
         void setDailyResetMarker(todayStr);
       }
     };
 
     void checkSharedDailyReset();
+    // Re-check periodically so a tab left open across the reset boundary
+    // still catches it, instead of only checking once on mount/reload.
+    const interval = setInterval(checkSharedDailyReset, 60000);
     return () => {
       cancelled = true;
+      clearInterval(interval);
     };
   }, []);
 
@@ -1215,6 +1324,18 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         };
       }
 
+      // Booking is only allowed inside today's configured window (default
+      // 8:00 AM start, 10:00 PM auto-reset; admins can override per weekday
+      // from Admin Panel > Booking Schedule).
+      const nowDate = new Date();
+      if (!isBookingWindowOpen(nowDate, bookingScheduleRef.current)) {
+        const day = getDaySchedule(nowDate, bookingScheduleRef.current);
+        return {
+          success: false,
+          message: `Seat booking is closed right now. It opens at ${formatScheduleTime(day.startHour, day.startMinute)}.`,
+        };
+      }
+
       // Check Female Reserved Area rule
       if (seat.isFemaleReserved && studentDetails.gender !== 'female') {
         return {
@@ -1228,8 +1349,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       const branchName = allBranches[seat.branchId]?.name || 'Study Center';
 
       const now = Date.now();
-      const durationMs = studentDetails.targetHours * 3600 * 1000;
-      const expectedLeave = now + durationMs;
+      // Valid Till now always matches today's configured reset/closing
+      // time (not a fixed duration from booking time) — since every seat
+      // gets auto-released at reset anyway, a pass "valid until 2 AM" would
+      // be meaningless if the library closes at 10 PM.
+      const expectedLeave = getTodaysResetTimestamp(nowDate, bookingScheduleRef.current);
       const passCode = `PASS-${seat.branchId === 'science_library' ? 'SCI' : 'CEN'}-${Math.floor(
         10000 + Math.random() * 90000
       )}`;
@@ -2448,6 +2572,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   const isAdminLoggedIn = useMemo(() => Boolean(adminUser), [adminUser]);
 
+  // Whether a student could book a seat RIGHT NOW, per today's configured
+  // schedule. Recomputes every tick since currentTime updates every second.
+  const isBookingOpenNow = useMemo(
+    () => isBookingWindowOpen(currentTime, bookingSchedule),
+    [currentTime, bookingSchedule]
+  );
+
   const value = useMemo(
     () => ({
       currentBranchId,
@@ -2455,6 +2586,9 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       branchConfig,
       allBranches,
       updateBranchConfig,
+
+      bookingSchedule,
+      updateBookingSchedule,
 
       rooms,
       branchRooms,
@@ -2536,6 +2670,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       triggerDailyAutoReset,
       resetToDefaultData,
 
+      isBookingOpenNow,
+
       currentTime,
     }),
     [
@@ -2544,6 +2680,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       branchConfig,
       allBranches,
       updateBranchConfig,
+      bookingSchedule,
+      updateBookingSchedule,
       rooms,
       branchRooms,
       addRoom,
@@ -2611,6 +2749,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       overallStats,
       triggerDailyAutoReset,
       resetToDefaultData,
+      isBookingOpenNow,
       currentTime,
     ]
   );

@@ -156,24 +156,23 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
 
       {/* 2. Room Tabs, Single Break Stat, and Search Bar */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-2.5 bg-white border border-slate-200/90 rounded-2xl p-2.5 shadow-xs w-full max-w-full overflow-hidden">
-        {/* Left Side: Room Navigation Tabs + Single Break Stat */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto shrink min-w-0">
-          {/* All Rooms Tab (Icon + Number) */}
+        {/* Left Side: Room Navigation Tabs + Single Break Stat — minimal, icon-first, room number only */}
+        <div className="flex items-center gap-1.5 overflow-x-auto pb-1 md:pb-0 scrollbar-none w-full md:w-auto shrink min-w-0">
+          {/* All Rooms Tab */}
           <button
             type="button"
             onClick={() => setSelectedRoomTab('all')}
-            className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold transition-all cursor-pointer ${
+            className={`shrink-0 flex items-center justify-center w-9 h-9 rounded-xl transition-all cursor-pointer ${
               selectedRoomTab === 'all'
                 ? 'bg-emerald-700 text-white shadow-xs'
-                : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70'
+                : 'bg-slate-100 text-slate-500 hover:bg-slate-200/70'
             }`}
-            title={`All Rooms (${occupiedCount + awayCount}/${totalCount})`}
+            title={`All Rooms (${occupiedCount + awayCount}/${totalCount} booked)`}
           >
-            <LayoutGrid className="w-3.5 h-3.5" />
-            <span>All ({occupiedCount + awayCount}/{totalCount})</span>
+            <LayoutGrid className="w-4 h-4" />
           </button>
 
-          {/* Individual Room Tabs (Room Icon + Room Number) */}
+          {/* Individual Room Tabs — icon + room number only */}
           {branchRooms.map((room) => {
             const roomSeats = branchSeats.filter((s) => s.roomId === room.id);
             const bookedInRoom = roomSeats.filter(
@@ -189,26 +188,26 @@ export const SeatGrid: React.FC<SeatGridProps> = ({
                 key={room.id}
                 type="button"
                 onClick={() => setSelectedRoomTab(room.id)}
-                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs transition-all cursor-pointer ${
+                className={`shrink-0 flex items-center justify-center gap-1 px-2.5 h-9 rounded-xl text-xs font-bold transition-all cursor-pointer ${
                   selectedRoomTab === room.id
-                    ? 'bg-emerald-700 text-white shadow-xs font-semibold'
-                    : 'bg-slate-100 text-slate-700 hover:bg-slate-200/70 font-medium'
+                    ? 'bg-emerald-700 text-white shadow-xs'
+                    : 'bg-slate-100 text-slate-600 hover:bg-slate-200/70'
                 }`}
-                title={`${room.name} (${bookedInRoom}/${roomSeats.length})`}
+                title={`${room.name} (${bookedInRoom}/${roomSeats.length} booked)`}
               >
                 <DoorOpen className="w-3.5 h-3.5" />
-                <span>{roomDisplay} ({bookedInRoom}/${roomSeats.length})</span>
+                <span>{roomDisplay}</span>
               </button>
             );
           })}
 
-          {/* Single Button Size Break Statistics Card */}
-          <div className="shrink-0 inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl bg-amber-50 border border-amber-300 text-amber-900 text-xs font-semibold shadow-2xs">
-            <Coffee className="w-3.5 h-3.5 text-amber-600 animate-pulse" />
-            <span>Break</span>
-            <span className="font-mono font-bold text-amber-950 bg-amber-200/70 px-1.5 py-0.5 rounded-md border border-amber-300 text-[11px]">
-              {awayCount}
-            </span>
+          {/* Break count — icon + number only */}
+          <div
+            className="shrink-0 flex items-center justify-center gap-1 px-2.5 h-9 rounded-xl bg-amber-50 border border-amber-200 text-amber-700 text-xs font-bold"
+            title={`${awayCount} seat${awayCount === 1 ? '' : 's'} on break`}
+          >
+            <Coffee className="w-3.5 h-3.5" />
+            <span>{awayCount}</span>
           </div>
         </div>
 

@@ -48,7 +48,7 @@ import {
   Radio,
   FlaskConical,
 } from 'lucide-react';
-import { useLibrary } from '../context/LibraryContext';
+import { useLibrary, WEEKDAY_LABELS, formatScheduleTime } from '../context/LibraryContext';
 import { Room, RoomCategory, Gender, BranchId, LibraryNotice, LibraryRule, WifiFacilityConfig, WifiNetwork } from '../types';
 import { SupabaseDiagnosticReport, SUPABASE_SETUP_SQL } from '../lib/supabase';
 import { describePinHash, pinHashFingerprint, needsHashUpgrade } from '../lib/crypto';
@@ -68,6 +68,8 @@ export const AdminPage: React.FC<AdminPageProps> = ({
     branchConfig,
     allBranches,
     updateBranchConfig,
+    bookingSchedule,
+    updateBookingSchedule,
     branchRooms,
     branchSeats,
     addRoom,
@@ -3559,6 +3561,106 @@ export const AdminPage: React.FC<AdminPageProps> = ({
                   </button>
                 </div>
               </form>
+
+              {/* Booking Schedule — minimal per-weekday start/reset time control */}
+              <div className="bg-white rounded-2xl p-4 sm:p-5 border border-slate-200 space-y-4">
+                <div>
+                  <div className="font-bold text-slate-900 text-sm flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-amber-500" />
+                    <span>Booking Schedule</span>
+                  </div>
+                  <p className="text-[11px] text-slate-400 mt-0.5">
+                    Seats can be booked from start time until reset — at reset every occupied/away seat is
+                    automatically released for everyone.
+                  </p>
+                </div>
+
+                <div className="flex items-center justify-between px-3.5 py-2.5 rounded-xl bg-slate-50">
+                  <span className="text-xs font-medium text-slate-500">Apply one time to every day</span>
+                  <div className="flex items-center gap-1.5">
+                    <input
+                      type="time"
+                      id="apply-all-start"
+                      defaultValue="08:00"
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-700 outline-none focus:border-amber-400"
+                    />
+                    <span className="text-slate-300 text-xs">→</span>
+                    <input
+                      type="time"
+                      id="apply-all-reset"
+                      defaultValue="22:00"
+                      className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-700 outline-none focus:border-amber-400"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => {
+                        const startEl = document.getElementById('apply-all-start') as HTMLInputElement | null;
+                        const resetEl = document.getElementById('apply-all-reset') as HTMLInputElement | null;
+                        const [sh, sm] = (startEl?.value || '08:00').split(':').map(Number);
+                        const [rh, rm] = (resetEl?.value || '22:00').split(':').map(Number);
+                        for (let day = 0; day <= 6; day++) {
+                          updateBookingSchedule(day, {
+                            startHour: sh,
+                            startMinute: sm,
+                            resetHour: rh,
+                            resetMinute: rm,
+                          });
+                        }
+                      }}
+                      className="px-3 py-1.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-semibold cursor-pointer transition-colors"
+                    >
+                      Apply to all
+                    </button>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  {[0, 1, 2, 3, 4, 5, 6].map((day) => {
+                    const s = bookingSchedule[day];
+                    const pad = (n: number) => n.toString().padStart(2, '0');
+                    const startVal = `${pad(s.startHour)}:${pad(s.startMinute)}`;
+                    const resetVal = `${pad(s.resetHour)}:${pad(s.resetMinute)}`;
+                    return (
+                      <div
+                        key={day}
+                        className="flex items-center justify-between gap-2 px-3.5 py-2 rounded-xl hover:bg-slate-50 transition-colors"
+                      >
+                        <span className="text-xs font-semibold text-slate-700 w-20 shrink-0">
+                          {WEEKDAY_LABELS[day].slice(0, 3)}
+                        </span>
+                        <div className="flex items-center gap-1.5 flex-1 justify-end">
+                          <input
+                            type="time"
+                            value={startVal}
+                            onChange={(e) => {
+                              const [h, m] = e.target.value.split(':').map(Number);
+                              if (!isNaN(h) && !isNaN(m)) {
+                                updateBookingSchedule(day, { startHour: h, startMinute: m });
+                              }
+                            }}
+                            className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-700 outline-none focus:border-amber-400 w-[104px]"
+                          />
+                          <span className="text-slate-300 text-xs">→</span>
+                          <input
+                            type="time"
+                            value={resetVal}
+                            onChange={(e) => {
+                              const [h, m] = e.target.value.split(':').map(Number);
+                              if (!isNaN(h) && !isNaN(m)) {
+                                updateBookingSchedule(day, { resetHour: h, resetMinute: m });
+                              }
+                            }}
+                            className="px-2 py-1.5 rounded-lg border border-slate-200 bg-white text-xs font-mono text-slate-700 outline-none focus:border-amber-400 w-[104px]"
+                          />
+                        </div>
+                        <span className="text-[10px] text-slate-300 w-24 text-right shrink-0 hidden sm:block">
+                          {formatScheduleTime(s.startHour, s.startMinute)} – {formatScheduleTime(s.resetHour, s.resetMinute)}
+                        </span>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
             </div>
           )}
         </div>

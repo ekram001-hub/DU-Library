@@ -1,4 +1,17 @@
-import { BranchConfig, Room, Seat, LibraryNotice, StudentProfile, LibraryRule, WifiFacilityConfig, WifiNetwork } from '../types';
+import { BranchConfig, Room, Seat, LibraryNotice, StudentProfile, LibraryRule, WifiFacilityConfig, WifiNetwork, BookingSchedule } from '../types';
+
+/** Default booking window: every day opens at 8:00 AM and auto-resets
+ * (releases every occupied/away seat) at 10:00 PM. Admins can override any
+ * individual day from the Admin Panel's Booking Schedule settings. */
+export const DEFAULT_BOOKING_SCHEDULE: BookingSchedule = {
+  0: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+  1: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+  2: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+  3: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+  4: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+  5: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+  6: { startHour: 8, startMinute: 0, resetHour: 22, resetMinute: 0 },
+};
 
 export const BRANCHES_DATA: Record<string, BranchConfig> = {
   science_library: {

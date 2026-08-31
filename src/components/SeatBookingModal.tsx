@@ -15,6 +15,7 @@ import {
 import confetti from 'canvas-confetti';
 import { Seat, Room, Gender } from '../types';
 import { useLibrary } from '../context/LibraryContext';
+import { isBookingWindowOpen, getDaySchedule, formatScheduleTime } from '../context/LibraryContext';
 
 interface SeatBookingModalProps {
   seat: Seat | null;
@@ -33,7 +34,7 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
   onBookingSuccess,
   onRequireAuth,
 }) => {
-  const { currentStudent, bookSeat, registerOrUpdateStudent } = useLibrary();
+  const { currentStudent, bookSeat, registerOrUpdateStudent, bookingSchedule, currentTime } = useLibrary();
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -61,6 +62,10 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
   }, [isOpen, currentStudent, seat]);
 
   if (!isOpen || !seat) return null;
+
+  const todaysSchedule = getDaySchedule(currentTime, bookingSchedule);
+  const bookingOpen = isBookingWindowOpen(currentTime, bookingSchedule);
+  const resetTimeLabel = formatScheduleTime(todaysSchedule.resetHour, todaysSchedule.resetMinute);
 
   // Check if profile is complete (Directive: User must login with Google and submit info)
   const isProfileComplete = Boolean(
@@ -146,14 +151,6 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
     }
   };
 
-  const durationOptions = [
-    { hours: 2, label: '2 Hours', sub: 'Short' },
-    { hours: 4, label: '4 Hours', sub: 'Standard' },
-    { hours: 6, label: '6 Hours', sub: 'Deep Focus' },
-    { hours: 8, label: '8 Hours', sub: 'Full Day' },
-    { hours: 12, label: '12 Hours', sub: 'Marathon' },
-  ];
-
   return (
     <div
       id="seat-booking-modal-overlay"
@@ -178,6 +175,9 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
               </div>
               <p className="text-xs text-slate-500">
                 {room ? room.name : 'Study Hall'}
+                {bookingOpen && (
+                  <span className="text-slate-400"> · Valid until {resetTimeLabel}</span>
+                )}
               </p>
             </div>
           </div>
@@ -191,6 +191,16 @@ export const SeatBookingModal: React.FC<SeatBookingModalProps> = ({
             <X className="w-5 h-5" />
           </button>
         </div>
+
+        {/* Booking window closed banner */}
+        {!bookingOpen && (
+          <div className="bg-slate-50 border-b border-slate-200 px-5 py-2.5 flex items-center gap-2 text-xs text-slate-600">
+            <Lock className="w-3.5 h-3.5 text-slate-400 shrink-0" />
+            <span>
+              Booking opens at <strong className="text-slate-900">{formatScheduleTime(todaysSchedule.startHour, todaysSchedule.startMinute)}</strong>.
+            </span>
+          </div>
+        )}
 
         {/* Female reserved warning banner if applicable */}
         {seat.isFemaleReserved && (
