@@ -330,14 +330,14 @@ export function reconcileSeatsWithRooms(roomsList: Room[], seatsList: Seat[]): S
       const expectedSeatId = `${room.id}_seat_${i}`;
 
       // Prioritize exact seat ID and exact seat number match so active bookings & status are preserved
-      const existingSeat =
-        matchedSeats.find(
-          (s) =>
-            s.id === expectedSeatId ||
-            s.seatNumber === expectedSeatNumber ||
-            s.seatNumber === `${i}` ||
-            s.seatNumber === `${room.seatPrefix}-${i}`
-        ) || matchedSeats[i - 1];
+      const existingSeat = matchedSeats.find(
+        (s) =>
+          s.id === expectedSeatId ||
+          s.seatNumber === expectedSeatNumber ||
+          s.seatNumber === `${i}` ||
+          s.seatNumber === `${room.seatPrefix}-${i}` ||
+          s.seatNumber === `${room.seatPrefix}-${seatNumPadded}`
+      );
 
       if (existingSeat) {
         finalRoomSeats.push({
@@ -559,6 +559,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     }
     return null;
   });
+
+  const currentStudentRef = useRef<StudentProfile | null>(currentStudent);
+  useEffect(() => {
+    currentStudentRef.current = currentStudent;
+  }, [currentStudent]);
 
   // ==========================================================================
   // 6. ADMIN SESSION
@@ -991,9 +996,23 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // anything it fetches — see CLOUD_POLL_GRACE_MS for why.
   const lastLocalMutationAtRef = React.useRef<number>(0);
 
+  // Track recently mutated seats on this local client to prevent race-condition clobbering
+  const recentLocalSeatMutationsRef = React.useRef<
+    Map<
+      string,
+      {
+        status: Seat['status'];
+        isSecondaryBooked?: boolean;
+        timestamp: number;
+        occupantPhone?: string;
+        passCode?: string;
+      }
+    >
+  >(new Map());
+
   // Instant Cloud Push for interactive user seat actions (Booking, Break, Release)
   const pushStateToCloudNow = useCallback(
-    (customSeats?: Seat[], customRooms?: Room[]) => {
+    async (customSeats?: Seat[], customRooms?: Room[]) => {
       lastLocalMutationAtRef.current = Date.now();
       const payload = {
         rooms: customRooms || roomsRef.current,
@@ -1005,9 +1024,134 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         wifiNetworks: wifiNetworksRef.current,
       };
       broadcastSync(payload);
-      syncLibraryStateToCloud(payload).catch(() => {});
+      try {
+        const res = await syncLibraryStateToCloud(payload);
+        if (!res.success) {
+          console.warn('[Sync] pushStateToCloudNow cloud write unsuccessful:', res.error);
+        }
+      } catch (err) {
+        console.warn('[Sync] pushStateToCloudNow threw:', err);
+      }
     },
     [broadcastSync]
+  );
+
+  // Intelligently merge incoming seats with local state so that:
+  // 1. Fresh local mutations (within 30s) are never clobbered by stale polls or delayed broadcasts.
+  // 2. An active booking held by the user on THIS device is preserved and auto-healed in the cloud.
+  // 3. Legitimate releases or remote bookings from other students / admin are correctly adopted.
+  const mergeIncomingSeats = useCallback(
+    (incomingSeats: Seat[]): Seat[] => {
+      const currentSeats = seatsRef.current;
+      const now = Date.now();
+      const LOCAL_PROTECTION_WINDOW_MS = 30000; // 30s window for recently mutated seats
+
+      // Cleanup expired mutations older than 90s
+      for (const [id, mut] of recentLocalSeatMutationsRef.current.entries()) {
+        if (now - mut.timestamp > 90000) {
+          recentLocalSeatMutationsRef.current.delete(id);
+        }
+      }
+
+      const activeStudent = currentStudentRef.current;
+      let needsResyncToCloud = false;
+
+      const merged = incomingSeats.map((incoming) => {
+        const local = currentSeats.find((s) => s.id === incoming.id);
+        if (!local) return incoming;
+
+        // 1. Check if this seat was mutated locally within the protection window
+        const recentMut = recentLocalSeatMutationsRef.current.get(incoming.id);
+        if (recentMut && now - recentMut.timestamp < LOCAL_PROTECTION_WINDOW_MS) {
+          // If we locally released it, but incoming still says occupied/away -> enforce available
+          if (recentMut.status === 'available') {
+            return {
+              ...incoming,
+              status: 'available' as const,
+              occupantName: undefined,
+              occupantPhone: undefined,
+              occupantEmail: undefined,
+              studentId: undefined,
+              bookedAt: undefined,
+              expectedLeaveAt: undefined,
+              targetDurationHours: undefined,
+              awaySince: undefined,
+              awayDurationMinutes: undefined,
+              awayReason: undefined,
+              awayCustomReason: undefined,
+              passCode: undefined,
+              isSecondaryBooked: false,
+              secondaryOccupantName: undefined,
+              secondaryOccupantPhone: undefined,
+              secondaryOccupantStudentId: undefined,
+              secondaryOccupantGender: undefined,
+              secondaryBookedAt: undefined,
+              secondaryExpectedLeaveAt: undefined,
+              secondaryPassCode: undefined,
+            };
+          }
+
+          // If we locally booked, broke, or occupied, but incoming says available -> PROTECT LOCAL
+          if (
+            (recentMut.status === 'occupied' || recentMut.status === 'away') &&
+            incoming.status === 'available'
+          ) {
+            needsResyncToCloud = true;
+            return local;
+          }
+
+          // If local has secondary booking but incoming does not -> preserve local secondary
+          if (recentMut.isSecondaryBooked && !incoming.isSecondaryBooked) {
+            needsResyncToCloud = true;
+            return {
+              ...incoming,
+              isSecondaryBooked: true,
+              secondaryOccupantName: local.secondaryOccupantName,
+              secondaryOccupantPhone: local.secondaryOccupantPhone,
+              secondaryOccupantStudentId: local.secondaryOccupantStudentId,
+              secondaryOccupantGender: local.secondaryOccupantGender,
+              secondaryBookedAt: local.secondaryBookedAt,
+              secondaryPassCode: local.secondaryPassCode,
+            };
+          }
+        }
+
+        // 2. Check if this seat belongs to current student logged in on THIS device
+        if (
+          activeStudent &&
+          (local.status === 'occupied' || local.status === 'away') &&
+          incoming.status === 'available'
+        ) {
+          const cleanLocalPhone = (local.occupantPhone || '').replace(/\D/g, '');
+          const cleanStudentPhone = (activeStudent.phone || '').replace(/\D/g, '');
+          const isMySeat = Boolean(
+            (local.studentId && activeStudent.studentId && local.studentId === activeStudent.studentId) ||
+            (cleanLocalPhone && cleanStudentPhone && cleanLocalPhone === cleanStudentPhone) ||
+            (local.occupantName && activeStudent.name && local.occupantName.toLowerCase() === activeStudent.name.toLowerCase())
+          );
+
+          // If user hasn't explicitly released this seat on this device
+          const wasExplicitlyReleased = recentMut && recentMut.status === 'available';
+          if (isMySeat && !wasExplicitlyReleased) {
+            needsResyncToCloud = true;
+            return local;
+          }
+        }
+
+        return incoming;
+      });
+
+      // If cloud was missing a confirmed active booking from this client, heal the cloud in background!
+      if (needsResyncToCloud) {
+        console.warn('[Sync] Detected missing cloud booking for active local seat — auto-repairing cloud state.');
+        setTimeout(() => {
+          pushStateToCloudNow(merged);
+        }, 800);
+      }
+
+      return merged;
+    },
+    [pushStateToCloudNow]
   );
 
   // Listen for Cross-Tab broadcast (same browser)
@@ -1021,7 +1165,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         if (Array.isArray(p.rooms) && p.rooms.length > 0) setRooms(p.rooms);
         if (Array.isArray(p.seats) && p.seats.length > 0) {
           const reconciled = reconcileSeatsWithRooms(p.rooms || roomsRef.current, p.seats);
-          setSeats(reconciled);
+          const merged = mergeIncomingSeats(reconciled);
+          setSeats(merged);
         }
         if (Array.isArray(p.notices)) setNotices(p.notices);
         if (Array.isArray(p.rules)) setRules(p.rules);
@@ -1033,7 +1178,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       channel.close();
     };
-  }, []);
+  }, [mergeIncomingSeats]);
 
   // Remote update flag to prevent echo loops
   const isRemoteUpdateRef = React.useRef(false);
@@ -1050,7 +1195,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (Array.isArray(payload.seats) && payload.seats.length > 0) {
           const reconciled = reconcileSeatsWithRooms(incomingRooms, payload.seats as Seat[]);
-          setSeats(reconciled);
+          const merged = mergeIncomingSeats(reconciled);
+          setSeats(merged);
         }
         if (Array.isArray(payload.notices) && payload.notices.length > 0) {
           setNotices(payload.notices as LibraryNotice[]);
@@ -1072,21 +1218,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     return () => {
       unsubscribe();
     };
-  }, []);
+  }, [mergeIncomingSeats]);
 
   // Supabase initial cloud load tracker
   const isCloudLoadedRef = React.useRef(false);
 
-  // How long a poll defers to a just-made local write. Supabase's write and
-  // this poll's read are two independent round-trips, so a poll can land
-  // between "we wrote the booking" and "the write is actually visible on
-  // read", fetch the still-old row, and silently flip a freshly booked/
-  // released/break seat back to its previous status for a few seconds —
-  // reported as "booking status sometimes disappears on its own". Skipping
-  // polls inside this window lets the optimistic local state stand until
-  // the write has definitely landed, at which point the next poll (or the
-  // realtime broadcast, which is immediate) picks up the confirmed value.
-  const CLOUD_POLL_GRACE_MS = 6000;
+  // Polling grace period (12 seconds) so local optimistic writes never get clobbered
+  const CLOUD_POLL_GRACE_MS = 12000;
 
   // Helper to load and apply cloud state
   const loadCloudState = useCallback(async () => {
@@ -1104,7 +1242,8 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         }
         if (Array.isArray(cloudState.seats) && cloudState.seats.length > 0) {
           const reconciled = reconcileSeatsWithRooms(incomingRooms, cloudState.seats as Seat[]);
-          setSeats(reconciled);
+          const merged = mergeIncomingSeats(reconciled);
+          setSeats(merged);
         }
         if (Array.isArray(cloudState.notices) && cloudState.notices.length > 0) {
           setNotices(cloudState.notices as LibraryNotice[]);
@@ -1124,7 +1263,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     } catch {
       isCloudLoadedRef.current = true;
     }
-  }, []);
+  }, [mergeIncomingSeats]);
 
   // Fetch initial global library configuration from Supabase Cloud on mount
   useEffect(() => {
@@ -1139,26 +1278,6 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
     return () => clearInterval(pollTimer);
   }, [loadCloudState]);
-
-  // Automatically broadcast and sync state changes to Supabase Cloud (debounced)
-  useEffect(() => {
-    // Prevent pushing local blank/initial state before fetching latest from cloud
-    if (!isCloudLoadedRef.current) return;
-
-    // Skip if state was updated by a remote broadcast/fetch to prevent bounce-back loops
-    if (isRemoteUpdateRef.current) {
-      isRemoteUpdateRef.current = false;
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      lastLocalMutationAtRef.current = Date.now();
-      broadcastSync({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities });
-      syncLibraryStateToCloud({ rooms, seats, notices, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
-    }, 300);
-
-    return () => clearTimeout(timer);
-  }, [rooms, seats, notices, allBranches, rules, wifiFacilities, broadcastSync]);
 
   // 9. Live Digital Clock (1s tick)
   const [currentTime, setCurrentTime] = useState<Date>(new Date());
@@ -1194,6 +1313,7 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   // in this effect's dependency array would evaluate the identifier
   // immediately during this render, before its own declaration has run.
   const triggerDailyAutoResetRef = React.useRef<(() => void) | null>(null);
+  const hasResetTodayRef = React.useRef<string>('');
 
   useEffect(() => {
     let cancelled = false;
@@ -1218,15 +1338,20 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
       const now = new Date();
       const todayStr = now.toDateString();
+      if (hasResetTodayRef.current === todayStr) {
+        return;
+      }
+
       const resetTimestamp = getTodaysResetTimestamp(now, bookingScheduleRef.current);
       const sharedLastReset = await fetchDailyResetMarker();
       if (cancelled) return;
 
       if (now.getTime() >= resetTimestamp && sharedLastReset !== todayStr) {
+        hasResetTodayRef.current = todayStr;
         const day = getDaySchedule(now, bookingScheduleRef.current);
         console.log(`Reset time (${formatScheduleTime(day.resetHour, day.resetMinute)}) has passed — running daily seat auto-reset once.`);
+        await setDailyResetMarker(todayStr);
         triggerDailyAutoResetRef.current?.();
-        void setDailyResetMarker(todayStr);
       }
     };
 
@@ -1382,6 +1507,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       setSeats(updatedSeats);
+      recentLocalSeatMutationsRef.current.set(seatId, {
+        status: 'occupied',
+        timestamp: now,
+        occupantPhone: studentDetails.phone,
+        passCode,
+      });
       pushStateToCloudNow(updatedSeats);
 
       // Record attendance
@@ -1429,6 +1560,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
         return s;
       });
       setSeats(updatedSeats);
+      recentLocalSeatMutationsRef.current.set(seatId, {
+        status: 'away',
+        timestamp: now,
+      });
       pushStateToCloudNow(updatedSeats);
     },
     [pushStateToCloudNow]
@@ -1467,6 +1602,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return s;
     });
     setSeats(updatedSeats);
+    recentLocalSeatMutationsRef.current.set(seatId, {
+      status: 'occupied',
+      timestamp: Date.now(),
+    });
     pushStateToCloudNow(updatedSeats);
   }, [pushStateToCloudNow]);
 
@@ -1501,6 +1640,13 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       setSeats(updatedSeats);
+      recentLocalSeatMutationsRef.current.set(seatId, {
+        status: 'away',
+        isSecondaryBooked: true,
+        timestamp: now,
+        occupantPhone: studentDetails.phone,
+        passCode,
+      });
       pushStateToCloudNow(updatedSeats);
 
       return {
@@ -1531,6 +1677,11 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return s;
     });
     setSeats(updatedSeats);
+    recentLocalSeatMutationsRef.current.set(seatId, {
+      status: 'away',
+      isSecondaryBooked: false,
+      timestamp: Date.now(),
+    });
     pushStateToCloudNow(updatedSeats);
   }, [pushStateToCloudNow]);
 
@@ -1572,6 +1723,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
     });
 
     setSeats(updatedSeats);
+    recentLocalSeatMutationsRef.current.set(seatId, {
+      status: 'available',
+      timestamp: now,
+    });
     pushStateToCloudNow(updatedSeats);
 
     // Close ONLY the attendance record that belongs to this booking —
@@ -1609,9 +1764,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
   }, [releaseSeat]);
 
   const adminToggleMaintenance = useCallback((seatId: string, note?: string) => {
+    let nextStatus: Seat['status'] = 'available';
     const updatedSeats = seatsRef.current.map((s) => {
       if (s.id === seatId) {
-        const nextStatus = s.status === 'maintenance' ? ('available' as const) : ('maintenance' as const);
+        nextStatus = s.status === 'maintenance' ? ('available' as const) : ('maintenance' as const);
         return {
           ...s,
           status: nextStatus,
@@ -1625,6 +1781,10 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       return s;
     });
     setSeats(updatedSeats);
+    recentLocalSeatMutationsRef.current.set(seatId, {
+      status: nextStatus,
+      timestamp: Date.now(),
+    });
     pushStateToCloudNow(updatedSeats);
   }, [pushStateToCloudNow]);
 
@@ -1660,6 +1820,12 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
       });
 
       setSeats(updatedSeats);
+      recentLocalSeatMutationsRef.current.set(seatId, {
+        status: 'occupied',
+        timestamp: now,
+        occupantPhone: phone,
+        passCode,
+      });
       pushStateToCloudNow(updatedSeats);
     },
     [pushStateToCloudNow]
@@ -2463,32 +2629,40 @@ export const LibraryProvider: React.FC<{ children: React.ReactNode }> = ({ child
 
   // Daily auto reset
   const triggerDailyAutoReset = useCallback(() => {
+    const nowDate = new Date();
+    const resetCutoff = getTodaysResetTimestamp(nowDate, bookingScheduleRef.current);
     setSeats((prev) => {
-      const next = prev.map((s) => ({
-        ...s,
-        status: s.status === 'maintenance' ? ('maintenance' as const) : ('available' as const),
-        occupantName: undefined,
-        occupantPhone: undefined,
-        occupantEmail: undefined,
-        studentId: undefined,
-        occupantGender: undefined,
-        bookedAt: undefined,
-        expectedLeaveAt: undefined,
-        targetDurationHours: undefined,
-        awaySince: undefined,
-        awayDurationMinutes: undefined,
-        awayReason: undefined,
-        awayCustomReason: undefined,
-        passCode: undefined,
-        isSecondaryBooked: false,
-        secondaryOccupantName: undefined,
-        secondaryOccupantPhone: undefined,
-        secondaryOccupantStudentId: undefined,
-        secondaryOccupantGender: undefined,
-        secondaryBookedAt: undefined,
-        secondaryExpectedLeaveAt: undefined,
-        secondaryPassCode: undefined,
-      }));
+      const next = prev.map((s) => {
+        // Protect seats booked recently after today's reset timestamp
+        if (s.bookedAt && s.bookedAt > resetCutoff) {
+          return s;
+        }
+        return {
+          ...s,
+          status: s.status === 'maintenance' ? ('maintenance' as const) : ('available' as const),
+          occupantName: undefined,
+          occupantPhone: undefined,
+          occupantEmail: undefined,
+          studentId: undefined,
+          occupantGender: undefined,
+          bookedAt: undefined,
+          expectedLeaveAt: undefined,
+          targetDurationHours: undefined,
+          awaySince: undefined,
+          awayDurationMinutes: undefined,
+          awayReason: undefined,
+          awayCustomReason: undefined,
+          passCode: undefined,
+          isSecondaryBooked: false,
+          secondaryOccupantName: undefined,
+          secondaryOccupantPhone: undefined,
+          secondaryOccupantStudentId: undefined,
+          secondaryOccupantGender: undefined,
+          secondaryBookedAt: undefined,
+          secondaryExpectedLeaveAt: undefined,
+          secondaryPassCode: undefined,
+        };
+      });
       broadcastSync({ seats: next });
       syncLibraryStateToCloud({ rooms, seats: next, notices, branchesConfig: allBranches, rules, wifiFacilities }).catch(() => {});
       return next;

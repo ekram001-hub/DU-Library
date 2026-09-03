@@ -17,9 +17,9 @@ export default defineConfig(() => {
       // `3000-<id>.e2b.app`. Vite rejects unknown Host headers by default, so
       // allow them here, or pin an explicit list via VITE_ALLOWED_HOSTS
       // (comma separated) if you prefer to keep the allowlist strict.
-      allowedHosts: process.env.VITE_ALLOWED_HOSTS
+      allowedHosts: (process.env.VITE_ALLOWED_HOSTS
         ? process.env.VITE_ALLOWED_HOSTS.split(',').map((h) => h.trim())
-        : true,
+        : true) as true | string[],
       // HMR is disabled in AI Studio via DISABLE_HMR env var.
       // Do not modifyâfile watching is disabled to prevent flickering during agent edits.
       hmr: process.env.DISABLE_HMR !== 'true',

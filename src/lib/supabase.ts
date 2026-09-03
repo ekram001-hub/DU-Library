@@ -812,31 +812,48 @@ export async function syncLibraryStateToCloud(payload: {
   wifiFacilities?: unknown;
   wifiNetworks?: unknown[];
 }): Promise<{ success: boolean; error?: unknown }> {
+  // 1. Instantly broadcast to all connected clients in real-time
   try {
-    // 1. Instantly broadcast to all connected clients in real-time
     broadcastStateViaSupabase(payload);
-
-    const client = getSupabase();
-    if (!client) return { success: false };
-
-    // 2. Persist in system_config table in Supabase
-    const { error } = await client.from('system_config').upsert(
-      {
-        key: 'library_live_state',
-        value: payload,
-        updated_at: new Date().toISOString(),
-      },
-      { onConflict: 'key' }
-    );
-
-    if (error) {
-      // Non-fatal if table not yet created
-      return { success: false, error };
-    }
-    return { success: true };
   } catch (err) {
-    return { success: false, error: err };
+    console.warn('[Sync] Supabase broadcast failed:', err);
   }
+
+  const client = getSupabase();
+  if (!client) return { success: false, error: 'No client' };
+
+  // 2. Persist in system_config table in Supabase with retry logic (up to 3 attempts)
+  const maxAttempts = 3;
+  let lastError: unknown = null;
+
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      const { error } = await client.from('system_config').upsert(
+        {
+          key: 'library_live_state',
+          value: payload,
+          updated_at: new Date().toISOString(),
+        },
+        { onConflict: 'key' }
+      );
+
+      if (!error) {
+        return { success: true };
+      }
+
+      lastError = error;
+      console.warn(`[Sync] syncLibraryStateToCloud attempt ${attempt}/${maxAttempts} failed:`, error);
+    } catch (err) {
+      lastError = err;
+      console.warn(`[Sync] syncLibraryStateToCloud attempt ${attempt}/${maxAttempts} threw:`, err);
+    }
+
+    if (attempt < maxAttempts) {
+      await new Promise((resolve) => setTimeout(resolve, attempt * 350));
+    }
+  }
+
+  return { success: false, error: lastError };
 }
 
 /**
